@@ -93,6 +93,9 @@ jspm_packages/
 *.sqlite-wal
 data/
 
+# Auto-generated database encryption key (see src/backend/src/database/encryption.ts)
+.encryption.key
+
 # Temporary files
 tmp/
 temp/

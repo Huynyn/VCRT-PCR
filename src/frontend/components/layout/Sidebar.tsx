@@ -22,6 +22,41 @@ interface SidebarProps {
   }
 }
 
+// Defined at module scope (not inside Sidebar) so its component identity is
+// stable across renders — otherwise React would unmount/remount these
+// buttons on every Sidebar re-render, sometimes swallowing the click that
+// triggered the re-render in the first place.
+const SidebarItemComponent: React.FC<{ item: SidebarItem; onClick: (href: string) => void }> = ({
+  item,
+  onClick,
+}) => (
+  <button
+    onClick={() => onClick(item.href)}
+    className={cn(
+      'w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200',
+      'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800',
+      item.isActive
+        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100',
+    )}
+  >
+    <span className="mr-3 flex-shrink-0">{item.icon}</span>
+    <span className="flex-1 text-left">{item.label}</span>
+    {item.badge && (
+      <span
+        className={cn(
+          'inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none rounded-full',
+          item.isActive
+            ? 'bg-primary-600 text-white'
+            : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-200',
+        )}
+      >
+        {item.badge}
+      </span>
+    )}
+  </button>
+)
+
 const Sidebar: React.FC<SidebarProps> = ({
   isOpen = true,
   currentPath = '/',
@@ -79,34 +114,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   }
 
-  const SidebarItemComponent: React.FC<{ item: SidebarItem }> = ({ item }) => (
-    <button
-      onClick={() => handleItemClick(item.href)}
-      className={cn(
-        'w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200',
-        'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800',
-        item.isActive
-          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-          : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100',
-      )}
-    >
-      <span className="mr-3 flex-shrink-0">{item.icon}</span>
-      <span className="flex-1 text-left">{item.label}</span>
-      {item.badge && (
-        <span
-          className={cn(
-            'inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none rounded-full',
-            item.isActive
-              ? 'bg-primary-600 text-white'
-              : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-200',
-          )}
-        >
-          {item.badge}
-        </span>
-      )}
-    </button>
-  )
-
   return (
     <>
       {/* Mobile overlay */}
@@ -142,7 +149,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <nav className="flex-1 px-4 py-6 overflow-y-auto">
             <div className="space-y-1">
               {navigationItems.map(item => (
-                <SidebarItemComponent key={item.id} item={item} />
+                <SidebarItemComponent key={item.id} item={item} onClick={handleItemClick} />
               ))}
             </div>
 
@@ -154,7 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </h3>
                 <div className="mt-2 space-y-1">
                   {adminItems.map(item => (
-                    <SidebarItemComponent key={item.id} item={item} />
+                    <SidebarItemComponent key={item.id} item={item} onClick={handleItemClick} />
                   ))}
                 </div>
               </div>

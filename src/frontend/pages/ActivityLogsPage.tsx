@@ -288,7 +288,8 @@ const ActivityLogsPage = () => {
               onChange={(e) => handleFilterChange('dateTo', e.target.value)}
             />
 
-            <div className="flex flex-col justify-end">
+            <div className="space-y-1">
+              <p aria-hidden="true" className="form-label select-none">&nbsp;</p>
               <Button
                 variant="secondary"
                 onClick={clearFilters}

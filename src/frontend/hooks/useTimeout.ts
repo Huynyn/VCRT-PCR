@@ -29,8 +29,11 @@ export const useTimeout = ({
 
   const resetTimer = useCallback(() => {
     lastActivityRef.current = Date.now()
-    setTimeLeft(timeoutDuration)
-    setIsWarningShown(false)
+    // Don't force setTimeLeft here - the countdown interval below already
+    // re-derives it from lastActivityRef once a second. Only update
+    // isWarningShown if it's actually changing, so routine activity
+    // (mousemove, clicks) doesn't trigger an app-wide re-render every time.
+    setIsWarningShown(prev => (prev ? false : prev))
 
     // Clear existing timers
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
@@ -113,7 +116,11 @@ export const useTimeout = ({
       'click',
     ]
 
+    // Throttled to at most once/second - a 30-minute idle timeout doesn't
+    // need finer resolution, and mousemove/scroll otherwise fire far too
+    // often to reschedule timers on every event.
     const handleActivity = () => {
+      if (Date.now() - lastActivityRef.current < 1000) return
       resetTimer()
     }
 

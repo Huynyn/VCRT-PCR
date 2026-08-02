@@ -27,6 +27,14 @@ CREATE TABLE IF NOT EXISTS pcr_reports (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
+-- Generic key-value store for small admin-configured app settings
+-- (e.g. the supply-usage Microsoft Form URL used to generate a QR code).
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Admin-managed list of responder names, used to populate the searchable
 -- responder dropdown on the PCR form (a responder can still be typed in
 -- freeform if they're not on this list).

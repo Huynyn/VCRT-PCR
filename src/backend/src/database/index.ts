@@ -2,6 +2,7 @@ import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import { getEncryptionKey, encryptBuffer, decryptBuffer, isEncrypted } from './encryption';
 
 // Electron environment detection
 const isElectron = process.env.IS_ELECTRON === 'true';
@@ -38,6 +39,14 @@ CREATE TABLE IF NOT EXISTS pcr_reports (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+-- Generic key-value store for small admin-configured app settings
+-- (e.g. the supply-usage Microsoft Form URL used to generate a QR code).
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Admin-managed list of responder names, used to populate the searchable
@@ -218,8 +227,9 @@ class DatabaseWrapper {
   saveToFile(): void {
     try {
       const data = this.db.export();
-      const buffer = Buffer.from(data);
-      fs.writeFileSync(this.dbPath, buffer);
+      const key = getEncryptionKey(this.dbPath);
+      const encrypted = encryptBuffer(Buffer.from(data), key);
+      fs.writeFileSync(this.dbPath, encrypted);
     } catch (error) {
       console.error('Error saving database:', error);
     }
@@ -265,8 +275,16 @@ export class DatabaseManager {
       let db: SqlJsDatabase;
       if (fs.existsSync(DB_PATH)) {
         const fileBuffer = fs.readFileSync(DB_PATH);
-        db = new SQL.Database(fileBuffer);
-        console.log('Loaded existing database from:', DB_PATH);
+        const key = getEncryptionKey(DB_PATH);
+        const wasEncrypted = isEncrypted(fileBuffer);
+        const decrypted = decryptBuffer(fileBuffer, key);
+        db = new SQL.Database(decrypted);
+        console.log(
+          wasEncrypted
+            ? 'Loaded existing encrypted database from:'
+            : 'Loaded existing unencrypted database from (will be encrypted on next save):',
+          DB_PATH
+        );
       } else {
         db = new SQL.Database();
         console.log('Created new database');

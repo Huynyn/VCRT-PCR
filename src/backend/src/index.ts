@@ -10,6 +10,7 @@ import pcrRoutes from './routes/pcr';
 import userRoutes from './routes/users';
 import logsRoutes from './routes/logs';
 import respondersRoutes from './routes/responders';
+import settingsRoutes from './routes/settings';
 
 // Import database to initialize
 import { initDatabase } from './database';
@@ -62,6 +63,7 @@ function createApp(): express.Application {
   app.use('/api/users', userRoutes);
   app.use('/api/logs', logsRoutes);
   app.use('/api/responders', respondersRoutes);
+  app.use('/api/settings', settingsRoutes);
 
   // Special route for submissions to match frontend expectation
   app.post('/api/submissions', (req, res, next) => {

@@ -139,10 +139,17 @@ src/
 ## Database Schema
 
 - sql.js database (`pcr_database.db`)
-- Main tables: users, pcr_reports, activity_logs
+- Main tables: users, pcr_reports, pcr_call_archive, responders, activity_logs
 - pcr_reports uses status field (draft/completed/submitted/approved) for all report states
 - Database initialization in `src/backend/src/database/`
 - Cleanup service runs hourly to remove old records
+
+### Encryption at rest
+
+- The database file is encrypted (AES-256-GCM) on every save and decrypted into memory on load — see `src/backend/src/database/encryption.ts`. All SQL access happens against the decrypted in-memory database; only the on-disk file is encrypted.
+- Key source: `ENCRYPTION_KEY` env var if set (64 hex chars, or any passphrase hashed to a key), otherwise an auto-generated `.encryption.key` file next to the database (created on first run, gitignored).
+- This protects the database file if copied off the machine or included in an unencrypted backup. It does not protect against someone with full access to the running app's data directory, since the auto-generated key lives there too — use `ENCRYPTION_KEY` from an external secret store for that level of protection.
+- Existing unencrypted databases are migrated transparently: loaded as plaintext, then encrypted on the first subsequent save.
 
 ## Environment Configuration
 

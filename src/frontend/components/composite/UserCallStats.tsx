@@ -111,8 +111,8 @@ const UserCallStats: React.FC = () => {
         {loading ? (
           <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+            <div className="md:col-span-2">
               <CallCalendar
                 markedDates={markedDates}
                 selectedDate={selectedDate}
@@ -120,7 +120,7 @@ const UserCallStats: React.FC = () => {
               />
             </div>
 
-            <div>
+            <div className="md:col-span-3">
               <div className="flex flex-wrap items-end gap-3 mb-5">
                 <div>
                   <label className="form-label" htmlFor="season-select">
