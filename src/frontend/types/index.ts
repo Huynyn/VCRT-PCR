@@ -70,6 +70,7 @@ export interface VitalSign {
   time?: string;
   pulse?: string;
   resp?: string;
+  spo2?: string;
   bp?: string;
   loc?: string;
   skin?: string;

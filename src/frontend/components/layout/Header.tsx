@@ -49,9 +49,6 @@ const Header: React.FC<HeaderProps> = ({
               <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Patient Care Report
               </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Documentation System
-              </p>
             </div>
           </div>
         </div>

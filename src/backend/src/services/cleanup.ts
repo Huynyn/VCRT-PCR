@@ -1,10 +1,11 @@
 import db from '../database'
+import { archivePcrReportsSql } from './pcrArchive'
 
 export class CleanupService {
   private cleanupInterval: NodeJS.Timeout | null = null
 
   // Configurable retention periods
-  private readonly PCR_RETENTION_HOURS = 72
+  private readonly PCR_RETENTION_DAYS = 730
   private readonly LOG_RETENTION_DAYS = 7
 
   start(): void {
@@ -38,7 +39,7 @@ export class CleanupService {
       const logsResult = this.cleanupActivityLogs()
 
       if (pcrResult.changes > 0 || logsResult.changes > 0) {
-        console.log(`🗑️  Deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_HOURS} hours`)
+        console.log(`🗑️  Deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_DAYS} days`)
         console.log(`🗑️  Deleted ${logsResult.changes} activity log(s) older than ${this.LOG_RETENTION_DAYS} days`)
 
         // Log the cleanup activity
@@ -53,10 +54,12 @@ export class CleanupService {
   }
 
   private cleanupPCRReports(): { changes: number } {
+    db.prepare(archivePcrReportsSql(`datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_DAYS} days')`)).run()
+
     const deleteQuery = `
       DELETE FROM pcr_reports
       WHERE status IN ('submitted','draft','approved')
-      AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
+      AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_DAYS} days')
     `
     return db.prepare(deleteQuery).run()
   }
@@ -85,7 +88,7 @@ export class CleanupService {
         JSON.stringify({
           deletedPCRCount,
           deletedLogsCount,
-          pcrRetention: `${this.PCR_RETENTION_HOURS}_hour_retention`,
+          pcrRetention: `${this.PCR_RETENTION_DAYS}_day_retention`,
           logRetention: `${this.LOG_RETENTION_DAYS}_day_retention`
         })
       )
@@ -100,10 +103,13 @@ export class CleanupService {
       console.log('🧹 Running manual cleanup...')
 
       // Delete PCR reports older than configured retention
+      const ageCondition = `datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_DAYS} days')`
+      db.prepare(archivePcrReportsSql(ageCondition)).run()
+
       const pcrDeleteQuery = `
         DELETE FROM pcr_reports
         WHERE status IN ('submitted','approved')
-        AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
+        AND ${ageCondition}
       `
       const pcrResult = db.prepare(pcrDeleteQuery).run()
 
@@ -115,7 +121,7 @@ export class CleanupService {
       const logsResult = db.prepare(logsDeleteQuery).run()
 
       if (pcrResult.changes > 0 || logsResult.changes > 0) {
-        console.log(`🗑️  Manually deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_HOURS} hours`)
+        console.log(`🗑️  Manually deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_DAYS} days`)
         console.log(`🗑️  Manually deleted ${logsResult.changes} activity log(s) older than ${this.LOG_RETENTION_DAYS} days`)
         this.logCleanupActivity(pcrResult.changes, logsResult.changes)
       }
@@ -143,7 +149,7 @@ export class CleanupService {
         SELECT COUNT(*) as count, MIN(created_at) as oldestDate
         FROM pcr_reports
         WHERE status IN ('submitted','approved')
-        AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_HOURS} hours')
+        AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_DAYS} days')
       `
       const pcrResult = db.prepare(pcrQuery).get() as { count: number, oldestDate: string | null }
 

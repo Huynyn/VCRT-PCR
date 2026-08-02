@@ -119,7 +119,8 @@ src/
 - Default accounts: admin/vcrt-ebic2026! and user/user
 
 ### Cleanup
-- Cleanup service runs hourly, removes old reports (submitted/draft/approved) after 72 hours
+- Cleanup service runs hourly, removes old reports (submitted/draft/approved) after 730 days (2 years)
+- Before a submitted/approved report is deleted (manually or by cleanup), its de-identified stats fields are archived to `pcr_call_archive` (see `src/backend/src/services/pcrArchive.ts`) so call-history stats survive deletion
 - Activity logs retained for 7 days
 
 ## Testing

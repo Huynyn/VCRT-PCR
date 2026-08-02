@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Plus, UserCog, Shield, User as UserIcon, Edit, Trash2 } from 'lucide-react'
+import { Plus, UserCog, Shield, User as UserIcon, Edit, Trash2, KeyRound } from 'lucide-react'
 import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
+import { RespondersManager } from '@/components/composite'
 import type { User } from '@/types'
 
 interface CreateUserForm {
@@ -19,6 +20,11 @@ interface EditUserForm {
   firstName: string
   lastName: string
   isActive: boolean
+}
+
+interface PasswordForm {
+  newPassword: string
+  confirmPassword: string
 }
 
 const UserManagementPage = () => {
@@ -48,6 +54,16 @@ const UserManagementPage = () => {
     isActive: true
   })
   const [editFormErrors, setEditFormErrors] = useState<Partial<EditUserForm>>({})
+
+  // Reset password state
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordTarget, setPasswordTarget] = useState<User | null>(null)
+  const [resettingPassword, setResettingPassword] = useState(false)
+  const [passwordForm, setPasswordForm] = useState<PasswordForm>({
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [passwordFormErrors, setPasswordFormErrors] = useState<Partial<PasswordForm>>({})
 
   useEffect(() => {
     if (currentUser?.role !== 'admin') {
@@ -233,6 +249,54 @@ const UserManagementPage = () => {
       console.error('Error updating user:', err)
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const handleOpenResetPassword = (user: User) => {
+    setShowEditModal(false)
+    setPasswordTarget(user)
+    setPasswordForm({ newPassword: '', confirmPassword: '' })
+    setPasswordFormErrors({})
+    setShowPasswordModal(true)
+  }
+
+  const validatePasswordForm = (): boolean => {
+    const errors: Partial<PasswordForm> = {}
+
+    if (!passwordForm.newPassword.trim()) {
+      errors.newPassword = 'New password is required'
+    } else if (passwordForm.newPassword.length < 8) {
+      errors.newPassword = 'Password must be at least 8 characters'
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match'
+    }
+
+    setPasswordFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleResetPassword = async () => {
+    if (!validatePasswordForm() || !passwordTarget) return
+
+    try {
+      setResettingPassword(true)
+
+      await apiRequest(`/users/${passwordTarget.id}/change-password`, {
+        method: 'POST',
+        body: JSON.stringify({ newPassword: passwordForm.newPassword }),
+      })
+
+      setShowPasswordModal(false)
+      setPasswordTarget(null)
+      setPasswordForm({ newPassword: '', confirmPassword: '' })
+      setPasswordFormErrors({})
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset password')
+      console.error('Error resetting password:', err)
+    } finally {
+      setResettingPassword(false)
     }
   }
 
@@ -433,6 +497,10 @@ const UserManagementPage = () => {
         </div>
       </div>
 
+      <div className="mt-8">
+        <RespondersManager />
+      </div>
+
       {/* Create User Modal */}
       <Modal
         isOpen={showCreateModal}
@@ -571,6 +639,18 @@ const UserManagementPage = () => {
             )}
           </div>
 
+          <div>
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<KeyRound className="w-4 h-4" />}
+              onClick={() => editingUser && handleOpenResetPassword(editingUser)}
+              className="text-gray-600 hover:text-gray-900 dark:text-gray-300"
+            >
+              Reset Password
+            </Button>
+          </div>
+
           <div className="flex justify-between items-center pt-4 border-t">
             {/* Left: Delete */}
             <Button
@@ -604,6 +684,64 @@ const UserManagementPage = () => {
                 Update User
               </Button>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reset Password Modal */}
+      <Modal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false)
+          setPasswordTarget(null)
+          setPasswordFormErrors({})
+        }}
+        title={`Reset Password: ${passwordTarget?.username}`}
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Set a new password for this user. They will need to use it the next time they log in.
+          </p>
+
+          <Input
+            label="New Password"
+            type="password"
+            value={passwordForm.newPassword}
+            onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+            error={passwordFormErrors.newPassword}
+            required
+            helpText="Must be at least 8 characters long"
+          />
+
+          <Input
+            label="Confirm New Password"
+            type="password"
+            value={passwordForm.confirmPassword}
+            onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+            error={passwordFormErrors.confirmPassword}
+            required
+          />
+
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowPasswordModal(false)
+                setPasswordTarget(null)
+                setPasswordFormErrors({})
+              }}
+              disabled={resettingPassword}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleResetPassword}
+              loading={resettingPassword}
+              disabled={resettingPassword}
+            >
+              Reset Password
+            </Button>
           </div>
         </div>
       </Modal>

@@ -1,8 +1,9 @@
 import { Router, Response } from 'express';
 import db from '../database';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { authenticateToken, AuthenticatedRequest, requireRole } from '../middleware/auth';
 import { logActivity } from '../middleware/logger';
 import { cleanupService } from '../services/cleanup';
+import { archivePcrReportsSql } from '../services/pcrArchive';
 
 const router = Router();
 
@@ -287,6 +288,9 @@ router.delete('/:id', authenticateToken, logActivity('delete_pcr', 'pcr_report')
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
+    // Archive stats-relevant fields (de-identified) before removing a finalized report
+    db.prepare(archivePcrReportsSql('id = ?')).run(id);
+
     // If there are child rows, delete them first or ensure FK ON DELETE CASCADE
     db.prepare('DELETE FROM pcr_reports WHERE id = ?').run(id);
 
@@ -353,7 +357,7 @@ router.get('/cleanup/preview', authenticateToken, (req: AuthenticatedRequest, re
         oldestReportDate: preview.oldestPCRDate,
         logsToDelete: preview.logsCount,
         oldestLogDate: preview.oldestLogDate,
-        pcrRetentionPeriod: '72 hours',
+        pcrRetentionPeriod: '730 days',
         logRetentionPeriod: '7 days'
       }
     });
@@ -385,6 +389,89 @@ router.post('/cleanup/run', authenticateToken, logActivity('manual_cleanup', 'pc
 
   } catch (error) {
     console.error('Manual cleanup error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// GET /api/pcr/stats/mine - Current user's own finalized calls (for calendar/season stats)
+router.get('/stats/mine', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+
+    const rows = db.prepare(`
+      SELECT id,
+        json_extract(form_data, '$.date') AS date,
+        json_extract(form_data, '$.supervisor') AS supervisor,
+        json_extract(form_data, '$.responder1') AS responder1,
+        json_extract(form_data, '$.responder2') AS responder2,
+        json_extract(form_data, '$.responder3') AS responder3
+      FROM pcr_reports
+      WHERE created_by = ? AND status IN ('submitted', 'approved')
+      UNION ALL
+      SELECT id, date, supervisor, responder1, responder2, responder3
+      FROM pcr_call_archive
+      WHERE created_by = ?
+      ORDER BY date
+    `).all(userId, userId);
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Get my PCR stats error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// GET /api/pcr/stats/pending-approval-count - Count of PCRs awaiting approval (admin only)
+router.get('/stats/pending-approval-count', authenticateToken, requireRole(['admin']), (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = db.prepare(`
+      SELECT COUNT(*) AS count FROM pcr_reports WHERE status = 'submitted'
+    `).get() as { count: number };
+
+    res.json({ success: true, data: { count: result.count } });
+  } catch (error) {
+    console.error('Get pending approval count error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// GET /api/pcr/stats/approved-range - De-identified approved-call data for a date range (admin only)
+router.get('/stats/approved-range', authenticateToken, requireRole(['admin']), (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { start, end } = req.query;
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+
+    if (typeof start !== 'string' || typeof end !== 'string' || !dateRe.test(start) || !dateRe.test(end)) {
+      return res.status(400).json({ success: false, message: 'start and end query params (YYYY-MM-DD) are required' });
+    }
+
+    const rows = db.prepare(`
+      SELECT id,
+        json_extract(form_data, '$.date') AS date,
+        json_extract(form_data, '$.reportNumber') AS report_number,
+        json_extract(form_data, '$.chiefComplaint') AS chief_complaint,
+        json_extract(form_data, '$.timeNotified') AS time_notified,
+        json_extract(form_data, '$.onScene') AS on_scene,
+        json_extract(form_data, '$.clearedScene') AS cleared_scene,
+        json_extract(form_data, '$.patientCareTransferred') AS patient_care_transferred,
+        json_extract(form_data, '$.oxygenProtocol.oxygen_given') AS oxygen_given,
+        json_extract(form_data, '$.supervisor') AS supervisor,
+        json_extract(form_data, '$.responder1') AS responder1,
+        json_extract(form_data, '$.responder2') AS responder2,
+        json_extract(form_data, '$.responder3') AS responder3
+      FROM pcr_reports
+      WHERE status = 'approved' AND json_extract(form_data, '$.date') BETWEEN ? AND ?
+      UNION ALL
+      SELECT id, date, report_number, chief_complaint, time_notified, on_scene, cleared_scene,
+        patient_care_transferred, oxygen_given, supervisor, responder1, responder2, responder3
+      FROM pcr_call_archive
+      WHERE status = 'approved' AND date BETWEEN ? AND ?
+      ORDER BY date
+    `).all(start, end, start, end);
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Get approved-range PCR stats error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

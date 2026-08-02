@@ -61,6 +61,7 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
     { key: 'time', label: 'Time', width: 'w-24' },
     { key: 'pulse', label: 'Pulse (rate, rhythm, qual.)', width: 'w-34' },
     { key: 'resp', label: 'Resp (rate, rhythm, qual.)', width: 'w-34' },
+    { key: 'spo2', label: 'SpO2 (%)', width: 'w-24' },
     { key: 'bp', label: 'B/P', width: 'w-24' },
     { key: 'loc', label: 'LOC, GCS', width: 'w-32' },
     { key: 'skin', label: 'Skin, Temp', width: 'w-32' },

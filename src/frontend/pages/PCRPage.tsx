@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save } from 'lucide-react'
-import { Button, Card, Alert, Modal } from '@/components/ui'
+import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck } from 'lucide-react'
+import { Button, Card, Alert, Modal, Tooltip } from '@/components/ui'
 import {
   Input,
   Select,
@@ -12,14 +12,14 @@ import {
   Textarea,
   FormSection,
 } from '@/components/forms'
-import { VitalSignsTable, InjuryCanvas, OxygenProtocolForm } from '@/components/composite'
+import { VitalSignsTable, InjuryCanvas, OxygenProtocolForm, SearchableSelect } from '@/components/composite'
 import { useForm } from '../context/FormContext'
 import { useNotification } from '../context/NotificationContext'
 import { useAuth } from '../context/AuthContext'
 import { cn, getCurrentTime, formatDate } from '../utils'
 import { pdfService } from '../services/pdf.service'
 import { apiRequest } from '../utils/api'
-import type { PCRFormData, VitalSign, VitalSigns2 } from '../types'
+import type { PCRFormData, VitalSign } from '../types'
 
 const PCRPage: React.FC = () => {
   const {
@@ -45,6 +45,16 @@ const PCRPage: React.FC = () => {
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [signOffPdf, setSignOffPdf] = useState<File | null>(null)
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
+  const [responderOptions, setResponderOptions] = useState<string[]>([])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    apiRequest('/responders')
+      .then(res => setResponderOptions((res.data || []).map((r: { name: string }) => r.name)))
+      .catch(() => {
+        // Silently fail - responders just won't be suggested, free text still works
+      })
+  }, [isAuthenticated])
 
   // Helper function to convert File to base64
   const fileToBase64 = (file: File): Promise<string> => {
@@ -334,10 +344,6 @@ const PCRPage: React.FC = () => {
     updateField('vitalSigns', vitalSigns)
   }
 
-  const handleVitalSigns2Change = (vitalSigns2: VitalSigns2[]) => {
-    updateField('vitalSigns2', vitalSigns2)
-  }
-
   const calculateAgeFromDOB = (dob: string): number => {
     const birthDate = new Date(dob)
     const today = new Date()
@@ -600,6 +606,21 @@ const PCRPage: React.FC = () => {
               error={errors.supervisor}
               placeholder="Supervisor name"
               required
+              rightIcon={
+                currentUser && (
+                  <Tooltip content="Use my name">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateField('supervisor', `${currentUser.firstName} ${currentUser.lastName}`)
+                      }
+                      className="p-1 rounded text-gray-400 hover:text-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                    </button>
+                  </Tooltip>
+                )
+              }
             />
 
             <Input
@@ -611,25 +632,28 @@ const PCRPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
+            <SearchableSelect
               label="Responder 1"
               value={data.responder1 || ''}
-              onChange={e => updateField('responder1', e.target.value)}
-              placeholder="First responder name"
+              onChange={value => updateField('responder1', value)}
+              options={responderOptions}
+              placeholder="Search responders..."
             />
 
-            <Input
+            <SearchableSelect
               label="Responder 2"
               value={data.responder2 || ''}
-              onChange={e => updateField('responder2', e.target.value)}
-              placeholder="Second responder name"
+              onChange={value => updateField('responder2', value)}
+              options={responderOptions}
+              placeholder="Search responders..."
             />
 
-            <Input
+            <SearchableSelect
               label="Responder 3"
               value={data.responder3 || ''}
-              onChange={e => updateField('responder3', e.target.value)}
-              placeholder="Third responder name"
+              onChange={value => updateField('responder3', value)}
+              options={responderOptions}
+              placeholder="Search responders..."
             />
           </div>
 
@@ -1105,19 +1129,6 @@ const PCRPage: React.FC = () => {
             data={data.oxygenProtocol || {}}
             onChange={oxygenProtocolData => updateField('oxygenProtocol', oxygenProtocolData)}
             errors={errors}
-          />
-        </FormSection>
-
-        {/* Vital Signs Table 2 */}
-        <FormSection title="Additional Vital Signs" subtitle="SpO2 measurements over time">
-          <VitalSignsTable
-            data={data.vitalSigns2 || []}
-            onChange={handleVitalSigns2Change}
-            title="SpO2 Measurements"
-            columns={[
-              { key: 'time' as keyof VitalSigns2, label: 'Time', width: 'w-24' },
-              { key: 'spo2' as keyof VitalSigns2, label: 'SPO2', width: 'w-24' },
-            ]}
           />
         </FormSection>
 

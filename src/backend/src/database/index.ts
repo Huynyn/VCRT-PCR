@@ -40,6 +40,39 @@ CREATE TABLE IF NOT EXISTS pcr_reports (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
+-- Admin-managed list of responder names, used to populate the searchable
+-- responder dropdown on the PCR form (a responder can still be typed in
+-- freeform if they're not on this list).
+CREATE TABLE IF NOT EXISTS responders (
+    id TEXT PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- De-identified snapshot of finalized PCR reports, written just before a
+-- submitted/approved report is deleted (manually or by retention cleanup),
+-- so call-stats history survives deletion. No patient name or free-text
+-- comments are ever stored here.
+CREATE TABLE IF NOT EXISTS pcr_call_archive (
+    id TEXT PRIMARY KEY,
+    date TEXT,
+    status TEXT,
+    supervisor TEXT,
+    responder1 TEXT,
+    responder2 TEXT,
+    responder3 TEXT,
+    report_number TEXT,
+    chief_complaint TEXT,
+    time_notified TEXT,
+    on_scene TEXT,
+    cleared_scene TEXT,
+    patient_care_transferred TEXT,
+    oxygen_given TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME,
+    archived_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Activity logs table
 CREATE TABLE IF NOT EXISTS activity_logs (
     id TEXT PRIMARY KEY,

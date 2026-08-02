@@ -2,7 +2,7 @@
  * PDF generation and printing service for PCR reports
  */
 import jsPDF from 'jspdf'
-import type { PCRFormData, VitalSign, VitalSigns2 } from '@/types'
+import type { PCRFormData, VitalSign } from '@/types'
 import { OxygenProtocol } from '../types'
 import { PDFDocument } from 'pdf-lib'
 
@@ -235,7 +235,7 @@ export class PDFService {
 
       // Oxygen Protocol
       if (data.oxygenProtocol) {
-        yPosition = this.addOxygenProtocol(pdf, data.oxygenProtocol, data.vitalSigns2, opts, yPosition, contentWidth, newPage)
+        yPosition = this.addOxygenProtocol(pdf, data.oxygenProtocol, opts, yPosition, contentWidth, newPage)
       }
 
       // Transport Information
@@ -953,7 +953,7 @@ private addPageWithHeader(
     const pageH = pdf.internal.pageSize.getHeight()
     const bottom = options.margins.bottom
 
-    const headers = ['Time', 'Pulse', 'Resp', 'B/P', 'LOC,GCS', 'Skin,Temp', 'Pupils']
+    const headers = ['Time', 'Pulse', 'Resp', 'SpO2', 'B/P', 'LOC,GCS', 'Skin,Temp', 'Pupils']
     const nCols = headers.length
     const colW = contentWidth / nCols
     const cellPadX = 1.5
@@ -1012,6 +1012,7 @@ private addPageWithHeader(
         v.time ?? '',
         v.pulse ?? '',
         v.resp ?? '',
+        v.spo2 ?? '',
         v.bp ?? '',
         v.loc ?? '',
         v.skin ?? '',
@@ -1057,7 +1058,6 @@ private addPageWithHeader(
   private addOxygenProtocol(
     pdf: jsPDF,
     oxygenProtocol: OxygenProtocol,
-    vitalSigns2: VitalSigns2[],
     options: Required<PDFOptions>,
     yPosition: number,
     contentWidth: number,
@@ -1256,91 +1256,6 @@ private addPageWithHeader(
         }
       }
     }
-    
-    const readings = (vitalSigns2 ?? []).filter(v => {
-      const s = (v?.spo2 ?? '');
-      return s !== null && s !== undefined && String(s).trim() !== '';
-    });
-
-    if (readings.length > 0) {
-      pdf.setDrawColor(0)
-      pdf.setLineWidth(0.4)
-      pdf.line(
-        options.margins.left,
-        yPosition,
-        pdf.internal.pageSize.getWidth() - options.margins.right,
-        yPosition
-      )
-      yPosition += 6
-    }
-
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('SpO2 Readings:', options.margins.left, yPosition)
-    pdf.setFont('helvetica', 'normal')
-    yPosition += 4
-
-    const labels = ['Time', 'SpO2 (%)'] // rows
-    const nRows = labels.length
-    const nDataCols = Math.max(1, (vitalSigns2?.length || 0))
-
-    const x0 = options.margins.left
-    const rowHeight = 6
-    const labelColWidth = Math.min(30, contentWidth * 0.25) // left header column
-
-    // columns take 1/8 width unless more than 8 entries, then fit all
-    const denom = Math.max(8, nDataCols)
-    const dataColWidth = (contentWidth - labelColWidth) / denom
-    const tableWidth = labelColWidth + nDataCols * dataColWidth
-    const tableHeight = nRows * rowHeight
-
-    // Left header column background
-    pdf.setFillColor(220, 220, 220)
-    pdf.rect(x0, yPosition, labelColWidth, tableHeight, 'F')
-
-    // Outer border (use actual used width)
-    pdf.setDrawColor(0)
-    pdf.rect(x0, yPosition, tableWidth, tableHeight)
-
-    // *** BLACK vertical line after the labels column ***
-    const sepX = x0 + labelColWidth
-    pdf.line(sepX, yPosition, sepX, yPosition + tableHeight)
-
-    // Vertical lines between data columns
-    for (let c = 1; c < nDataCols; c++) {
-      const vx = x0 + labelColWidth + c * dataColWidth
-      pdf.line(vx, yPosition, vx, yPosition + tableHeight)
-    }
-
-    // Horizontal lines between rows
-    for (let r = 1; r < nRows; r++) {
-      const hy = yPosition + r * rowHeight
-      pdf.line(x0, hy, x0 + tableWidth, hy)
-    }
-
-    // Row labels (left header col)
-    pdf.setFontSize(8)
-    pdf.setFont('helvetica', 'bold')
-    labels.forEach((label, r) => {
-      pdf.text(label, x0 + (labelColWidth / 2), yPosition + r * rowHeight + 4, { align: 'center' })
-    })
-
-    // Data cells
-    pdf.setFont('helvetica', 'normal')
-    for (let c = 0; c < nDataCols; c++) {
-      const vital = vitalSigns2[c] || {}
-      const colValues = [
-        vital.time ?? '',
-        (vital.spo2 != null ? String(vital.spo2) : ''),
-      ]
-
-      colValues.forEach((cell, r) => {
-        const cellX = x0 + labelColWidth + c * dataColWidth
-        const cellY = yPosition + r * rowHeight
-        pdf.text(String(cell), cellX + (dataColWidth / 2), cellY + 4, { align: 'center' }) 
-      })
-    }
-
-    yPosition += tableHeight + 4
 
     return yPosition
   }
