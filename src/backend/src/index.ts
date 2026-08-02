@@ -13,7 +13,7 @@ import respondersRoutes from './routes/responders';
 import settingsRoutes from './routes/settings';
 
 // Import database to initialize
-import { initDatabase } from './database';
+import { initDatabase, closeDatabase } from './database';
 import { cleanupService } from './services/cleanup';
 
 // Electron environment detection
@@ -167,6 +167,9 @@ export function stopEmbeddedServer(): void {
     embeddedServer = null;
   }
   cleanupService.stop();
+  // Flush any pending debounced save before Electron exits - without this,
+  // data written in the last second before quit could be silently dropped.
+  closeDatabase();
 }
 
 // Start server in standalone mode (not embedded in Electron)
@@ -210,13 +213,26 @@ if (isMainModule) {
   process.on('SIGINT', () => {
     console.log('\n🛑 Shutting down server...');
     cleanupService.stop();
+    closeDatabase();
     process.exit(0);
   });
 
   process.on('SIGTERM', () => {
     console.log('\n🛑 Shutting down server...');
     cleanupService.stop();
+    closeDatabase();
     process.exit(0);
+  });
+
+  // Last-resort safety net: catches shutdown paths not covered above (e.g. an
+  // uncaught exception elsewhere calling process.exit()). Only synchronous
+  // work is guaranteed to run here, which closeDatabase()'s save/close is.
+  process.on('exit', () => {
+    try {
+      closeDatabase();
+    } catch {
+      // Already closed, or nothing to flush - safe to ignore
+    }
   });
 }
 

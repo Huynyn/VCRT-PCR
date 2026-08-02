@@ -12,6 +12,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   disabled,
   leftIcon,
   rightIcon,
+  type = 'button',
   ...props
 }, ref) => {
   const baseClasses = 'btn'
@@ -31,6 +32,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   return (
     <button
       ref={ref}
+      type={type}
       className={cn(
         baseClasses,
         variantClasses[variant],

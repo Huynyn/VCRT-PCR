@@ -336,32 +336,51 @@ export class DatabaseManager {
         console.log('Migration: Added sign_off_filename column to pcr_reports');
       }
 
-      // Migration: Add 'approved' to status CHECK constraint
-      // Check if the constraint already includes 'approved' by trying an insert with that status
+      // Migration: Add 'approved' to status CHECK constraint.
+      // Gated on the constraint text itself so this only runs once ever,
+      // instead of rebuilding the table on every single startup, and wrapped
+      // in a transaction so a crash mid-migration (e.g. power loss on a
+      // field laptop) rolls back cleanly instead of leaving pcr_reports
+      // half-migrated or missing rows.
       try {
-        this.database.exec(`
-          CREATE TABLE IF NOT EXISTS pcr_reports_new (
-            id TEXT PRIMARY KEY,
-            form_data TEXT NOT NULL,
-            sign_off_attachment TEXT,
-            sign_off_filename TEXT,
-            status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved')) DEFAULT 'draft',
-            created_by TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (created_by) REFERENCES users(id)
-          )
-        `);
-        this.database.exec(`
-          INSERT INTO pcr_reports_new SELECT id, form_data, sign_off_attachment, sign_off_filename, status, created_by, created_at, updated_at FROM pcr_reports
-        `);
-        this.database.exec('DROP TABLE pcr_reports');
-        this.database.exec('ALTER TABLE pcr_reports_new RENAME TO pcr_reports');
-        // Recreate indexes
-        this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_by ON pcr_reports(created_by)');
-        this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_status ON pcr_reports(status)');
-        this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_at ON pcr_reports(created_at)');
-        console.log('Migration: Updated pcr_reports status constraint to include approved');
+        const tableRow = this.database
+          .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'pcr_reports'")
+          .get() as { sql: string } | undefined;
+        const alreadyMigrated = !!tableRow?.sql && tableRow.sql.includes("'approved'");
+
+        if (!alreadyMigrated) {
+          this.database.exec('BEGIN TRANSACTION');
+          try {
+            this.database.exec('DROP TABLE IF EXISTS pcr_reports_new');
+            this.database.exec(`
+              CREATE TABLE pcr_reports_new (
+                id TEXT PRIMARY KEY,
+                form_data TEXT NOT NULL,
+                sign_off_attachment TEXT,
+                sign_off_filename TEXT,
+                status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved')) DEFAULT 'draft',
+                created_by TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users(id)
+              )
+            `);
+            this.database.exec(`
+              INSERT INTO pcr_reports_new SELECT id, form_data, sign_off_attachment, sign_off_filename, status, created_by, created_at, updated_at FROM pcr_reports
+            `);
+            this.database.exec('DROP TABLE pcr_reports');
+            this.database.exec('ALTER TABLE pcr_reports_new RENAME TO pcr_reports');
+            // Recreate indexes
+            this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_by ON pcr_reports(created_by)');
+            this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_status ON pcr_reports(status)');
+            this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_at ON pcr_reports(created_at)');
+            this.database.exec('COMMIT');
+            console.log('Migration: Updated pcr_reports status constraint to include approved');
+          } catch (migrationError) {
+            this.database.exec('ROLLBACK');
+            console.error('Migration error (status constraint):', migrationError);
+          }
+        }
       } catch (migrationError) {
         console.error('Migration error (status constraint):', migrationError);
       }
@@ -446,6 +465,14 @@ export function getDatabase(): DatabaseWrapper {
 
 export async function initDatabase(): Promise<void> {
   await dbManager.waitForInit();
+}
+
+// Flushes any pending debounced save and closes the database. Must be called
+// on every shutdown path (SIGINT/SIGTERM, Electron app quit) - saveToFile()
+// is debounced by up to 1 second, so exiting without this can silently drop
+// the most recent write(s) even on a clean shutdown, not just a crash.
+export function closeDatabase(): void {
+  dbManager.close();
 }
 
 // For backwards compatibility

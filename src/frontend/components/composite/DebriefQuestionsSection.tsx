@@ -84,7 +84,11 @@ const DebriefQuestionsSection: React.FC = () => {
   }
 
   const addDraftItem = () => {
-    setDraft(prev => [...prev, { question: '', category: 'General' }])
+    // Prepend rather than append: the list box has a fixed max height, and an
+    // existing list can already be long enough that a row added at the end
+    // would land below the visible scroll area, making the click look like
+    // it did nothing.
+    setDraft(prev => [{ question: '', category: 'General' }, ...prev])
   }
 
   const handleSave = async () => {
