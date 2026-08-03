@@ -953,7 +953,7 @@ private addPageWithHeader(
     const pageH = pdf.internal.pageSize.getHeight()
     const bottom = options.margins.bottom
 
-    const headers = ['Time', 'Pulse', 'Resp', 'SpO2', 'B/P', 'LOC,GCS', 'Skin,Temp', 'Pupils']
+    const headers = ['Time', 'HR', 'RR', 'SpO2', 'B/P', 'LOC,GCS', 'Skin', 'Pupils']
     const nCols = headers.length
     const colW = contentWidth / nCols
     const cellPadX = 1.5

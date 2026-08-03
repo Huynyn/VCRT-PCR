@@ -711,7 +711,7 @@ const PCRPage: React.FC = () => {
         {/* Patient Information */}
         <FormSection
           title="Patient Information"
-          subtitle="Patient demographics and contact details"
+          subtitle="Patient information and contact details (DNO or UTO if not obtained)"
           required
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -744,9 +744,7 @@ const PCRPage: React.FC = () => {
           </div>
 
           {errors.ageOrDob && (
-            <Alert variant="error" className="mb-4">
-              {errors.ageOrDob}
-            </Alert>
+            <Alert type="error" message={errors.ageOrDob} className="mb-4" />
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -852,20 +850,22 @@ const PCRPage: React.FC = () => {
               onChange={value => updateField('contacted', value)}
             />
 
-            <Input
-              label="Contacted by"
-              value={data.contactedBy || ''}
-              onChange={e => updateField('contactedBy', e.target.value)}
-              placeholder="Who made contact"
-              requireUnknown
-            />
+            {data.contacted === 'Yes' && (
+              <Input
+                label="Contacted by"
+                value={data.contactedBy || ''}
+                onChange={e => updateField('contactedBy', e.target.value)}
+                placeholder="Who called?"
+                requireUnknown
+              />
+            )}
           </div>
         </FormSection>
 
         {/* Medical History */}
         <FormSection
           title="Patient Medical History"
-          subtitle="Medical background and assessment findings"
+          subtitle="Medical background and assessment findings (DNO or UTO if not obtained)"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Textarea
@@ -940,7 +940,7 @@ const PCRPage: React.FC = () => {
         {/* Treatment Performed */}
         <FormSection
           title="Treatment Performed"
-          subtitle="Interventions and care provided to the patient"
+          subtitle="Lifesaving interventions and care provided to the patient"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -953,7 +953,6 @@ const PCRPage: React.FC = () => {
                   { value: 'OPA', label: 'OPA' },
                   { value: 'BVM', label: 'BVM' },
                   { value: 'Pocket Mask', label: 'Pocket Mask' },
-                  { value: 'Other', label: 'Other' },
                 ]}
                 value={Array.isArray(data.airwayManagement) ? data.airwayManagement : []}
                 onChange={value => updateField('airwayManagement', value)}
@@ -988,46 +987,122 @@ const PCRPage: React.FC = () => {
                 value={Array.isArray(data.immobilization) ? data.immobilization : []}
                 onChange={value => updateField('immobilization', value)}
               />
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="cprAedPerformed"
+                    checked={!!data.cprAedPerformed}
+                    onChange={e => {
+                      const checked = e.target.checked
+                      updateField('cprAedPerformed', checked)
+                      if (!checked) {
+                        updateField('cprPerformed', false)
+                        updateField('aedPerformed', false)
+                        updateField('timeStarted', '')
+                        updateField('numberOfCycles', '')
+                        updateField('numberOfShocks', '')
+                        updateField('shockNotAdvised', '')
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="cprAedPerformed"
+                    className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+                  >
+                    CPR/AED
+                  </label>
+                </div>
+
+                {data.cprAedPerformed && (
+                  <div className="ml-7 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="cprPerformed"
+                        checked={!!data.cprPerformed}
+                        onChange={e => {
+                          const checked = e.target.checked
+                          updateField('cprPerformed', checked)
+                          if (!checked) {
+                            updateField('timeStarted', '')
+                            updateField('numberOfCycles', '')
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="cprPerformed"
+                        className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                      >
+                        CPR
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="aedPerformed"
+                        checked={!!data.aedPerformed}
+                        onChange={e => {
+                          const checked = e.target.checked
+                          updateField('aedPerformed', checked)
+                          if (!checked) {
+                            updateField('numberOfShocks', '')
+                            updateField('shockNotAdvised', '')
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="aedPerformed"
+                        className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                      >
+                        AED
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-4">
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100">CPR</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <TimePicker
-                    label="Time Started"
-                    value={data.timeStarted || ''}
-                    onChange={e => updateField('timeStarted', e.target.value)}
-                  />
-                  <Input
-                    label="Number of Cycles"
-                    type="number"
-                    value={data.numberOfCycles || ''}
-                    onChange={e => updateField('numberOfCycles', e.target.value)}
-                    placeholder="0"
-                  />
+              {data.cprPerformed && (
+                <div className="border rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">CPR</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <TimePicker
+                      label="Time Started"
+                      value={data.timeStarted || ''}
+                      onChange={e => updateField('timeStarted', e.target.value)}
+                    />
+                    <Input
+                      label="Number of Cycles"
+                      type="number"
+                      value={data.numberOfCycles || ''}
+                      onChange={e => updateField('numberOfCycles', e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100">AED</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    label="Shocks (#)"
-                    type="number"
-                    value={data.numberOfShocks || ''}
-                    onChange={e => updateField('numberOfShocks', e.target.value)}
-                    placeholder="0"
-                  />
-                  <Input
-                    label="Shock Not Advised (#)"
-                    type="number"
-                    value={data.shockNotAdvised || ''}
-                    onChange={e => updateField('shockNotAdvised', e.target.value)}
-                    placeholder="0"
-                  />
+              {data.aedPerformed && (
+                <div className="border rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">AED</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      label="Shocks (#)"
+                      type="number"
+                      value={data.numberOfShocks || ''}
+                      onChange={e => updateField('numberOfShocks', e.target.value)}
+                      placeholder="0"
+                    />
+                    <Input
+                      label="Shock Not Advised (#)"
+                      type="number"
+                      value={data.shockNotAdvised || ''}
+                      onChange={e => updateField('shockNotAdvised', e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {hasTourniquet && (
                 <div className="border rounded-lg p-4 space-y-3">
@@ -1062,7 +1137,8 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* OPQRST Assessment */}
-        <FormSection title="OPQRST Assessment" subtitle="Pain and symptom assessment">
+        <FormSection title="OPQRST Assessment" subtitle="If more than one location, number in comments and on diagram and separate with semicolons,
+          e.g. (1) Headache; (2) Left Arm Pain">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Input
               label="Onset"
@@ -1111,7 +1187,7 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* Injury Location */}
-        <FormSection title="Injury Location" subtitle="Mark injury locations on body diagram">
+        <FormSection title="Injury Location" subtitle="Mark injury locations on body diagram (number if needed)">
           <InjuryCanvas
             value={data.injuryCanvas}
             onChange={value => updateField('injuryCanvas', value)}

@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { Plus, Trash2, Clock } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
-import { cn, getCurrentTime } from '@/utils'
+import { cn } from '@/utils'
 import type { VitalSign } from '@/types'
 
 interface VitalSignsTableProps {
@@ -10,7 +10,7 @@ interface VitalSignsTableProps {
   maxRows?: number
   title?: string
   className?: string
-  columns?: Array<{ key: string; label: string; width: string }>
+  columns?: Array<{ key: string; label: string; width: string; hint?: string }>
 }
 
 const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
@@ -42,8 +42,7 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
 
   const addRow = useCallback(() => {
     if (data.length < maxRows) {
-      const newRow: any = { time: getCurrentTime() }
-      onChange([...data, newRow])
+      onChange([...data, {}])
     }
   }, [data, onChange, maxRows])
 
@@ -53,19 +52,15 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
     onChange(newData.length > 0 ? newData : [{}])
   }, [data, onChange])
 
-  const addCurrentTime = useCallback((rowIndex: number) => {
-    handleCellChange(rowIndex, 'time', getCurrentTime())
-  }, [handleCellChange])
-
   const defaultColumns = [
-    { key: 'time', label: 'Time', width: 'w-24' },
-    { key: 'pulse', label: 'Pulse (rate, rhythm, qual.)', width: 'w-34' },
-    { key: 'resp', label: 'Resp (rate, rhythm, qual.)', width: 'w-34' },
-    { key: 'spo2', label: 'SpO2 (%)', width: 'w-24' },
-    { key: 'bp', label: 'B/P', width: 'w-24' },
-    { key: 'loc', label: 'LOC, GCS', width: 'w-32' },
-    { key: 'skin', label: 'Skin, Temp', width: 'w-32' },
-    { key: 'pupils', label: 'Pupils', width: 'w-28' },
+    { key: 'time', label: 'Time', width: 'w-24', hint: 'HH:MM' },
+    { key: 'pulse', label: 'HR', width: 'w-32', hint: 'rate, rhythm, quality' },
+    { key: 'resp', label: 'RR', width: 'w-32', hint: 'rate, rhythm, quality' },
+    { key: 'spo2', label: 'SpO2', width: 'w-24', hint: '0-100%' },
+    { key: 'bp', label: 'B/P', width: 'w-28', hint: 'SYS/DIA or SYS/PALP' },
+    { key: 'loc', label: 'LOC, GCS', width: 'w-32', hint: 'A&O x(1-3) or GCS 3-15' },
+    { key: 'skin', label: 'Skin', width: 'w-36', hint: 'XX°C, color, temp, moisture' },
+    { key: 'pupils', label: 'Pupils', width: 'w-32', hint: 'PERRLA?, X mm' },
   ]
 
   const columns = customColumns || defaultColumns
@@ -146,9 +141,9 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
                   className={cn('text-center font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 px-3 py-2 border border-gray-200 dark:border-gray-600', column.width)}
                 >
                   {column.label}
-                  {column.key === 'time' && (
+                  {column.hint && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 font-normal mt-1">
-                      (24hr)
+                      {column.hint}
                     </div>
                   )}
                 </th>
@@ -169,18 +164,7 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
                 ))}
                 <td className="px-2 py-1 text-center border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
                   <div className="flex items-center justify-center space-x-1">
-                    <Tooltip content="Add current time">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => addCurrentTime(rowIndex)}
-                        className="p-1 h-6 w-6"
-                      >
-                        <Clock className="w-3 h-3" />
-                      </Button>
-                    </Tooltip>
-                    {rowIndex < data.length && data[rowIndex] && Object.values(data[rowIndex]).some(v => v) && data.length > 1 && (
+                    {data.length > 1 && (
                       <Tooltip content="Remove row">
                         <Button
                           type="button"
@@ -202,8 +186,9 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
       </div>
 
       <div className="text-sm text-gray-500 dark:text-gray-400">
-        <p>Click on any cell to edit. Press Enter to save changes.</p>
         <p>Use 24-hour format for time entries (e.g., 14:30 for 2:30 PM).</p>
+        <p>If value was not obtained, enter DNO or UTO based on case and explain in comments.</p>
+        <p>Click on any cell to edit. Press Enter to save changes.</p>
       </div>
     </div>
   )

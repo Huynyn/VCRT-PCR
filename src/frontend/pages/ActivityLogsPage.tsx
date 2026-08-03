@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { History, Filter, Calendar, User, Activity, RefreshCw, ChevronLeft, ChevronRight, Search } from 'lucide-react'
-import { Button, Loading, Alert } from '@/components/ui'
-import { Input, Select } from '@/components/forms'
+import { History, Filter, Calendar, User, Activity, RefreshCw, ChevronLeft, ChevronRight, Search, Trash2 } from 'lucide-react'
+import { Button, Loading, Alert, Modal } from '@/components/ui'
+import { Select, DatePicker } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
+import { useNotification } from '@/context/NotificationContext'
 import { apiRequest } from '@/utils/api'
 import { parseServerDate } from '@/utils'
 import type { ActivityLog, PaginatedResponse } from '@/types'
@@ -18,6 +19,7 @@ interface LogFilters {
 
 const ActivityLogsPage = () => {
   const { token, isAuthenticated, user: currentUser } = useAuth()
+  const { showNotification } = useNotification()
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -32,6 +34,8 @@ const ActivityLogsPage = () => {
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const [showCleanModal, setShowCleanModal] = useState(false)
+  const [cleaning, setCleaning] = useState(false)
   const [usernameOptions, setUsernameOptions] = useState<{ value: string; label: string }[]>([
     { value: '', label: 'All Users' },
   ])
@@ -115,6 +119,26 @@ const ActivityLogsPage = () => {
     fetchLogs()
   }
 
+  const handleCleanLogs = async () => {
+    try {
+      setCleaning(true)
+      const res = await apiRequest('/logs/cleanup', { method: 'DELETE' })
+      const deletedCount = res.data?.deletedCount ?? 0
+      showNotification(
+        deletedCount > 0
+          ? `Deleted ${deletedCount} log${deletedCount === 1 ? '' : 's'} older than 1 week`
+          : 'No logs older than 1 week to delete',
+        'success'
+      )
+      setShowCleanModal(false)
+      fetchLogs()
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Failed to clean up logs', 'error')
+    } finally {
+      setCleaning(false)
+    }
+  }
+
   const handlePageChange = (newPage: number) => {
     setFilters(prev => ({ ...prev, page: newPage }))
   }
@@ -164,6 +188,7 @@ const ActivityLogsPage = () => {
       manual_cleanup: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
       update_setting: 'bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-200',
       cleanup_pcr_reports: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-200',
+      cleanup_activity_logs: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-200',
     }
     return colors[action] || 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
   }
@@ -230,14 +255,23 @@ const ActivityLogsPage = () => {
               </p>
             )}
           </div>
-          <Button
-            leftIcon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
-            onClick={handleRefresh}
-            disabled={refreshing}
-            variant="secondary"
-          >
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              onClick={() => setShowCleanModal(true)}
+              variant="secondary"
+            >
+              Clean
+            </Button>
+            <Button
+              leftIcon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
+              onClick={handleRefresh}
+              disabled={refreshing}
+              variant="secondary"
+            >
+              Refresh
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -277,6 +311,7 @@ const ActivityLogsPage = () => {
                 { value: 'update_setting', label: 'Update Setting' },
                 { value: 'manual_cleanup', label: 'Manual Cleanup' },
                 { value: 'cleanup_pcr_reports', label: 'Automatic Cleanup' },
+                { value: 'cleanup_activity_logs', label: 'Clean Activity Logs' },
               ]}
             />
 
@@ -287,16 +322,14 @@ const ActivityLogsPage = () => {
               options={usernameOptions}
             />
 
-            <Input
+            <DatePicker
               label="Date From"
-              type="date"
               value={filters.dateFrom}
               onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
             />
 
-            <Input
+            <DatePicker
               label="Date To"
-              type="date"
               value={filters.dateTo}
               onChange={(e) => handleFilterChange('dateTo', e.target.value)}
             />
@@ -435,6 +468,28 @@ const ActivityLogsPage = () => {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={showCleanModal}
+        onClose={() => setShowCleanModal(false)}
+        title="Clean Up Activity Logs"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            This will permanently delete all activity logs older than 1 week. This cannot be undone.
+            Are you sure you want to continue?
+          </p>
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button variant="secondary" onClick={() => setShowCleanModal(false)} disabled={cleaning}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleCleanLogs} loading={cleaning} disabled={cleaning}>
+              Delete Old Logs
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

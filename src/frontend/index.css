@@ -103,6 +103,14 @@
     @apply form-input pr-10 cursor-pointer;
   }
 
+  /* Hide the browser's own date-picker icon so only our custom Calendar icon
+     (see DatePicker.tsx, which opens the picker itself via showPicker()) shows -
+     without this, date inputs show two icons. Opacity only (not display/appearance:
+     none) so this stays purely visual and doesn't disable anything. */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0;
+  }
+
   .form-checkbox,
   .form-radio {
     @apply h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600;

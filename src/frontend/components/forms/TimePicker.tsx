@@ -102,7 +102,7 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
           id={inputId}
           placeholder={format24 ? 'HH:MM (24hr)' : 'HH:MM'}
           className={cn(
-            'form-input pr-20',
+            'form-input pr-10',
             finalError && 'form-input-error',
             className
           )}
@@ -117,19 +117,15 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
           {...props}
         />
         
-        <div className="absolute inset-y-0 right-0 flex items-center">
-          <button
-            type="button"
-            onClick={setCurrentTime}
-            className="px-2 py-1 text-xs text-primary-600 hover:text-primary-700 focus:outline-none focus:ring-1 focus:ring-primary-500 rounded mr-1"
-            title="Set current time"
-          >
-            Now
-          </button>
-          <div className="pr-3 flex items-center pointer-events-none">
-            <Clock className="w-4 h-4 text-gray-400" />
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={setCurrentTime}
+          tabIndex={-1}
+          aria-label="Set current time"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-primary-600 focus:text-primary-600 focus:outline-none focus:ring-0 focus:ring-offset-0"
+        >
+          <Clock className="w-4 h-4" />
+        </button>
       </div>
       
       {finalError && (

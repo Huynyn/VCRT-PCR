@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react'
+import React, { forwardRef, useRef } from 'react'
 import { Calendar } from 'lucide-react'
 import { cn } from '@/utils'
 
@@ -17,6 +17,19 @@ const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
   ...props
 }, ref) => {
   const inputId = props.id || `date-${Math.random().toString(36).substr(2, 9)}`
+  const internalRef = useRef<HTMLInputElement | null>(null)
+
+  const setRefs = (el: HTMLInputElement | null) => {
+    internalRef.current = el
+    if (typeof ref === 'function') ref(el)
+    else if (ref) (ref as React.MutableRefObject<HTMLInputElement | null>).current = el
+  }
+
+  const openPicker = () => {
+    // showPicker() is the standard way to open a native date picker
+    // programmatically (Chromium/Electron, and modern Firefox/Safari).
+    internalRef.current?.showPicker?.()
+  }
 
   return (
     <div className="space-y-1">
@@ -28,10 +41,10 @@ const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
           {label}
         </label>
       )}
-      
+
       <div className="relative">
         <input
-          ref={ref}
+          ref={setRefs}
           type="date"
           id={inputId}
           className={cn(
@@ -46,10 +59,16 @@ const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
           required={required}
           {...props}
         />
-        
-        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-          <Calendar className="w-4 h-4 text-gray-400" />
-        </div>
+
+        <button
+          type="button"
+          onClick={openPicker}
+          tabIndex={-1}
+          aria-label="Open calendar"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-primary-600 focus:text-primary-600 focus:outline-none focus:ring-0 focus:ring-offset-0"
+        >
+          <Calendar className="w-4 h-4" />
+        </button>
       </div>
       
       {error && (

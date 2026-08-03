@@ -1,9 +1,25 @@
 import { Router } from 'express'
 import { authenticateToken, requireRole, AuthenticatedRequest } from '../middleware/auth'
+import { logActivity } from '../middleware/logger'
 import db from '../database'
 import { ActivityLog, PaginatedResponse } from '../../../shared/types'
 
 const router = Router()
+
+// DELETE /api/logs/cleanup - Manually delete activity logs older than 1 week (admin only)
+router.delete('/cleanup', authenticateToken, requireRole(['admin']), logActivity('cleanup_activity_logs', 'activity_logs'), (req: AuthenticatedRequest, res) => {
+  try {
+    const result = db.prepare(`
+      DELETE FROM activity_logs
+      WHERE datetime(created_at) < datetime('now', '-7 days')
+    `).run()
+
+    res.json({ success: true, data: { deletedCount: result.changes } })
+  } catch (error) {
+    console.error('Error cleaning up activity logs:', error)
+    res.status(500).json({ success: false, message: 'Failed to clean up activity logs' })
+  }
+})
 
 router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRequest, res) => {
   try {

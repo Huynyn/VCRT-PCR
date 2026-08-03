@@ -46,6 +46,9 @@ export interface MedicalHistory {
 export interface TreatmentPerformed {
   airwayManagement?: string[];
   airwayManagementOther?: string;
+  cprAedPerformed?: boolean;
+  cprPerformed?: boolean;
+  aedPerformed?: boolean;
   timeStarted?: string;
   numberOfCycles?: string;
   numberOfShocks?: string;
