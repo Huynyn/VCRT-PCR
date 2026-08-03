@@ -76,6 +76,24 @@ export function formatDate(date: Date): string {
   return date.toISOString().split('T')[0]
 }
 
+/**
+ * Parses a timestamp coming from the backend (SQLite's CURRENT_TIMESTAMP,
+ * e.g. "2026-08-03 18:32:10") as UTC.
+ *
+ * SQLite stores these as UTC but with no timezone marker, and `new Date(...)`
+ * parses that ambiguous format as *local* time rather than UTC - silently
+ * shifting every displayed timestamp by the viewer's own UTC offset. Marking
+ * it explicitly as UTC here makes `.toLocaleString()`/`.toLocaleDateString()`
+ * (called with no `timeZone` override) correctly convert it to the viewer's
+ * real local time, the same as any other `Date`.
+ */
+export function parseServerDate(dateString: string): Date {
+  if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
+    return new Date(dateString)
+  }
+  return new Date(`${dateString.replace(' ', 'T')}Z`)
+}
+
 export function getCurrentTime(): string {
   const now = new Date()
   return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`

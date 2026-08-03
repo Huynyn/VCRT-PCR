@@ -3,6 +3,7 @@ import { Loading, Alert } from '@/components/ui'
 import { pdfService } from '@/services/pdf.service'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
+import { parseServerDate } from '@/utils'
 
 interface PCRReport {
   id: string
@@ -139,8 +140,7 @@ const ReportsPage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-CA', {
-      timeZone: 'Etc/GMT+10',
+    return parseServerDate(dateString).toLocaleDateString('en-CA', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -150,7 +150,7 @@ const ReportsPage = () => {
   }
 
   const formatFallbackId = (dateString: string) => {
-    const date = new Date(new Date(dateString).toLocaleString('en-CA', { timeZone: 'Etc/GMT+10' }))
+    const date = parseServerDate(dateString)
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
@@ -297,20 +297,29 @@ const ReportsPage = () => {
                               <button
                                 onClick={e => {
                                   e.stopPropagation()
-                                  handleEditDraft(report.id)
+                                  handleViewReport(report.id)
                                 }}
                                 className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                               >
-                                Edit Draft
+                                Preview PDF
                               </button>
                               <button
                                 onClick={e => {
                                   e.stopPropagation()
-                                  handleViewReport(report.id)
+                                  handleEditDraft(report.id)
                                 }}
-                                className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 font-medium"
+                                className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
                               >
-                                Preview
+                                Edit
+                              </button>
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  handleEditDraft(report.id)
+                                }}
+                                className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
+                              >
+                                Submit
                               </button>
                             </>
                           ) : (
@@ -320,21 +329,10 @@ const ReportsPage = () => {
                                   e.stopPropagation()
                                   handleViewReport(report.id)
                                 }}
-                                className="text-blue-600 hover:text-blue-900 font-medium"
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                               >
                                 View PDF
                               </button>
-                              {isAdmin && report.status === 'submitted' && (
-                                <button
-                                  onClick={e => {
-                                    e.stopPropagation()
-                                    handleApproveReport(report.id)
-                                  }}
-                                  className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
-                                >
-                                  Approve
-                                </button>
-                              )}
                               {isAdmin && (
                                 <button
                                   onClick={e => {
@@ -344,6 +342,17 @@ const ReportsPage = () => {
                                   className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
                                 >
                                   Edit
+                                </button>
+                              )}
+                              {isAdmin && report.status === 'submitted' && (
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    handleApproveReport(report.id)
+                                  }}
+                                  className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
+                                >
+                                  Approve
                                 </button>
                               )}
                             </>

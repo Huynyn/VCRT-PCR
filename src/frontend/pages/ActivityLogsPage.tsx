@@ -4,6 +4,7 @@ import { Button, Loading, Alert } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
+import { parseServerDate } from '@/utils'
 import type { ActivityLog, PaginatedResponse } from '@/types'
 
 interface LogFilters {
@@ -134,8 +135,7 @@ const ActivityLogsPage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-CA', {
-      timeZone: 'Etc/GMT+10',
+    return parseServerDate(dateString).toLocaleDateString('en-CA', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -152,11 +152,17 @@ const ActivityLogsPage = () => {
       create_user: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
       update_user: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
       delete_user: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200',
+      change_password: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
+      create_responder: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200',
+      update_responder: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200',
+      delete_responder: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-200',
       create_pcr: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200',
       update_pcr: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
       submit_pcr: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200',
       delete_pcr: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
       approve_pcr: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+      manual_cleanup: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
+      update_setting: 'bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-200',
       cleanup_pcr_reports: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-200',
     }
     return colors[action] || 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
@@ -259,11 +265,18 @@ const ActivityLogsPage = () => {
                 { value: 'create_user', label: 'Create User' },
                 { value: 'update_user', label: 'Update User' },
                 { value: 'delete_user', label: 'Delete User' },
+                { value: 'change_password', label: 'Change Password' },
+                { value: 'create_responder', label: 'Create Responder' },
+                { value: 'update_responder', label: 'Update Responder' },
+                { value: 'delete_responder', label: 'Delete Responder' },
                 { value: 'create_pcr', label: 'Create PCR' },
                 { value: 'update_pcr', label: 'Update PCR' },
                 { value: 'submit_pcr', label: 'Submit PCR' },
                 { value: 'delete_pcr', label: 'Delete PCR' },
                 { value: 'approve_pcr', label: 'Approve PCR' },
+                { value: 'update_setting', label: 'Update Setting' },
+                { value: 'manual_cleanup', label: 'Manual Cleanup' },
+                { value: 'cleanup_pcr_reports', label: 'Automatic Cleanup' },
               ]}
             />
 

@@ -4,6 +4,7 @@ import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
+import { parseServerDate } from '@/utils'
 import { RespondersManager } from '@/components/composite'
 import type { User } from '@/types'
 
@@ -301,8 +302,7 @@ const UserManagementPage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-CA', {
-      timeZone: 'Etc/GMT+10',
+    return parseServerDate(dateString).toLocaleDateString('en-CA', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

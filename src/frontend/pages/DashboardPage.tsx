@@ -66,11 +66,6 @@ const DashboardPage = () => {
         </p>
       </div>
 
-      {/* Call Stats */}
-      <div className="mb-6">
-        {user?.role === 'admin' ? <AdminCallStats /> : <UserCallStats />}
-      </div>
-
       {/* Drafts in Progress */}
       {!draftsLoading && drafts.length > 0 && (
         <div className="mb-6">
@@ -127,6 +122,11 @@ const DashboardPage = () => {
           </div>
         </div>
       )}
+
+      {/* Call Stats */}
+      <div className="mb-6">
+        {user?.role === 'admin' ? <AdminCallStats /> : <UserCallStats />}
+      </div>
 
       <SamplePcrSection />
 
