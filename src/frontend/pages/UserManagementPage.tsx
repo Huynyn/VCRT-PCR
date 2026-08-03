@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Plus, UserCog, Shield, User as UserIcon, Edit, Trash2, KeyRound } from 'lucide-react'
 import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
@@ -65,6 +65,17 @@ const UserManagementPage = () => {
     confirmPassword: ''
   })
   const [passwordFormErrors, setPasswordFormErrors] = useState<Partial<PasswordForm>>({})
+
+  // Alphabetical by name, with admin accounts pushed to the bottom (also alphabetical among themselves)
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => {
+      if (a.role === 'admin' && b.role !== 'admin') return 1
+      if (a.role !== 'admin' && b.role === 'admin') return -1
+      const nameA = `${a.firstName} ${a.lastName}`.toLowerCase()
+      const nameB = `${b.firstName} ${b.lastName}`.toLowerCase()
+      return nameA.localeCompare(nameB)
+    })
+  }, [users])
 
   useEffect(() => {
     if (currentUser?.role !== 'admin') {
@@ -417,7 +428,7 @@ const UserManagementPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {users.map((user) => (
+                  {sortedUsers.map((user) => (
                     <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
