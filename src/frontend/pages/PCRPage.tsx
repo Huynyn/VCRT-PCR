@@ -1305,8 +1305,8 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         <FormSection
-          title="Sign-Off Attachment"
-          subtitle="Upload patient sign-off sheet (as a PDF) to append to the report"
+          title="Additional Attachments"
+          subtitle="Upload patient sign-off or other information (as a PDF) to append to the report"
         >
           <div
             className={cn(

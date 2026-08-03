@@ -128,13 +128,13 @@ const DashboardPage = () => {
         {user?.role === 'admin' ? <AdminCallStats /> : <UserCallStats />}
       </div>
 
-      <SamplePcrSection />
-
       {user?.role === 'admin' ? <SupplyFormQrAdmin /> : <SupplyFormQrSection />}
 
-      <DebriefQuestionsSection />
+      <SamplePcrSection />
 
       <MedicalGlossarySection />
+
+      <DebriefQuestionsSection />
     </div>
   )
 }
