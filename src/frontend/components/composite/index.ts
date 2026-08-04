@@ -1,5 +1,5 @@
 export { default as VitalSignsTable } from './VitalSignsTable'
-export { default as InjuryCanvas } from './InjuryCanvas'
+export { default as InjuryLocationMap } from './InjuryLocationMap'
 export { default as OxygenProtocolForm } from './OxygenProtocolForm'
 export { default as RollingBarChart } from './RollingBarChart'
 export { default as CallCalendar } from './CallCalendar'

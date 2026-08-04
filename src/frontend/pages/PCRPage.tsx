@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck } from 'lucide-react'
+import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck, Plus, Trash2 } from 'lucide-react'
 import { Button, Card, Alert, Modal, Tooltip } from '@/components/ui'
 import {
   Input,
@@ -12,14 +12,14 @@ import {
   Textarea,
   FormSection,
 } from '@/components/forms'
-import { VitalSignsTable, InjuryCanvas, OxygenProtocolForm, SearchableSelect } from '@/components/composite'
+import { VitalSignsTable, InjuryLocationMap, OxygenProtocolForm, SearchableSelect } from '@/components/composite'
 import { useForm } from '../context/FormContext'
 import { useNotification } from '../context/NotificationContext'
 import { useAuth } from '../context/AuthContext'
-import { cn, getCurrentTime, formatDate } from '../utils'
+import { cn, getCurrentTime, formatDate, generateId, MARKER_COLORS } from '../utils'
 import { pdfService } from '../services/pdf.service'
 import { apiRequest } from '../utils/api'
-import type { PCRFormData, VitalSign } from '../types'
+import type { PCRFormData, VitalSign, OPQRSTEntry } from '../types'
 
 const PCRPage: React.FC = () => {
   const {
@@ -344,6 +344,24 @@ const PCRPage: React.FC = () => {
     updateField('vitalSigns', vitalSigns)
   }
 
+  const opqrstEntries: OPQRSTEntry[] = data.opqrstEntries || []
+
+  const addOpqrstEntry = () => {
+    if (opqrstEntries.length >= 4) return
+    updateField('opqrstEntries', [...opqrstEntries, { id: generateId() }])
+  }
+
+  const updateOpqrstEntry = (id: string, field: keyof OPQRSTEntry, value: string) => {
+    updateField(
+      'opqrstEntries',
+      opqrstEntries.map((entry: OPQRSTEntry) => (entry.id === id ? { ...entry, [field]: value } : entry))
+    )
+  }
+
+  const removeOpqrstEntry = (id: string) => {
+    updateField('opqrstEntries', opqrstEntries.filter((entry: OPQRSTEntry) => entry.id !== id))
+  }
+
   const calculateAgeFromDOB = (dob: string): number => {
     const birthDate = new Date(dob)
     const today = new Date()
@@ -431,12 +449,18 @@ const PCRPage: React.FC = () => {
       shockNotAdvised: '',
 
       // --- OPQRST (optional) ---
-      onset: 'Acute',
-      provocation: 'Movement worsens',
-      quality: 'Sharp',
-      radiation: 'None',
-      scale: 4 as any,
-      time: '14:20',
+      opqrstEntries: [
+        {
+          id: generateId(),
+          area: 'Right knee',
+          onset: 'Acute',
+          provocation: 'Movement worsens',
+          quality: 'Sharp',
+          radiation: 'None',
+          scale: '4',
+          time: '14:20',
+        },
+      ],
 
       // --- Medical History (all these textareas were set with requireUnknown) ---
       chiefComplaint: 'Injured knee',
@@ -513,7 +537,7 @@ const PCRPage: React.FC = () => {
                 ? 'Edit Patient Care Report Draft'
                 : 'Patient Care Report'}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             {isLoadingDraft
               ? 'Loading...'
               : currentReportId &&
@@ -522,12 +546,12 @@ const PCRPage: React.FC = () => {
                 ? 'Editing submitted report as admin - changes will update the existing report'
                 : currentDraftId
                   ? 'Editing existing draft - complete and submit when ready'
-                  : 'Complete all required fields to submit the report'}
+                  : 'Complete fields to submit the report'}
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
-          {/* Test buttons for development */}
+          {/* Test button for development */}
           <Button type="button" variant="outline" size="sm" onClick={fillSampleData}>
             Fill Sample Data
           </Button>
@@ -1137,60 +1161,123 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* OPQRST Assessment */}
-        <FormSection title="OPQRST Assessment" subtitle="If more than one location, number in comments and on diagram and separate with semicolons,
-          e.g. (1) Headache; (2) Left Arm Pain">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Input
-              label="Onset"
-              value={data.onset || ''}
-              onChange={e => updateField('onset', e.target.value)}
-              placeholder="Acute/chronic"
-            />
-
-            <Input
-              label="Provocation"
-              value={data.provocation || ''}
-              onChange={e => updateField('provocation', e.target.value)}
-              placeholder="What makes it better/worse?"
-            />
-
-            <Input
-              label="Quality"
-              value={data.quality || ''}
-              onChange={e => updateField('quality', e.target.value)}
-              placeholder="How does it feel?"
-            />
+        <FormSection title="OPQRST Assessment" subtitle="Add a section for each reported pain/injury location - its number and color are mirrored on the body diagram below">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {opqrstEntries.length === 0
+                ? 'No OPQRST sections added yet.'
+                : `${opqrstEntries.length} of 4 section${opqrstEntries.length === 1 ? '' : 's'} added.`}
+            </p>
+            {opqrstEntries.length < 4 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addOpqrstEntry}
+                leftIcon={<Plus className="w-4 h-4" />}
+              >
+                Add OPQRST Section
+              </Button>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Input
-              label="Radiation"
-              value={data.radiation || ''}
-              onChange={e => updateField('radiation', e.target.value)}
-              placeholder="Where does it radiate?"
-            />
+          {opqrstEntries.map((entry, index) => {
+            const color = MARKER_COLORS[index]?.hex || MARKER_COLORS[0].hex
+            return (
+              <Card key={entry.id}>
+                <Card.Header>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="flex items-center justify-center w-7 h-7 rounded-full border-2 text-sm font-bold"
+                        style={{ borderColor: color, color }}
+                      >
+                        {index + 1}
+                      </span>
+                      <h4 className="font-medium text-gray-700 dark:text-gray-300">
+                        OPQRST #{index + 1}
+                      </h4>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeOpqrstEntry(entry.id)}
+                      className="text-emergency-500 hover:text-emergency-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </Card.Header>
+                <Card.Body>
+                  <Input
+                    label="Area / Location"
+                    value={entry.area || ''}
+                    onChange={e => updateOpqrstEntry(entry.id, 'area', e.target.value)}
+                    placeholder="e.g. Left knee, Chest, Lower back"
+                    className="mb-4"
+                  />
 
-            <Input
-              label="Scale (1-10)"
-              value={data.scale || ''}
-              onChange={e => updateField('scale', e.target.value)}
-              placeholder="Pain scale"
-            />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Input
+                      label="Onset"
+                      value={entry.onset || ''}
+                      onChange={e => updateOpqrstEntry(entry.id, 'onset', e.target.value)}
+                      placeholder="Acute/chronic"
+                    />
 
-            <Input
-              label="Time"
-              value={data.time || ''}
-              onChange={e => updateField('time', e.target.value)}
-              placeholder="What time did it occur?"
-            />
-          </div>
+                    <Input
+                      label="Provocation"
+                      value={entry.provocation || ''}
+                      onChange={e => updateOpqrstEntry(entry.id, 'provocation', e.target.value)}
+                      placeholder="What makes it better/worse?"
+                    />
+
+                    <Input
+                      label="Quality"
+                      value={entry.quality || ''}
+                      onChange={e => updateOpqrstEntry(entry.id, 'quality', e.target.value)}
+                      placeholder="How does it feel?"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                    <Input
+                      label="Radiation"
+                      value={entry.radiation || ''}
+                      onChange={e => updateOpqrstEntry(entry.id, 'radiation', e.target.value)}
+                      placeholder="Where does it radiate?"
+                    />
+
+                    <Input
+                      label="Scale (1-10)"
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={entry.scale || ''}
+                      onChange={e => updateOpqrstEntry(entry.id, 'scale', e.target.value)}
+                      placeholder="Pain scale"
+                    />
+
+                    <Input
+                      label="Time"
+                      value={entry.time || ''}
+                      onChange={e => updateOpqrstEntry(entry.id, 'time', e.target.value)}
+                      placeholder="What time did it occur?"
+                    />
+                  </div>
+                </Card.Body>
+              </Card>
+            )
+          })}
         </FormSection>
 
         {/* Injury Location */}
-        <FormSection title="Injury Location" subtitle="Mark injury locations on body diagram (number if needed)">
-          <InjuryCanvas
-            value={data.injuryCanvas}
-            onChange={value => updateField('injuryCanvas', value)}
+        <FormSection title="Injury Location" subtitle="Mark injury locations on the front/back body diagram - matching numbers/colors link back to the OPQRST sections above">
+          <InjuryLocationMap
+            value={data.injuryMarkers}
+            onChange={value => updateField('injuryMarkers', value)}
+            opqrstCount={opqrstEntries.length}
           />
         </FormSection>
 

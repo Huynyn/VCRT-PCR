@@ -5,6 +5,7 @@ import jsPDF from 'jspdf'
 import type { PCRFormData, VitalSign } from '@/types'
 import { OxygenProtocol } from '../types'
 import { PDFDocument } from 'pdf-lib'
+import { MARKER_COLORS } from '@/utils'
 
 interface PDFOptions {
   includeImages?: boolean
@@ -157,6 +158,11 @@ function renderMultilineBlock(
   return y + 1
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  const clean = hex.replace('#', '')
+  const num = parseInt(clean, 16)
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255]
+}
 
 export class PDFService {
   private defaultOptions: Required<PDFOptions> = {
@@ -223,9 +229,9 @@ export class PDFService {
       // Assessment
       yPosition = this.addAssessment(pdf, data, opts, yPosition, contentWidth, newPage)
 
-      // Injury Canvas (if available and enabled)
-      if (opts.includeImages && data.injuryCanvas) {
-        yPosition = await this.addInjuryCanvas(pdf, data.injuryCanvas, opts, yPosition, contentWidth, data, newPage)
+      // Injury Location / OPQRST (if available and enabled)
+      if (opts.includeImages && (data.injuryMarkers || (data.opqrstEntries && data.opqrstEntries.length > 0))) {
+        yPosition = await this.addInjuryLocation(pdf, data.injuryMarkers || '', opts, yPosition, contentWidth, data, newPage)
       }
 
       // Vital Signs
@@ -844,11 +850,25 @@ private addPageWithHeader(
   }
 
   /**
-   * Add injury canvas drawing
+   * Load an image data URL just to read its natural pixel dimensions, so the
+   * injury diagram snapshot (whose aspect ratio isn't fixed) isn't stretched.
    */
-  private async addInjuryCanvas(
+  private getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
+      img.onerror = reject
+      img.src = dataUrl
+    })
+  }
+
+  /**
+   * Add the injury location diagram (front/back body with markers) together
+   * with the OPQRST assessment section(s) that share their numbering/color.
+   */
+  private async addInjuryLocation(
     pdf: jsPDF,
-    canvasData: string,
+    markersData: string,
     options: Required<PDFOptions>,
     yPosition: number,
     contentWidth: number,
@@ -867,70 +887,96 @@ private addPageWithHeader(
       yPosition += 6
 
       pdf.setFont('helvetica', 'bold')
-      pdf.text('Pain Assessment:', options.margins.left, yPosition)
+      pdf.text('Pain Assessment / Injury Location:', options.margins.left, yPosition)
 
-      // Extract image data from canvas data
-      let imageDataUrl = canvasData
-      
+      // Extract the rendered body-diagram snapshot, if any
+      let imageDataUrl = ''
       try {
-        const parsedCanvasData = JSON.parse(canvasData)
-        if (parsedCanvasData.imageData) {
-          // New format with both fabric data and image data
-          imageDataUrl = parsedCanvasData.imageData
-        }
-        // If no imageData property, fall back to assuming it's already an image data URL
-      } catch (parseError) {
-        // If parsing fails, assume canvasData is already an image data URL
-        console.log('Canvas data is not JSON, assuming it\'s an image data URL')
+        const parsed = JSON.parse(markersData)
+        if (parsed?.imageData) imageDataUrl = parsed.imageData
+      } catch {
+        // No markers recorded - imageDataUrl stays empty and is skipped below
       }
 
       // Two-column layout (left: text, right: image)
       const columnGap = 8
       const leftColWidth = (contentWidth - columnGap) / 2
       const imgWidth = (contentWidth - columnGap) / 2
-      const imgHeight = imgWidth * 0.4 // Maintain your chosen aspect ratio
-      const blockNeed = Math.max(imgHeight, 40) // or something based on your left text minimum
+
+      let imgHeight = imgWidth * 0.94
+      if (imageDataUrl) {
+        try {
+          const dims = await this.getImageDimensions(imageDataUrl)
+          if (dims.width && dims.height) {
+            imgHeight = imgWidth * (dims.height / dims.width)
+          }
+        } catch {
+          // Keep the default aspect ratio if the snapshot can't be measured
+        }
+      }
+
+      const blockNeed = Math.max(imageDataUrl ? imgHeight : 0, 40)
       yPosition = ensureSpaceFor(pdf, options, yPosition, blockNeed, newPage)
       const startY = yPosition
 
-      // --- Draw image on the RIGHT half ---
+      // --- Draw the body diagram snapshot on the RIGHT half ---
       const rightX = options.margins.left + leftColWidth + columnGap
-      pdf.addImage(
-        imageDataUrl,
-        'PNG',
-        rightX,
-        startY,
-        imgWidth,
-        imgHeight
-      )
+      if (imageDataUrl) {
+        pdf.addImage(imageDataUrl, 'PNG', rightX, startY, imgWidth, imgHeight)
+      }
 
-      // --- Render OPQRST on the LEFT half ---
-      let yText = startY
-      yText += 6
-      yText = renderMultilineBlock(
-        pdf, 'Onset:', data.onset || '', yText, options, leftColWidth, newPage
-      )
-      yText = renderMultilineBlock(
-        pdf, 'Provocation:', data.provocation || '', yText, options, leftColWidth, newPage
-      )
-      yText = renderMultilineBlock(
-        pdf, 'Quality:', data.quality || '', yText, options, leftColWidth, newPage
-      )
-      yText = renderMultilineBlock(
-        pdf, 'Radiation:', data.radiation || '', yText, options, leftColWidth, newPage
-      )
-      yText = renderFieldsRow(
-        pdf, [{ label: 'Scale:', value: data.scale || '' }], [4], yText, options, leftColWidth, newPage
-      )
-      yText = renderFieldsRow(
-        pdf, [{ label: 'Time:', value: data.time || '' }], [4], yText, options, leftColWidth, newPage
-      )
+      // --- Render each OPQRST section on the LEFT half, numbered/colored to match its marker ---
+      const opqrstEntries = data.opqrstEntries || []
+      let yText = startY + 6
+
+      if (opqrstEntries.length === 0) {
+        pdf.setFont('helvetica', 'italic')
+        pdf.setFontSize(8)
+        pdf.text('No OPQRST sections recorded.', options.margins.left, yText)
+        pdf.setFont('helvetica', 'normal')
+        yText += 5
+      }
+
+      opqrstEntries.forEach((entry, index) => {
+        const marker = MARKER_COLORS[index] || MARKER_COLORS[0]
+        yText = ensureSpaceFor(pdf, options, yText, 8, newPage)
+
+        const [r, g, b] = hexToRgb(marker.hex)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(r, g, b)
+        pdf.text(`OPQRST #${index + 1} (${marker.name})`, options.margins.left, yText)
+        pdf.setTextColor(0, 0, 0)
+        yText += 5
+
+        yText = renderMultilineBlock(
+          pdf, 'Area:', entry.area || '', yText, options, leftColWidth, newPage
+        )
+        yText = renderMultilineBlock(
+          pdf, 'Onset:', entry.onset || '', yText, options, leftColWidth, newPage
+        )
+        yText = renderMultilineBlock(
+          pdf, 'Provocation:', entry.provocation || '', yText, options, leftColWidth, newPage
+        )
+        yText = renderMultilineBlock(
+          pdf, 'Quality:', entry.quality || '', yText, options, leftColWidth, newPage
+        )
+        yText = renderMultilineBlock(
+          pdf, 'Radiation:', entry.radiation || '', yText, options, leftColWidth, newPage
+        )
+        yText = renderFieldsRow(
+          pdf, [{ label: 'Scale:', value: entry.scale || '' }], [4], yText, options, leftColWidth, newPage
+        )
+        yText = renderFieldsRow(
+          pdf, [{ label: 'Time:', value: entry.time || '' }], [4], yText, options, leftColWidth, newPage
+        )
+        yText += 3
+      })
 
       // Advance Y by the taller of image vs text, plus a small spacer
       const textHeight = yText - startY
-      return startY + Math.max(imgHeight, textHeight) + 5
+      return startY + Math.max(imageDataUrl ? imgHeight : 0, textHeight) + 5
     } catch (error) {
-      console.error('Failed to add injury canvas:', error)
+      console.error('Failed to add injury location:', error)
       return yPosition
     }
   }

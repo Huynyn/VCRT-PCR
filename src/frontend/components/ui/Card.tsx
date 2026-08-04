@@ -16,9 +16,15 @@ interface CardBodyProps extends CardProps {}
 
 interface CardFooterProps extends CardProps {}
 
-const Card: React.FC<CardProps> = ({ children, className }) => {
-  return <div className={cn('card', className)}>{children}</div>
+interface CardComponent extends React.FC<CardProps> {
+  Header: React.FC<CardHeaderProps>
+  Body: React.FC<CardBodyProps>
+  Footer: React.FC<CardFooterProps>
 }
+
+const Card = (({ children, className }) => {
+  return <div className={cn('card', className)}>{children}</div>
+}) as CardComponent
 
 const CardHeader: React.FC<CardHeaderProps> = ({ 
   children, 

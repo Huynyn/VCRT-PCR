@@ -170,7 +170,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Footer */}
           <div className="flex-shrink-0 px-4 py-4 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400">PCR v1.1</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">PCR v2.1</p>
             <p className="text-xs text-gray-400 dark:text-gray-500">Documentation System</p>
           </div>
         </div>

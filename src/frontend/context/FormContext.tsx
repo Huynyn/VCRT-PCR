@@ -25,6 +25,7 @@ const initialState: FormState = {
     airwayManagement: [],
     hemorrhageControl: [],
     immobilization: [],
+    opqrstEntries: [],
     oxygenProtocol: {
       reasonForO2Therapy: [],
     },
@@ -76,7 +77,6 @@ const validationSchema: Record<string, [(value: any) => boolean, string][]> = {
 
   // Numbers
   age: [[(v: any) => v === '' || v === undefined || (+v >= 0 && +v <= 150), 'Please enter a valid age']],
-  scale: [[(v: any) => v === '' || v === undefined || (+v >= 1 && +v <= 10), 'Scale must be between 1-10']],
 
   // Composite: either age or dob must exist
   ageOrDob: [[

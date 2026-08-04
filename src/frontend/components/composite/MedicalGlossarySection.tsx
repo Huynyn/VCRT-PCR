@@ -226,7 +226,7 @@ const MedicalGlossarySection: React.FC = () => {
   }
 
   return (
-    <div className="mt-2">
+    <div className="mt-2 mb-6">
       <div className="card">
         <div className="card-header">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">

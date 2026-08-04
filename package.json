@@ -1,7 +1,7 @@
 {
   "name": "pcr-application",
   "version": "1.0.0",
-  "description": "Modern Patient Care Report web application built with React and TypeScript",
+  "description": "Local-first patient care report application for emergency response workflows",
   "main": "dist/electron/main.js",
   "scripts": {
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
@@ -39,7 +39,7 @@
     "react",
     "typescript"
   ],
-  "author": "Your Name",
+  "author": "VCRT",
   "license": "MIT",
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",

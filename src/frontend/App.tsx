@@ -35,7 +35,7 @@ const AppContent: React.FC = () => {
   const location = useLocation()
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('pcr_theme')
-    return saved ? saved === 'dark' : false
+    return saved ? saved === 'dark' : true
   })
   const [currentPath, setCurrentPath] = useState(location.pathname)
 

@@ -60,13 +60,29 @@ export interface TreatmentPerformed {
   positionOfPatient: string;
 }
 
-export interface OPQRSTAssessment {
+export interface OPQRSTEntry {
+  id: string;
+  area?: string;
   onset?: string;
   provocation?: string;
   quality?: string;
   radiation?: string;
-  scale?: number;
+  scale?: string;
   time?: string;
+}
+
+export interface OPQRSTAssessment {
+  opqrstEntries?: OPQRSTEntry[];
+}
+
+// Marker placed on the injury location body diagram
+export interface InjuryMarker {
+  id: string;
+  view: 'front' | 'back';
+  x: number; // 0-100, percentage of body panel width
+  y: number; // 0-100, percentage of body panel height
+  size: number; // circle radius in svg units
+  number: number; // 1-4, corresponds to an OPQRST entry / color
 }
 
 export interface VitalSign {
@@ -114,7 +130,7 @@ export interface AdditionalInformation {
 }
 
 export interface PCRFormData extends BasicInformation, PatientInformation, MedicalHistory, TreatmentPerformed, OPQRSTAssessment, AdditionalInformation {
-  injuryCanvas?: string;
+  injuryMarkers?: string;
   vitalSigns: VitalSign[];
   vitalSigns2: VitalSigns2[];
   oxygenProtocol?: OxygenProtocol;
