@@ -248,7 +248,7 @@ export class PDFService {
       yPosition = this.addTransportInformation(pdf, data, opts, yPosition, contentWidth, newPage)
 
       // Signatures and Footer
-      yPosition = this.addSignaturesAndFooter(pdf, data, opts, yPosition, newPage)
+      yPosition = await this.addSignaturesAndFooter(pdf, data, opts, yPosition, newPage)
 
       // NEW: append sign-off PDF
       // Generate blob
@@ -1475,18 +1475,52 @@ private addPageWithHeader(
     return yPosition + 4
   }
 
-    /**
+  /**
+   * The SignaturePad saves whatever was actually on screen - current theme's
+   * ink color, transparent background - so it redraws faithfully if the
+   * widget remounts. The PDF has no theme, so normalize independently here:
+   * recolor every drawn pixel to a fixed dark ink (keeping each pixel's
+   * original alpha for smooth anti-aliased edges) and fill the transparent
+   * gaps with solid white.
+   */
+  private normalizeSignatureImage(dataUrl: string): Promise<string> {
+    return new Promise(resolve => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          resolve(dataUrl)
+          return
+        }
+        ctx.drawImage(img, 0, 0)
+        ctx.globalCompositeOperation = 'source-in'
+        ctx.fillStyle = '#111827'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.globalCompositeOperation = 'destination-over'
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/png'))
+      }
+      img.onerror = () => resolve(dataUrl)
+      img.src = dataUrl
+    })
+  }
+
+  /**
    * E-signature strip pinned to the very bottom of the page: always 4 even
    * columns (Supervisor, Responder 1-3), even for responder slots that
    * weren't used on this call - unused/unsigned columns are left blank.
    */
-  private addSignaturesAndFooter(
+  private async addSignaturesAndFooter(
     pdf: jsPDF,
     data: PCRFormData,
     options: Required<PDFOptions>,
     yPosition: number,
     newPage: NewPageFn
-  ): number {
+  ): Promise<number> {
     const pageW = pdf.internal.pageSize.getWidth()
     const pageH = pdf.internal.pageSize.getHeight()
 
@@ -1516,6 +1550,10 @@ private addPageWithHeader(
       { label: 'Responder 2', name: data.responder2 || '', image: data.signatures?.responder2 },
       { label: 'Responder 3', name: data.responder3 || '', image: data.signatures?.responder3 },
     ]
+
+    const normalizedImages = await Promise.all(
+      columns.map(col => (col.image ? this.normalizeSignatureImage(col.image) : Promise.resolve(undefined)))
+    )
 
     const colW = contentW / columns.length
     const imageH = 15
@@ -1547,10 +1585,11 @@ private addPageWithHeader(
       const nameLabel = `${col.label}: ${col.name}`
       pdf.text(pdf.splitTextToSize(nameLabel, colW - 6), colCenterX, labelY, { align: 'center' })
 
-      if (col.image) {
+      const normalizedImage = normalizedImages[i]
+      if (normalizedImage) {
         try {
           const imgW = colW - 10
-          pdf.addImage(col.image, 'PNG', colX0 + 5, imageY, imgW, imageH, undefined, 'FAST')
+          pdf.addImage(normalizedImage, 'PNG', colX0 + 5, imageY, imgW, imageH, undefined, 'FAST')
         } catch {
           // Corrupt/unsupported signature image data - leave the line blank below
         }

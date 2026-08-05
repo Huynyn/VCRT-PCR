@@ -10,6 +10,24 @@ interface SignaturePadProps {
 }
 
 const CANVAS_HEIGHT = 130
+const INK_COLOR = '#111827'
+const INK_COLOR_DARK_MODE = '#e5e7eb'
+
+const isDarkMode = () => document.documentElement.classList.contains('dark')
+
+// Recolors whatever is already drawn to `color`, in place, regardless of what
+// color it was before - only each pixel's alpha (its stroke shape/edges) is
+// kept, so this works no matter which theme the ink was originally drawn in.
+const recolorInk = (canvas: HTMLCanvasElement, color: string) => {
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.save()
+  ctx.setTransform(1, 0, 0, 1, 0, 0) // ignore the devicePixelRatio scale - fill the whole real bitmap
+  ctx.globalCompositeOperation = 'source-in'
+  ctx.fillStyle = color
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.restore()
+}
 
 const SignaturePad: React.FC<SignaturePadProps> = ({ value, onChange, className }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -35,7 +53,6 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ value, onChange, className 
     ctx.lineWidth = 2
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
-    ctx.strokeStyle = '#111827'
   }, [])
 
   // Restore a previously-saved signature (e.g. loading a draft that finishes
@@ -52,10 +69,25 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ value, onChange, className 
     img.onload = () => {
       const ratio = window.devicePixelRatio || 1
       ctx.drawImage(img, 0, 0, canvas.width / ratio, canvas.height / ratio)
+      // Whatever color this was saved in, match it to the current theme.
+      recolorInk(canvas, isDarkMode() ? INK_COLOR_DARK_MODE : INK_COLOR)
       setHasStrokes(true)
     }
     img.src = value
   }, [value])
+
+  // Canvas pixels don't retroactively recolor when the app's theme toggles -
+  // so watch for it and repaint any existing ink to match, instead of leaving
+  // e.g. light ink (from dark mode) stranded and barely visible on white.
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const observer = new MutationObserver(() => {
+      recolorInk(canvas, isDarkMode() ? INK_COLOR_DARK_MODE : INK_COLOR)
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   const pointFromEvent = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current!.getBoundingClientRect()
@@ -64,6 +96,8 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ value, onChange, className 
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     e.preventDefault()
+    const ctx = canvasRef.current?.getContext('2d')
+    if (ctx) ctx.strokeStyle = isDarkMode() ? INK_COLOR_DARK_MODE : INK_COLOR
     canvasRef.current?.setPointerCapture(e.pointerId)
     userDrewRef.current = true
     drawingRef.current = true
@@ -90,6 +124,9 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ value, onChange, className 
     drawingRef.current = false
     lastPointRef.current = null
     canvasRef.current?.releasePointerCapture(e.pointerId)
+    // Save exactly what's on screen (transparent bg, current theme's ink
+    // color) - a faithful redraw matters more here than export-readiness,
+    // since the PDF service normalizes to dark-ink-on-white independently.
     onChange(canvasRef.current?.toDataURL('image/png') || '')
   }
 
@@ -108,7 +145,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ value, onChange, className 
       <canvas
         ref={canvasRef}
         style={{ height: CANVAS_HEIGHT, touchAction: 'none' }}
-        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white cursor-crosshair"
+        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 cursor-crosshair"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
