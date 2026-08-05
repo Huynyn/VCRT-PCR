@@ -83,6 +83,8 @@ const PCRPage: React.FC = () => {
   }
 
   useEffect(() => {
+    let ignore = false
+
     const loadFromUrl = async () => {
       // For HashRouter, params are in the hash: /#/pcr/new?draftId=xxx
       const hash = window.location.hash
@@ -97,6 +99,7 @@ const PCRPage: React.FC = () => {
 
         try {
           const data = await apiRequest(`/pcr/${draftId}`)
+          if (ignore) return
           const draftData = data.data
 
           if (draftData.status === 'draft') {
@@ -112,10 +115,11 @@ const PCRPage: React.FC = () => {
             showNotification('This report is not a draft and cannot be edited', 'error')
           }
         } catch (error) {
+          if (ignore) return
           console.error('Failed to load draft:', error)
           showNotification('Failed to load draft', 'error')
         } finally {
-          setIsLoadingDraft(false)
+          if (!ignore) setIsLoadingDraft(false)
         }
       } else if (reportId && isAuthenticated && token && isAdmin) {
         // Admin editing a submitted report
@@ -124,6 +128,7 @@ const PCRPage: React.FC = () => {
 
         try {
           const data = await apiRequest(`/pcr/${reportId}`)
+          if (ignore) return
           const reportData = data.data
 
           loadData(reportData.form_data)
@@ -135,20 +140,25 @@ const PCRPage: React.FC = () => {
           }
           showNotification('Report loaded for editing', 'success')
         } catch (error) {
+          if (ignore) return
           console.error('Failed to load report:', error)
           showNotification('Failed to load report', 'error')
         } finally {
-          setIsLoadingDraft(false)
+          if (!ignore) setIsLoadingDraft(false)
         }
       }
 
-      if (!data.date) {
+      if (!ignore && !data.date) {
         const todayISO = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
         updateField('date', todayISO)
       }
     }
 
     loadFromUrl()
+
+    return () => {
+      ignore = true
+    }
   }, [isAuthenticated, token, isAdmin, loadData, showNotification])
 
   const handleSubmit = async (e: React.FormEvent) => {

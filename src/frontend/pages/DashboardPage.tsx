@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Clock } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { apiRequest } from '../utils/api'
+import { parseServerDate } from '../utils'
 import {
   UserCallStats,
   AdminCallStats,
@@ -42,7 +43,7 @@ const DashboardPage = () => {
   }, [isAuthenticated])
 
   const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString)
+    const date = parseServerDate(dateString)
 
     return date.toLocaleDateString('en-CA', {
       month: 'short',
@@ -76,9 +77,6 @@ const DashboardPage = () => {
                   <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     Drafts in Progress
                   </h3>
-                  <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
-                    {drafts.length}
-                  </span>
                 </div>
                 <a
                   href="#/reports"
