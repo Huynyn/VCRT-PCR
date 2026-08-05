@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Edit, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Edit, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
 import { Modal, Button } from '@/components/ui'
@@ -13,8 +13,7 @@ interface DebriefQuestionItem {
 }
 
 const DEFAULT_DEBRIEF_QUESTIONS: DebriefQuestionItem[] = [
-  { question: 'What do you feel went well on this call?', category: 'General' },
-  { question: 'What do you feel didn\'t go well on this call?', category: 'General' },
+  { question: 'What do you feel went well / didn\'t go well on this call?', category: 'General' },
   { question: 'What do you think I did well as a supervisor and what do you think I can improve on?', category: 'General' },
   { question: 'Is there anything you would do differently if you could run the call again?', category: 'General' },
   { question: 'Was there anything about the call that surprised you or that you weren\'t expecting?', category: 'General' },
@@ -39,12 +38,15 @@ const CATEGORY_OPTIONS: DebriefCategory[] = [
   'Documentation',
 ]
 
+const VISIBLE_QUESTIONS = 3
+
 const DebriefQuestionsSection: React.FC = () => {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
   const [questions, setQuestions] = useState<DebriefQuestionItem[]>(DEFAULT_DEBRIEF_QUESTIONS)
   const [loading, setLoading] = useState(true)
+  const [startIndex, setStartIndex] = useState(0)
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [draft, setDraft] = useState<DebriefQuestionItem[]>([])
@@ -68,6 +70,27 @@ const DebriefQuestionsSection: React.FC = () => {
       })
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    setStartIndex(0)
+  }, [questions])
+
+  const maxStartIndex = Math.max(0, Math.ceil(questions.length / VISIBLE_QUESTIONS) - 1) * VISIBLE_QUESTIONS
+  const canScrollUp = startIndex > 0
+  const canScrollDown = startIndex < maxStartIndex
+
+  const scrollUp = () => setStartIndex(i => Math.max(0, i - VISIBLE_QUESTIONS))
+  const scrollDown = () => setStartIndex(i => Math.min(maxStartIndex, i + VISIBLE_QUESTIONS))
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      scrollUp()
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      scrollDown()
+    }
+  }
 
   const openEdit = () => {
     setDraft(questions.map(q => ({ ...q })))
@@ -141,17 +164,49 @@ const DebriefQuestionsSection: React.FC = () => {
           {loading ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
           ) : (
-            <div className="flex flex-col gap-3">
-              {questions.map((item, i) => (
-                <div
-                  key={i}
-                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
+            <div
+              className="flex items-stretch gap-2 outline-none"
+              tabIndex={0}
+              onKeyDown={handleKeyDown}
+              role="listbox"
+              aria-label="Debrief questions"
+            >
+              <div className="flex flex-col gap-3 flex-1 min-w-0">
+                {questions.slice(startIndex, startIndex + VISIBLE_QUESTIONS).map((item, i) => (
+                  <div
+                    key={startIndex + i}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
+                  >
+                    <p className="text-base text-gray-900 dark:text-gray-100">
+                      {item.question}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col items-center justify-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={scrollUp}
+                  disabled={!canScrollUp}
+                  aria-label="Show previous question"
+                  className="p-1.5 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
                 >
-                  <p className="text-base text-gray-900 dark:text-gray-100">
-                    {item.question}
-                  </p>
-                </div>
-              ))}
+                  <ChevronUp className="w-5 h-5" />
+                </button>
+                <span className="text-xs text-gray-400 dark:text-gray-500 select-none">
+                  {Math.min(startIndex + VISIBLE_QUESTIONS, questions.length)}/{questions.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={scrollDown}
+                  disabled={!canScrollDown}
+                  aria-label="Show next question"
+                  className="p-1.5 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronDown className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           )}
         </div>

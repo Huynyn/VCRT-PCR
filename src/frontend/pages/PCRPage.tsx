@@ -896,7 +896,7 @@ const PCRPage: React.FC = () => {
               label="Chief Complaint"
               value={data.chiefComplaint || ''}
               onChange={e => updateField('chiefComplaint', e.target.value)}
-              placeholder="Primary reason for call / Primary patient complaint..."
+              placeholder="Primary reason for call as reported by dispatch"
               rows={3}
               requireUnknown
             />
@@ -936,7 +936,7 @@ const PCRPage: React.FC = () => {
               label="Pertinent Medical History"
               value={data.medicalHistory || ''}
               onChange={e => updateField('medicalHistory', e.target.value)}
-              placeholder="Relevant medical history..."
+              placeholder="Relevant medical history and conditions..."
               rows={2}
               requireUnknown
             />
@@ -1161,7 +1161,7 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* OPQRST Assessment */}
-        <FormSection title="OPQRST Assessment" subtitle="Add a section for each reported pain/injury location - its number and color are mirrored on the body diagram below">
+        <FormSection title="OPQRST Assessment" subtitle="Add a section for each reported pain/injury location; its number/color are shown on the body diagram below (DNO or UTO if not obtained)">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {opqrstEntries.length === 0
@@ -1273,16 +1273,18 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* Injury Location */}
-        <FormSection title="Injury Location" subtitle="Mark injury locations on the front/back body diagram - matching numbers/colors link back to the OPQRST sections above">
-          <InjuryLocationMap
-            value={data.injuryMarkers}
-            onChange={value => updateField('injuryMarkers', value)}
-            opqrstCount={opqrstEntries.length}
-          />
-        </FormSection>
+        {opqrstEntries.length > 0 && (
+          <FormSection title="Injury Location" subtitle="Mark injury locations on the front/back body diagram - matching numbers/colors link back to the OPQRST sections above">
+            <InjuryLocationMap
+              value={data.injuryMarkers}
+              onChange={value => updateField('injuryMarkers', value)}
+              opqrstCount={opqrstEntries.length}
+            />
+          </FormSection>
+        )}
 
         {/* Vital Signs Table 1 */}
-        <FormSection title="Vital Signs" subtitle="Patient vital signs measurements">
+        <FormSection title="Vital Signs" subtitle="Patient vital signs measurements (DNO or UTO if not obtained)">
           <VitalSignsTable data={data.vitalSigns || []} onChange={handleVitalSignsChange} />
         </FormSection>
 

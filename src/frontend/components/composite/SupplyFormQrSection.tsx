@@ -49,7 +49,7 @@ const SupplyFormQrSection: React.FC = () => {
                 <p>
                   Scan this QR code with your phone to open the Microsoft Form and report any
                   medical supplies used from the bags during a call. Make sure to do that even
-                  if no supplies were used, so we can track usage and restock the bags as needed.
+                  if no supplies were used, so we can track usage and ensure we have enough supplies.
                 </p>
               </div>
               <div className="shrink-0 p-3 bg-white rounded-lg border border-gray-200 dark:border-gray-600">

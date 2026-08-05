@@ -38,9 +38,9 @@ interface InjuryLocationMapProps {
 
 type BodyView = 'front' | 'back'
 
-const MIN_MARKER_SIZE = 7
-const MAX_MARKER_SIZE = 22
-const DEFAULT_MARKER_SIZE = 12
+const MIN_MARKER_SIZE = 5
+const MAX_MARKER_SIZE = 17
+const DEFAULT_MARKER_SIZE = 10
 
 const SNAPSHOT_GAP = 48
 

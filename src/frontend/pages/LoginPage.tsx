@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Eye, EyeOff, Shield, Heart, Users, FileText } from 'lucide-react'
+import { Eye, EyeOff, Moon, Sun } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, Alert } from '@/components/ui'
+import { Button, Card, Alert, Tooltip } from '@/components/ui'
 import { Input } from '@/components/forms'
 import { useAuth } from '@/context'
-import { cn } from '@/utils'
 
 const LoginPage: React.FC = () => {
   const { login, isLoading, isAuthenticated } = useAuth()
@@ -15,6 +14,10 @@ const LoginPage: React.FC = () => {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('pcr_theme')
+    return saved ? saved === 'dark' : true
+  })
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -23,6 +26,18 @@ const LoginPage: React.FC = () => {
       navigate('/', { replace: true })
     }
   }, [isAuthenticated, navigate])
+
+  // Keep the document in sync in case this page loads before the app shell
+  // has had a chance to apply the saved theme (e.g. a fresh /login load).
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  const toggleTheme = () => {
+    const newTheme = !darkMode
+    setDarkMode(newTheme)
+    localStorage.setItem('pcr_theme', newTheme ? 'dark' : 'light')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,6 +71,21 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-medical-50 to-primary-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       {/* Background pattern */}
       <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none" />
+
+      {/* Theme toggle */}
+      <div className="absolute top-4 right-4">
+        <Tooltip content={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={toggleTheme}
+            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
+        </Tooltip>
+      </div>
 
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
         {/* Left side - Branding and features */}

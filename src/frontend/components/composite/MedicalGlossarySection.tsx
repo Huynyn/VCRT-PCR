@@ -289,7 +289,7 @@ const MedicalGlossarySection: React.FC = () => {
                           <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                             {item.acronym}
                           </span>
-                          <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-200">
+                          <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-primary-100 text-primary-700 dark:bg-primary-700/50 dark:text-primary-200">
                             {item.category}
                           </span>
                         </div>

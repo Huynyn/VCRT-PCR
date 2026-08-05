@@ -229,8 +229,8 @@ export class PDFService {
       // Assessment
       yPosition = this.addAssessment(pdf, data, opts, yPosition, contentWidth, newPage)
 
-      // Injury Location / OPQRST (if available and enabled)
-      if (opts.includeImages && (data.injuryMarkers || (data.opqrstEntries && data.opqrstEntries.length > 0))) {
+      // Injury Location / OPQRST (only if at least one OPQRST section was added, matching the form)
+      if (opts.includeImages && data.opqrstEntries && data.opqrstEntries.length > 0) {
         yPosition = await this.addInjuryLocation(pdf, data.injuryMarkers || '', opts, yPosition, contentWidth, data, newPage)
       }
 
