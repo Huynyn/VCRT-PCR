@@ -23,6 +23,9 @@ const ReportsPage = () => {
   const [reports, setReports] = useState<PCRReport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  // Guards against duplicate/stacked preview modals when a user clicks
+  // "Preview PDF" (or the row) more than once while a preview is loading.
+  const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchReports()
@@ -60,7 +63,11 @@ const ReportsPage = () => {
   }
 
   const handleViewReport = async (reportId: string) => {
+    if (previewLoadingId) return // already loading a preview - ignore repeat clicks
+
     try {
+      setPreviewLoadingId(reportId)
+
       if (!token) {
         setError('Authentication required')
         return
@@ -84,6 +91,8 @@ const ReportsPage = () => {
     } catch (err) {
       setError('Failed to load report details')
       console.error('Error loading report:', err)
+    } finally {
+      setPreviewLoadingId(null)
     }
   }
 
@@ -299,9 +308,10 @@ const ReportsPage = () => {
                                   e.stopPropagation()
                                   handleViewReport(report.id)
                                 }}
-                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                                disabled={previewLoadingId === report.id}
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium disabled:opacity-50 disabled:cursor-wait"
                               >
-                                Preview PDF
+                                {previewLoadingId === report.id ? 'Loading...' : 'Preview PDF'}
                               </button>
                               <button
                                 onClick={e => {
@@ -329,9 +339,10 @@ const ReportsPage = () => {
                                   e.stopPropagation()
                                   handleViewReport(report.id)
                                 }}
-                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                                disabled={previewLoadingId === report.id}
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium disabled:opacity-50 disabled:cursor-wait"
                               >
-                                View PDF
+                                {previewLoadingId === report.id ? 'Loading...' : 'View PDF'}
                               </button>
                               {isAdmin && (
                                 <button

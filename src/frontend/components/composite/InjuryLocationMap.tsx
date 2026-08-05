@@ -4,19 +4,25 @@ import { Button, Tooltip } from '@/components/ui'
 import { cn, generateId, MARKER_COLORS } from '@/utils'
 import {
   BODY_VIEWBOX,
-  FRONT_BODY_PATH,
-  BACK_BODY_PATH,
+  FRONT_MUSCLE_PATHS,
+  BACK_MUSCLE_PATHS,
   FRONT_BODY_TRANSFORM,
   BACK_BODY_TRANSFORM,
+  type BodySubpath,
 } from './bodyGeometry'
 import type { InjuryMarker } from '@/types'
 
-// Used for the PDF-export canvas snapshot, which is always drawn on a white
-// background - the on-screen SVG uses Tailwind's gray classes instead so it
-// adapts to light/dark mode (see BodyPanel below).
-const SNAPSHOT_BODY_COLOR = '#9ca3af'
+// Used for the PDF-export canvas snapshot, which always renders with the
+// light-mode body colors on a white background regardless of the app's
+// active theme - the on-screen SVG uses --body-fill/--body-stroke CSS
+// variables instead so it can adapt to light/dark mode (see BodyPanel below).
+const SNAPSHOT_BODY_FILL = '#ffffff'
+const SNAPSHOT_BODY_STROKE = '#9da4b0'
+// Supersample the canvas so the exported PNG stays crisp once jsPDF scales
+// it up to its final print size.
+const SNAPSHOT_SCALE = 4
 
-const BODY_PATH: Record<BodyView, string> = { front: FRONT_BODY_PATH, back: BACK_BODY_PATH }
+const BODY_PATHS: Record<BodyView, BodySubpath[]> = { front: FRONT_MUSCLE_PATHS, back: BACK_MUSCLE_PATHS }
 const BODY_TRANSFORM: Record<BodyView, { scale: number; tx: number; ty: number }> = {
   front: FRONT_BODY_TRANSFORM,
   back: BACK_BODY_TRANSFORM,
@@ -37,7 +43,6 @@ const MAX_MARKER_SIZE = 22
 const DEFAULT_MARKER_SIZE = 12
 
 const SNAPSHOT_GAP = 48
-const SNAPSHOT_LABEL_HEIGHT = 40
 
 const colorForNumber = (n: number): string =>
   MARKER_COLORS.find(c => c.number === n)?.hex || MARKER_COLORS[0].hex
@@ -53,14 +58,27 @@ const parseMarkers = (value?: string): InjuryMarker[] => {
   return []
 }
 
+const resolveSnapshotColor = (value: string): string =>
+  value === 'var(--body-fill)' ? SNAPSHOT_BODY_FILL : value === 'var(--body-stroke)' ? SNAPSHOT_BODY_STROKE : value
+
 const drawBodyOutline = (ctx: CanvasRenderingContext2D, view: BodyView, offsetX: number, offsetY: number) => {
   const t = BODY_TRANSFORM[view]
   ctx.save()
   ctx.translate(offsetX, offsetY)
   ctx.scale(t.scale, t.scale)
   ctx.translate(t.tx, t.ty)
-  ctx.fillStyle = SNAPSHOT_BODY_COLOR
-  ctx.fill(new Path2D(BODY_PATH[view]))
+  BODY_PATHS[view].forEach(sub => {
+    const path = new Path2D(sub.d)
+    if (sub.fill !== 'none') {
+      ctx.fillStyle = resolveSnapshotColor(sub.fill)
+      ctx.fill(path)
+    }
+    if (sub.stroke !== 'none') {
+      ctx.strokeStyle = resolveSnapshotColor(sub.stroke)
+      ctx.lineWidth = sub.strokeWidth
+      ctx.stroke(path)
+    }
+  })
   ctx.restore()
 }
 
@@ -68,28 +86,24 @@ const buildSnapshot = (markers: InjuryMarker[]): string => {
   const canvas = document.createElement('canvas')
   const panelW = BODY_VIEWBOX.width
   const panelH = BODY_VIEWBOX.height
-  canvas.width = panelW * 2 + SNAPSHOT_GAP
-  canvas.height = panelH + SNAPSHOT_LABEL_HEIGHT
+  canvas.width = (panelW * 2 + SNAPSHOT_GAP) * SNAPSHOT_SCALE
+  canvas.height = panelH * SNAPSHOT_SCALE
 
   const ctx = canvas.getContext('2d')
   if (!ctx) return ''
 
+  ctx.scale(SNAPSHOT_SCALE, SNAPSHOT_SCALE)
+
   ctx.fillStyle = '#FFFFFF'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.fillRect(0, 0, panelW * 2 + SNAPSHOT_GAP, panelH)
 
-  ctx.fillStyle = '#111827'
-  ctx.font = 'bold 22px Arial, sans-serif'
-  ctx.textAlign = 'center'
-  ctx.fillText('FRONT', panelW / 2, 28)
-  ctx.fillText('BACK', panelW + SNAPSHOT_GAP + panelW / 2, 28)
-
-  drawBodyOutline(ctx, 'front', 0, SNAPSHOT_LABEL_HEIGHT)
-  drawBodyOutline(ctx, 'back', panelW + SNAPSHOT_GAP, SNAPSHOT_LABEL_HEIGHT)
+  drawBodyOutline(ctx, 'front', 0, 0)
+  drawBodyOutline(ctx, 'back', panelW + SNAPSHOT_GAP, 0)
 
   markers.forEach(marker => {
     const baseX = marker.view === 'front' ? 0 : panelW + SNAPSHOT_GAP
     const x = baseX + (marker.x / 100) * panelW
-    const y = SNAPSHOT_LABEL_HEIGHT + (marker.y / 100) * panelH
+    const y = (marker.y / 100) * panelH
     const color = colorForNumber(marker.number)
 
     ctx.beginPath()
@@ -144,21 +158,30 @@ const BodyPanel: React.FC<BodyPanelProps> = ({
         {label}
       </button>
 
-      <div
-        className={cn(
-          'w-full max-w-[240px] rounded-lg border-2 bg-gray-50 dark:bg-gray-800/50 transition-colors',
-          isActive ? 'border-primary-500' : 'border-gray-200 dark:border-gray-700'
-        )}
-      >
+      <div className="w-full max-w-[240px]">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${BODY_VIEWBOX.width} ${BODY_VIEWBOX.height}`}
-          className="w-full h-auto cursor-crosshair select-none text-gray-400 dark:text-gray-500"
+          className={cn(
+            'w-full h-auto cursor-crosshair select-none transition-opacity',
+            '[--body-fill:#ffffff] [--body-stroke:#9da4b0] dark:[--body-fill:#101827] dark:[--body-stroke:#9ca3af]',
+            isActive ? 'opacity-100' : 'opacity-70'
+          )}
           onClick={onClick}
           data-testid={`injury-body-${view}`}
         >
           <g transform={`scale(${t.scale}) translate(${t.tx} ${t.ty})`}>
-            <path d={BODY_PATH[view]} fill="currentColor" />
+            {BODY_PATHS[view].map((sub, i) => (
+              <path
+                key={i}
+                d={sub.d}
+                fill={sub.fill}
+                stroke={sub.stroke}
+                strokeWidth={sub.strokeWidth}
+                strokeLinecap={sub.strokeLinecap ?? 'round'}
+                strokeLinejoin="round"
+              />
+            ))}
           </g>
 
           {markers.filter(m => m.view === view).map(m => {

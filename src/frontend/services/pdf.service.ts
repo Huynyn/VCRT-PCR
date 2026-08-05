@@ -284,10 +284,15 @@ export class PDFService {
   async showDownloadPreview(
     data: PCRFormData,
     options: PDFOptions = {},
-    ui: { allowDownload?: boolean } = {}
+    ui: { allowDownload?: boolean } = {},
+    cachedResult?: PDFGenerationResult
   ): Promise<void> {
     const { allowDownload = false } = ui
-    const result = await this.generatePDFReport(data, options)
+    // A cachedResult's blob URL is owned by the caller (e.g. the submit
+    // confirmation modal still needs it for its own Download/Confirm/Cancel
+    // handlers) - only revoke the URL on close if we generated it ourselves.
+    const ownsResult = !cachedResult
+    const result = cachedResult ?? (await this.generatePDFReport(data, options))
 
     const modal = document.createElement('div')
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
@@ -325,16 +330,14 @@ export class PDFService {
 
     const closeModal = () => {
       document.body.removeChild(modal)
-      URL.revokeObjectURL(result.url)
+      if (ownsResult) URL.revokeObjectURL(result.url)
+      document.removeEventListener('keydown', handleEsc)
     }
     closeBtn?.addEventListener('click', closeModal)
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal() })
 
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeModal()
-        document.removeEventListener('keydown', handleEsc)
-      }
+      if (e.key === 'Escape') closeModal()
     }
     document.addEventListener('keydown', handleEsc)
   }
@@ -350,12 +353,21 @@ export class PDFService {
     ): Promise<void> {
       const allowDownload = ui?.allowDownload ?? true
     let result: PDFGenerationResult | null = null
+    // Cache the in-flight promise (not just the resolved result) so rapid
+    // repeat clicks on Preview/Download while generation is still running
+    // share a single generatePDFReport() call instead of racing separate,
+    // wasteful ones (each of which would produce its own blob URL and, for
+    // Preview, its own stacked modal).
+    let resultPromise: Promise<PDFGenerationResult> | null = null
 
-    const ensureResult = async () => {
-      if (!result) {
-        result = await this.generatePDFReport(data, options)
+    const ensureResult = () => {
+      if (!resultPromise) {
+        resultPromise = this.generatePDFReport(data, options).then(r => {
+          result = r
+          return r
+        })
       }
-      return result
+      return resultPromise
     }
 
     const modal = document.createElement('div')
@@ -420,22 +432,40 @@ export class PDFService {
 
     document.body.appendChild(modal)
 
-    const previewBtn = modal.querySelector('#preview-download-btn')
-    const directBtn = modal.querySelector('#direct-download-btn')
+    const previewBtn = modal.querySelector('#preview-download-btn') as HTMLButtonElement | null
+    const directBtn = modal.querySelector('#direct-download-btn') as HTMLButtonElement | null
     const confirmBtn = modal.querySelector('#confirm-downloaded-btn') as HTMLButtonElement
     const cancelBtn = modal.querySelector('#cancel-btn')
 
     previewBtn?.addEventListener('click', async () => {
-      await ensureResult()
-      this.showDownloadPreview(data, options, { allowDownload })
-      confirmBtn.disabled = false
+      if (previewBtn.disabled) return
+      previewBtn.disabled = true
+      const previousLabel = previewBtn.textContent
+      previewBtn.textContent = 'Loading...'
+      try {
+        const r = await ensureResult()
+        await this.showDownloadPreview(data, options, { allowDownload }, r)
+        confirmBtn.disabled = false
+      } finally {
+        previewBtn.disabled = false
+        previewBtn.textContent = previousLabel
+      }
     })
 
 
     directBtn?.addEventListener('click', async () => {
-      const r = await ensureResult()
-      this.downloadPDF(r)
-      confirmBtn.disabled = false
+      if (directBtn.disabled) return
+      directBtn.disabled = true
+      const previousLabel = directBtn.textContent
+      directBtn.textContent = 'Loading...'
+      try {
+        const r = await ensureResult()
+        this.downloadPDF(r)
+        confirmBtn.disabled = false
+      } finally {
+        directBtn.disabled = false
+        directBtn.textContent = previousLabel
+      }
     })
 
 
@@ -443,13 +473,13 @@ export class PDFService {
       const timestamp = new Date().toISOString()
       onConfirm(true, timestamp)
       document.body.removeChild(modal)
-      URL.revokeObjectURL(result.url)
+      if (result) URL.revokeObjectURL(result.url)
     })
 
     cancelBtn?.addEventListener('click', () => {
       onConfirm(false, '')
       document.body.removeChild(modal)
-      URL.revokeObjectURL(result.url)
+      if (result) URL.revokeObjectURL(result.url)
     })
   }
 
@@ -918,6 +948,7 @@ private addPageWithHeader(
       const blockNeed = Math.max(imageDataUrl ? imgHeight : 0, 40)
       yPosition = ensureSpaceFor(pdf, options, yPosition, blockNeed, newPage)
       const startY = yPosition
+      const startPage = pdf.getNumberOfPages()
 
       // --- Draw the body diagram snapshot on the RIGHT half ---
       const rightX = options.margins.left + leftColWidth + columnGap
@@ -971,6 +1002,15 @@ private addPageWithHeader(
         )
         yText += 3
       })
+
+      // If the OPQRST text pushed us onto a later page than the image/startY
+      // were measured on, startY is a stale coordinate from the previous
+      // page - fall back to the current cursor instead of computing a
+      // bogus offset from it (which corrupted the Y handed to whatever
+      // section renders next, e.g. Vital Signs).
+      if (pdf.getNumberOfPages() !== startPage) {
+        return yText + 5
+      }
 
       // Advance Y by the taller of image vs text, plus a small spacer
       const textHeight = yText - startY
@@ -1046,6 +1086,14 @@ private addPageWithHeader(
         drawTableHeader()
       }
     }
+
+    // Reserve room for the section header + column header + at least one
+    // data row up front, so the table never starts at the very bottom of a
+    // page only to immediately overflow and redraw its own header again.
+    const tableHeaderRowH = Math.max(6, lineH + 2)
+    const minDataRowH = lineH + 2
+    const initialNeeded = headerBarH + 4 + tableHeaderRowH + (vitalSigns.length > 0 ? minDataRowH : 0)
+    yPosition = ensureSpaceFor(pdf, options, yPosition, initialNeeded, newPage)
 
     drawSectionHeader()
     drawTableHeader()
