@@ -299,7 +299,7 @@ export class PDFService {
     modal.innerHTML = `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 h-[90vh] flex flex-col">
         <div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Download Preview</h3>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">${allowDownload ? 'Download Preview' : 'Submission Preview'}</h3>
           <div class="flex space-x-2">
             ${allowDownload ? `
               <button id="download-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
@@ -376,7 +376,7 @@ export class PDFService {
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Download Confirmation
+            ${allowDownload ? 'Download Confirmation' : 'Submission Confirmation'}
           </h3>
 
           <div class="mb-6">
@@ -1476,8 +1476,9 @@ private addPageWithHeader(
   }
 
     /**
-   * Signature replacement strip pinned to the very bottom of the page.
-   * Replaces signature boxes with a statement listing responders' names.
+   * E-signature strip pinned to the very bottom of the page: always 4 even
+   * columns (Supervisor, Responder 1-3), even for responder slots that
+   * weren't used on this call - unused/unsigned columns are left blank.
    */
   private addSignaturesAndFooter(
     pdf: jsPDF,
@@ -1494,8 +1495,9 @@ private addPageWithHeader(
     const x1 = pageW - options.margins.right
     const contentW = x1 - x0
 
-    // fixed strip height at bottom
-    const stripHeight = 18
+    // fixed strip height at bottom - tall enough for a label, the signature
+    // image itself, and a signature line/caption underneath
+    const stripHeight = 34
     const stripTopY = pageH - bottom - stripHeight
 
     // if we collide with content, push to a new page
@@ -1503,38 +1505,67 @@ private addPageWithHeader(
       yPosition = newPage()
     }
 
-    const startY = pageH - bottom - stripHeight + 5
-
     // separator line above strip
     pdf.setDrawColor(0)
     pdf.setLineWidth(0.4)
-    pdf.line(x0, stripTopY - 2, x1, stripTopY - 2)
+    pdf.line(x0, stripTopY, x1, stripTopY)
 
-    // Collect names
-    const names = [
-      data.supervisor ? `Supervisor: ${data.supervisor}` : '',
-      data.responder1 ? `Responder 1: ${data.responder1}` : '',
-      data.responder2 ? `Responder 2: ${data.responder2}` : '',
-      data.responder3 ? `Responder 3: ${data.responder3}` : '',
-    ].filter(Boolean)
+    const columns: Array<{ label: string; name: string; image?: string }> = [
+      { label: 'Supervisor', name: data.supervisor || '', image: data.signatures?.supervisor },
+      { label: 'Responder 1', name: data.responder1 || '', image: data.signatures?.responder1 },
+      { label: 'Responder 2', name: data.responder2 || '', image: data.signatures?.responder2 },
+      { label: 'Responder 3', name: data.responder3 || '', image: data.signatures?.responder3 },
+    ]
 
-    const respondersLine = names.length ? names.join(' | ') : 'Responders: Not Recorded'
+    const colW = contentW / columns.length
+    const imageH = 15
+    const labelY = stripTopY + 5
+    const imageY = stripTopY + 10
+    const lineY = imageY + imageH + 2
+    const captionY = lineY + 4
 
-    const statement =
-      'This statement serves as a replacement for responder signatures on this Patient Care Report.'
+    columns.forEach((col, i) => {
+      const colX0 = x0 + i * colW
+      const colCenterX = colX0 + colW / 2
 
-    pdf.setFontSize(8)
+      // divider between columns (skip before the first one) - always drawn,
+      // even for a responder slot that wasn't used on this call, so the
+      // strip keeps a consistent 4-column layout
+      if (i > 0) {
+        pdf.setDrawColor(220)
+        pdf.setLineWidth(0.2)
+        pdf.line(colX0, stripTopY + 2, colX0, lineY)
+      }
 
-    // Line 1: responders
-    pdf.setFont('helvetica', 'bold')
-    const line1 = pdf.splitTextToSize(respondersLine, contentW)
-    pdf.text(line1, x0, startY)
+      // An unused responder slot gets nothing but its column space - no
+      // label, image, line, or caption.
+      if (!col.name) return
 
-    // Line 2: statement
-    pdf.setFont('helvetica', 'normal')
-    const line2Y = startY + 4 * line1.length
-    const line2 = pdf.splitTextToSize(statement, contentW)
-    pdf.text(line2, x0, line2Y)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(7.5)
+      pdf.setTextColor(0)
+      const nameLabel = `${col.label}: ${col.name}`
+      pdf.text(pdf.splitTextToSize(nameLabel, colW - 6), colCenterX, labelY, { align: 'center' })
+
+      if (col.image) {
+        try {
+          const imgW = colW - 10
+          pdf.addImage(col.image, 'PNG', colX0 + 5, imageY, imgW, imageH, undefined, 'FAST')
+        } catch {
+          // Corrupt/unsupported signature image data - leave the line blank below
+        }
+      }
+
+      pdf.setDrawColor(150)
+      pdf.setLineWidth(0.2)
+      pdf.line(colX0 + 5, lineY, colX0 + colW - 5, lineY)
+
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(6.5)
+      pdf.setTextColor(120)
+      pdf.text('Signature', colCenterX, captionY, { align: 'center' })
+      pdf.setTextColor(0)
+    })
 
     return pageH - bottom
   }
@@ -1544,10 +1575,9 @@ private addPageWithHeader(
    */
   private generateFilename(data: PCRFormData): string {
     const date = data.date ? new Date(data.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-    const callNumber = data.callNumber || 'unknown'
-    const patientName = data.patientName ? data.patientName.replace(/[^a-zA-Z0-9]/g, '_') : 'patient'
-    
-    return `PCR_${date}_${callNumber}_${patientName}.pdf`
+    const identifier = data.reportNumber ? data.reportNumber.replace(/[^a-zA-Z0-9-]/g, '_') : date
+
+    return `VCRT_PCR_${identifier}.pdf`
   }
 
   /**

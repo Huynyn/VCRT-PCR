@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck, Plus, Trash2 } from 'lucide-react'
+import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button, Card, Alert, Modal, Tooltip } from '@/components/ui'
 import {
   Input,
@@ -12,14 +12,14 @@ import {
   Textarea,
   FormSection,
 } from '@/components/forms'
-import { VitalSignsTable, InjuryLocationMap, OxygenProtocolForm, SearchableSelect } from '@/components/composite'
+import { VitalSignsTable, InjuryLocationMap, OxygenProtocolForm, SearchableSelect, SignaturePad } from '@/components/composite'
 import { useForm } from '../context/FormContext'
 import { useNotification } from '../context/NotificationContext'
 import { useAuth } from '../context/AuthContext'
 import { cn, getCurrentTime, formatDate, generateId, MARKER_COLORS } from '../utils'
 import { pdfService } from '../services/pdf.service'
 import { apiRequest } from '../utils/api'
-import type { PCRFormData, VitalSign, OPQRSTEntry } from '../types'
+import type { PCRFormData, VitalSign, OPQRSTEntry, Signatures } from '../types'
 
 const PCRPage: React.FC = () => {
   const {
@@ -46,6 +46,7 @@ const PCRPage: React.FC = () => {
   const [signOffPdf, setSignOffPdf] = useState<File | null>(null)
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
   const [responderOptions, setResponderOptions] = useState<string[]>([])
+  const [signerIndex, setSignerIndex] = useState(0)
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -415,42 +416,42 @@ const PCRPage: React.FC = () => {
     const sampleData: Partial<PCRFormData> = {
       // --- Basic Information (required) ---
       date: formatDate(new Date()),
-      location: 'Morisset 6th floor',
-      callNumber: '002',
-      reportNumber: '2026-001',
-      supervisor: 'Hailey Bieber',
-      primaryPSM: 'Kim Kardashian',
-      responder1: 'Frodo Baggins',
-      responder2: 'Cersei Lannister',
-      responder3: 'Tony Stark',
-      timeNotified: '14:30',
+      location: 'Montpetit Hall, Gymnasium A',
+      callNumber: '014',
+      reportNumber: '2026-014',
+      supervisor: 'Sarah Chen',
+      primaryPSM: 'Marc Tremblay',
+      responder1: 'Daniel Osei',
+      responder2: 'Priya Nair',
+      responder3: '',
+      timeNotified: '19:42',
       workplaceInjury: 'No',
-      onScene: '14:35',
-      clearedScene: '15:15',
+      onScene: '19:45',
+      clearedScene: '20:20',
       firstAgencyOnScene: 'Protection Services',
 
       // Optional-but-nice
-      transportArrived: '15:10',
+      transportArrived: '20:10',
       paramedicsCalledBy: 'Responder 1',
 
       // --- Patient Information ---
-      patientName: 'Harry Potter',
-      age: '25',
-      sex: 'Male',
+      patientName: 'Emily Tran',
+      age: '20',
+      sex: 'Female',
       status: 'Student',
 
       // requireUnknown fields in this section
-      studentEmployeeNumber: '300718038',
-      emergencyContactName: 'Lily Potter (Mother)',
-      emergencyContactPhone: '(613) 671-3781',
+      studentEmployeeNumber: '300512847',
+      emergencyContactName: 'Linh Tran (Mother)',
+      emergencyContactPhone: '(613) 555-0148',
       contacted: 'Yes',
-      contactedBy: 'Harry Potter',
+      contactedBy: 'Responder 2',
 
       // --- Treatment / Findings ---
       positionOfPatient: 'Seated',
-      airwayManagement: ['Positioning'],
-      hemorrhageControl: ['Direct Pressure'],
-      immobilization: [],
+      airwayManagement: [],
+      hemorrhageControl: [],
+      immobilization: ['Splints'],
 
       // CPR/AED (optional)
       timeStarted: '',
@@ -462,39 +463,64 @@ const PCRPage: React.FC = () => {
       opqrstEntries: [
         {
           id: generateId(),
-          area: 'Right knee',
-          onset: 'Acute',
-          provocation: 'Movement worsens',
-          quality: 'Sharp',
+          area: 'Left ankle',
+          onset: 'Acute - twisted stepping down from a jump',
+          provocation: 'Weight-bearing and movement worsen it; rest and elevation ease it',
+          quality: 'Sharp, throbbing',
           radiation: 'None',
-          scale: '4',
-          time: '14:20',
+          scale: '6',
+          time: '19:40',
         },
       ],
 
       // --- Medical History (all these textareas were set with requireUnknown) ---
-      chiefComplaint: 'Injured knee',
-      signsSymptoms: 'Panic attack symptoms, bleeding right knee',
-      allergies: 'Bee stings',
-      medications: 'DNO',
-      medicalHistory: 'Nothing to note',
-      lastMeal: 'Happy Meal, 2 hours ago, sat well',
-      bodySurvey: 'No other findings',
+      chiefComplaint: 'Left ankle pain after twisting it during an intramural basketball game',
+      signsSymptoms: 'Swelling and bruising over the lateral ankle, pain on weight-bearing, no obvious deformity',
+      allergies: 'NKDA',
+      medications: 'None',
+      medicalHistory: 'No significant medical history',
+      lastMeal: 'Sandwich, ~3 hours ago, tolerated well',
+      bodySurvey: 'No other injuries noted on full body survey',
+
+      // --- Vital Signs (2 sets, ~5 min apart) ---
+      vitalSigns: [
+        {
+          time: '19:47',
+          pulse: '82, regular, strong',
+          resp: '16, regular, unlaboured',
+          spo2: '98',
+          bp: '118/76',
+          loc: 'A&O x4',
+          skin: 'Warm, dry, normal colour',
+        },
+        {
+          time: '19:52',
+          pulse: '78, regular, strong',
+          resp: '16, regular, unlaboured',
+          spo2: '98',
+          bp: '116/74',
+          loc: 'A&O x4',
+          skin: 'Warm, dry, normal colour',
+        },
+      ],
 
       // --- Oxygen Protocol (optional) ---
       oxygenProtocol: {
-        saturation_range: '94–98%',
-        spo2: '96',
+        saturation_range: 'Other (95-100%)',
+        spo2: '98',
         spo2_acceptable: 'Yes',
+        oxygen_given: 'no',
       } as any,
 
       // --- Additional Information (required group) ---
-      comments: 'VCRT Responders (NAMES) were called at yada yada',
-      transferComments: 'Patient care transferred to paramedics yada yada yada.',
+      comments:
+        'VCRT (Daniel Osei, Priya Nair) received a call at 19:42 for a patient (PT) reported by Protection Services to have a possible ankle injury at Montpetit Hall, Gymnasium A. VCRT arrived on scene at 19:45 to find PT (Emily Tran) seated on the gym floor holding her left ankle, with a Protection Services officer and several teammates present. VCRT approached PT and obtained consent to begin treatment. Teammates reported PT landed awkwardly after a jump during an intramural basketball game and was unable to bear weight afterward. VCRT (Daniel Osei) conducted primary assessment and RBS; no findings requiring intervention, SMR was ruled out as the mechanism was isolated to the ankle with no head, neck, or back involvement. VCRT (Priya Nair) began taking the 1st set of vitals while VCRT (Daniel Osei) obtained SAMPLE and OPQRST, given reported pain. First set of vitals were within normal range. PT reported twisting her left ankle stepping down from a jump, with immediate sharp pain and visible swelling. VCRT (Daniel Osei) splinted and elevated the ankle; PT tolerated treatment well and reported some relief with ice and elevation. VCRT (Priya Nair) obtained a second set of vitals, within normal range; PT remained alert and stable throughout.',
+      transferComments:
+        'Care was transferred to paramedics on scene at 20:12. VCRT (Daniel Osei) gave a verbal handover covering mechanism of injury, vitals, and treatment provided (splinting and elevation); PT was alert and in stable condition at handover. PT was advised to avoid weight-bearing on the ankle until assessed by a physician, to follow up with Health and Wellness or a walk-in clinic if pain or swelling persisted, and to keep the ankle iced and elevated in the interim.',
       patientCareTransferred: 'Paramedics',
-      hospitalDestination: 'MontFort Hospital',
-      unitNumber: 'A-123',
-      timeCareTransferred: '15:12',
+      hospitalDestination: 'The Ottawa Hospital - Civic Campus',
+      unitNumber: 'A-142',
+      timeCareTransferred: '20:12',
     }
 
     Object.entries(sampleData).forEach(([key, value]) => {
@@ -532,6 +558,23 @@ const PCRPage: React.FC = () => {
 
   const hasTourniquet =
     Array.isArray(data.hemorrhageControl) && data.hemorrhageControl.includes('Tourniquet')
+
+  // Supervisor signs first, then whichever responders were actually added to the call.
+  const signers: Array<{ key: keyof Signatures; label: string; name: string }> = [
+    { key: 'supervisor', label: 'Supervisor', name: data.supervisor || '' },
+    ...(data.responder1 ? [{ key: 'responder1' as const, label: 'Responder 1', name: data.responder1 }] : []),
+    ...(data.responder2 ? [{ key: 'responder2' as const, label: 'Responder 2', name: data.responder2 }] : []),
+    ...(data.responder3 ? [{ key: 'responder3' as const, label: 'Responder 3', name: data.responder3 }] : []),
+  ]
+
+  const handleSignatureChange = (key: keyof Signatures, value: string) => {
+    updateField('signatures', { ...(data.signatures || {}), [key]: value })
+  }
+
+  const activeSignerIndex = Math.min(signerIndex, signers.length - 1)
+  const activeSigner = signers[activeSignerIndex]
+  const goPrevSigner = () => setSignerIndex(Math.max(0, activeSignerIndex - 1))
+  const goNextSigner = () => setSignerIndex(Math.min(signers.length - 1, activeSignerIndex + 1))
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -1456,6 +1499,51 @@ const PCRPage: React.FC = () => {
             )}
 
             {signOffPdfError && <div className="mt-2 text-sm text-red-600">{signOffPdfError}</div>}
+          </div>
+        </FormSection>
+
+        {/* Add Signatures */}
+        <FormSection
+          title="Add Signatures"
+          subtitle="Supervisor first, then each responder present on this call; these are printed at the bottom of the PDF"
+        >
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={goPrevSigner}
+              disabled={activeSignerIndex === 0}
+              aria-label="Previous signer"
+              className="p-2 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors shrink-0"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            <div className="flex-1 min-w-0">
+              <div className="max-w-xs mx-auto">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center mb-2">
+                  {activeSigner.label}
+                  {activeSigner.name ? ` — ${activeSigner.name}` : ''}
+                </p>
+                <SignaturePad
+                  key={activeSigner.key}
+                  value={data.signatures?.[activeSigner.key]}
+                  onChange={value => handleSignatureChange(activeSigner.key, value)}
+                />
+                <span className="block text-center text-xs text-gray-400 dark:text-gray-500 mt-2">
+                  {activeSignerIndex + 1}/{signers.length}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={goNextSigner}
+              disabled={activeSignerIndex === signers.length - 1}
+              aria-label="Next signer"
+              className="p-2 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors shrink-0"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
         </FormSection>
 

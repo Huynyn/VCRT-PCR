@@ -483,7 +483,6 @@ const UserManagementPage = () => {
                             size="sm"
                             onClick={() => handleEditUser(user)}
                             leftIcon={<Edit className="w-4 h-4" />}
-                            className="text-blue-600 hover:text-blue-900"
                           >
                             Edit
                           </Button>
@@ -492,7 +491,6 @@ const UserManagementPage = () => {
                             size="sm"
                             onClick={() => handleToggleUserStatus(user.id, user.isActive)}
                             disabled={user.id === currentUser?.id}
-                            className="text-gray-600 hover:text-gray-900"
                           >
                             {user.isActive ? 'Deactivate' : 'Activate'}
                           </Button>

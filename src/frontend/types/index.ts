@@ -129,11 +129,21 @@ export interface AdditionalInformation {
   timeCareTransferred: string;
 }
 
+// E-signatures captured at the end of the form, keyed by role. Each value is
+// a PNG data URL produced by the SignaturePad canvas, or absent if unsigned.
+export interface Signatures {
+  supervisor?: string;
+  responder1?: string;
+  responder2?: string;
+  responder3?: string;
+}
+
 export interface PCRFormData extends BasicInformation, PatientInformation, MedicalHistory, TreatmentPerformed, OPQRSTAssessment, AdditionalInformation {
   injuryMarkers?: string;
   vitalSigns: VitalSign[];
   vitalSigns2: VitalSigns2[];
   oxygenProtocol?: OxygenProtocol;
+  signatures?: Signatures;
 }
 
 // User Management Types
