@@ -588,11 +588,7 @@ private addPageWithHeader(
     )
     
     // Second set of basic info
-    const responders = [
-      data.responder1 || '',
-      data.responder2 || '',
-      data.responder3 || ''
-    ].filter(r => r.trim() !== '').join(', ')
+    const responders = (data.responders || []).filter(r => r.trim() !== '').join(', ')
     yPosition = renderFieldsRow(
       pdf,
       [
@@ -1544,11 +1540,20 @@ private addPageWithHeader(
     pdf.setLineWidth(0.4)
     pdf.line(x0, stripTopY, x1, stripTopY)
 
+    // One column per responder that was actually filled in - unlike the old
+    // fixed 3-slot layout, an empty responder row just doesn't get a column
+    // rather than reserving blank space for it.
+    const responderColumns = (data.responders || [])
+      .map((name, i) => ({
+        label: `Responder ${i + 1}`,
+        name: name || '',
+        image: data.signatures?.responders?.[i],
+      }))
+      .filter(col => col.name.trim() !== '')
+
     const columns: Array<{ label: string; name: string; image?: string }> = [
       { label: 'Supervisor', name: data.supervisor || '', image: data.signatures?.supervisor },
-      { label: 'Responder 1', name: data.responder1 || '', image: data.signatures?.responder1 },
-      { label: 'Responder 2', name: data.responder2 || '', image: data.signatures?.responder2 },
-      { label: 'Responder 3', name: data.responder3 || '', image: data.signatures?.responder3 },
+      ...responderColumns,
     ]
 
     const normalizedImages = await Promise.all(
@@ -1566,17 +1571,16 @@ private addPageWithHeader(
       const colX0 = x0 + i * colW
       const colCenterX = colX0 + colW / 2
 
-      // divider between columns (skip before the first one) - always drawn,
-      // even for a responder slot that wasn't used on this call, so the
-      // strip keeps a consistent 4-column layout
+      // divider between columns (skip before the first one)
       if (i > 0) {
         pdf.setDrawColor(220)
         pdf.setLineWidth(0.2)
         pdf.line(colX0, stripTopY + 2, colX0, lineY)
       }
 
-      // An unused responder slot gets nothing but its column space - no
-      // label, image, line, or caption.
+      // Supervisor is always included even if unfilled, so this only ever
+      // fires for that case - every responder column here was already
+      // filtered down to ones with a name.
       if (!col.name) return
 
       pdf.setFont('helvetica', 'bold')

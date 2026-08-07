@@ -20,6 +20,7 @@ type FormAction =
 
 const initialState: FormState = {
   data: {
+    responders: [''],
     vitalSigns: [{}],
     vitalSigns2: [{}],
     airwayManagement: [],

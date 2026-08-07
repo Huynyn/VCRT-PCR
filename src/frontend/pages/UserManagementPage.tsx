@@ -77,6 +77,11 @@ const UserManagementPage = () => {
     })
   }, [users])
 
+  const activeAdminCount = useMemo(
+    () => users.filter(u => u.role === 'admin' && u.isActive).length,
+    [users]
+  )
+
   useEffect(() => {
     if (currentUser?.role !== 'admin') {
       setError('Access denied. Admin privileges required.')
@@ -183,7 +188,7 @@ const UserManagementPage = () => {
 
       await fetchUsers()
     } catch (err) {
-      setError('Failed to update user status')
+      setError(err instanceof Error ? err.message : 'Failed to update user status')
       console.error('Error updating user status:', err)
     }
   }
@@ -492,7 +497,15 @@ const UserManagementPage = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleToggleUserStatus(user.id, user.isActive)}
-                            disabled={user.id === currentUser?.id}
+                            disabled={
+                              user.id === currentUser?.id ||
+                              (user.role === 'admin' && user.isActive && activeAdminCount <= 1)
+                            }
+                            title={
+                              user.role === 'admin' && user.isActive && activeAdminCount <= 1
+                                ? 'At least one admin must stay active'
+                                : undefined
+                            }
                           >
                             {user.isActive ? 'Deactivate' : 'Activate'}
                           </Button>
@@ -631,7 +644,12 @@ const UserManagementPage = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {editingUser?.role !== 'admin' ? (
+            {editingUser?.id === currentUser?.id ? (
+              // Can't deactivate the account you're currently signed in as.
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Status: <span className="font-medium">Active</span> (can't deactivate your own account)
+              </div>
+            ) : (
               <Select
                 label="Status"
                 value={editForm.isActive ? 'active' : 'inactive'}
@@ -642,11 +660,6 @@ const UserManagementPage = () => {
                 ]}
                 required
               />
-            ) : (
-              // Optional read-only hint for admins:
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Status: <span className="font-medium">Active</span> (admins cannot be deactivated)
-              </div>
             )}
           </div>
 

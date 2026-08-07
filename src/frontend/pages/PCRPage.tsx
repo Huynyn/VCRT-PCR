@@ -20,7 +20,42 @@ import { cn, getCurrentTime, formatDate, generateId, MARKER_COLORS } from '../ut
 import { pdfService } from '../services/pdf.service'
 import { apiRequest } from '../utils/api'
 import { setPcrCloseHandler } from '../utils/electronCloseGuard'
-import type { PCRFormData, VitalSign, OPQRSTEntry, Signatures } from '../types'
+import type { PCRFormData, VitalSign, OPQRSTEntry } from '../types'
+
+// Reshapes form_data saved before responders became a plain list: those rows
+// have fixed responder1/2/3 (and matching signatures.responder1/2/3) keys
+// instead of a responders[] array. Re-indexing keeps each signature image
+// paired with the responder it was actually drawn for.
+function normalizeLegacyResponders(formData: PCRFormData): PCRFormData {
+  const legacy = formData as any
+  if (!legacy || Array.isArray(legacy.responders)) return formData
+
+  const nameSlots: Array<string | undefined> = [legacy.responder1, legacy.responder2, legacy.responder3]
+  if (!nameSlots.some(Boolean)) return formData
+
+  const signatureSlots: Array<string | undefined> = [
+    legacy.signatures?.responder1,
+    legacy.signatures?.responder2,
+    legacy.signatures?.responder3,
+  ]
+
+  const responders: string[] = []
+  const responderSignatures: Array<string | undefined> = []
+  nameSlots.forEach((name, i) => {
+    if (name) {
+      responders.push(name)
+      responderSignatures.push(signatureSlots[i])
+    }
+  })
+
+  return {
+    ...formData,
+    responders,
+    signatures: Array.isArray(legacy.signatures?.responders)
+      ? legacy.signatures
+      : { ...legacy.signatures, responders: responderSignatures },
+  }
+}
 
 const PCRPage: React.FC = () => {
   const {
@@ -108,7 +143,7 @@ const PCRPage: React.FC = () => {
           const draftData = data.data
 
           if (draftData.status === 'draft') {
-            loadData(draftData.form_data)
+            loadData(normalizeLegacyResponders(draftData.form_data))
             setLoadedStatus('draft')
             // Restore sign-off attachment if present
             if (draftData.sign_off_attachment && draftData.sign_off_filename) {
@@ -138,7 +173,7 @@ const PCRPage: React.FC = () => {
           const reportData = data.data
 
           if (isAdmin || reportData.status === 'changes_requested') {
-            loadData(reportData.form_data)
+            loadData(normalizeLegacyResponders(reportData.form_data))
             setLoadedStatus(reportData.status)
             setAdminComments(reportData.admin_comments || null)
             // Restore sign-off attachment if present
@@ -459,9 +494,7 @@ const PCRPage: React.FC = () => {
       reportNumber: '2026-014',
       supervisor: 'Sarah Chen',
       primaryPSM: 'Marc Tremblay',
-      responder1: 'Daniel Osei',
-      responder2: 'Priya Nair',
-      responder3: '',
+      responders: ['Daniel Osei', 'Priya Nair'],
       timeNotified: '19:42',
       workplaceInjury: 'No',
       onScene: '19:45',
@@ -597,16 +630,48 @@ const PCRPage: React.FC = () => {
   const hasTourniquet =
     Array.isArray(data.hemorrhageControl) && data.hemorrhageControl.includes('Tourniquet')
 
-  // Supervisor signs first, then whichever responders were actually added to the call.
-  const signers: Array<{ key: keyof Signatures; label: string; name: string }> = [
-    { key: 'supervisor', label: 'Supervisor', name: data.supervisor || '' },
-    ...(data.responder1 ? [{ key: 'responder1' as const, label: 'Responder 1', name: data.responder1 }] : []),
-    ...(data.responder2 ? [{ key: 'responder2' as const, label: 'Responder 2', name: data.responder2 }] : []),
-    ...(data.responder3 ? [{ key: 'responder3' as const, label: 'Responder 3', name: data.responder3 }] : []),
+  // No fixed limit on responders - always show at least one row to fill in.
+  const responderList = data.responders && data.responders.length > 0 ? data.responders : ['']
+  const updateResponderAt = (index: number, value: string) => {
+    const next = [...responderList]
+    next[index] = value
+    updateField('responders', next)
+  }
+  const removeResponderAt = (index: number) => {
+    updateField('responders', responderList.filter((_, i) => i !== index))
+  }
+  const addResponder = () => {
+    updateField('responders', [...responderList, ''])
+  }
+
+  // Supervisor signs first, then whichever responders were actually added to
+  // the call. A responder's signature is tracked by its position in
+  // data.responders (there's no fixed field per responder any more, since
+  // the list can be any length), while the supervisor keeps its own named slot.
+  type SignerRef = { kind: 'supervisor' } | { kind: 'responder'; index: number }
+  const signers: Array<{ ref: SignerRef; reactKey: string; label: string; name: string }> = [
+    { ref: { kind: 'supervisor' }, reactKey: 'supervisor', label: 'Supervisor', name: data.supervisor || '' },
+    ...(data.responders || [])
+      .map((name, index) => ({
+        ref: { kind: 'responder' as const, index },
+        reactKey: `responder-${index}`,
+        label: `Responder ${index + 1}`,
+        name,
+      }))
+      .filter(s => s.name.trim()),
   ]
 
-  const handleSignatureChange = (key: keyof Signatures, value: string) => {
-    updateField('signatures', { ...(data.signatures || {}), [key]: value })
+  const getSignatureValue = (ref: SignerRef): string | undefined =>
+    ref.kind === 'supervisor' ? data.signatures?.supervisor : data.signatures?.responders?.[ref.index]
+
+  const handleSignatureChange = (ref: SignerRef, value: string) => {
+    if (ref.kind === 'supervisor') {
+      updateField('signatures', { ...(data.signatures || {}), supervisor: value })
+      return
+    }
+    const responderSignatures = [...(data.signatures?.responders || [])]
+    responderSignatures[ref.index] = value
+    updateField('signatures', { ...(data.signatures || {}), responders: responderSignatures })
   }
 
   const activeSignerIndex = Math.min(signerIndex, signers.length - 1)
@@ -754,30 +819,38 @@ const PCRPage: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <SearchableSelect
-              label="Responder 1"
-              value={data.responder1 || ''}
-              onChange={value => updateField('responder1', value)}
-              options={responderOptions}
-              placeholder="Search responders..."
-            />
-
-            <SearchableSelect
-              label="Responder 2"
-              value={data.responder2 || ''}
-              onChange={value => updateField('responder2', value)}
-              options={responderOptions}
-              placeholder="Search responders..."
-            />
-
-            <SearchableSelect
-              label="Responder 3"
-              value={data.responder3 || ''}
-              onChange={value => updateField('responder3', value)}
-              options={responderOptions}
-              placeholder="Search responders..."
-            />
+          <div className="space-y-3">
+            <label className="form-label">Responders Involved</label>
+            {responderList.map((name, index) => (
+              <div key={index} className="flex items-end gap-2">
+                <div className="flex-1">
+                  <SearchableSelect
+                    label={`Responder ${index + 1}`}
+                    value={name}
+                    onChange={value => updateResponderAt(index, value)}
+                    options={responderOptions}
+                    placeholder="Search responders..."
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeResponderAt(index)}
+                  className="mb-2 p-2 text-gray-400 hover:text-emergency-600 dark:hover:text-emergency-400"
+                  aria-label={`Remove responder ${index + 1}`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addResponder}
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              Add Responder
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1571,9 +1644,9 @@ const PCRPage: React.FC = () => {
                   {activeSigner.name ? ` — ${activeSigner.name}` : ''}
                 </p>
                 <SignaturePad
-                  key={activeSigner.key}
-                  value={data.signatures?.[activeSigner.key]}
-                  onChange={value => handleSignatureChange(activeSigner.key, value)}
+                  key={activeSigner.reactKey}
+                  value={getSignatureValue(activeSigner.ref)}
+                  onChange={value => handleSignatureChange(activeSigner.ref, value)}
                 />
                 <span className="block text-center text-xs text-gray-400 dark:text-gray-500 mt-2">
                   {activeSignerIndex + 1}/{signers.length}

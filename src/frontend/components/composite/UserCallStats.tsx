@@ -8,9 +8,18 @@ interface MineStatsRow {
   id: string
   date: string | null
   supervisor: string | null
-  responder1: string | null
-  responder2: string | null
-  responder3: string | null
+  /** JSON-encoded array of responder names, as returned by the backend. */
+  responders: string | null
+}
+
+function parseResponders(raw: string | null): string[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((name): name is string => !!name && typeof name === 'string') : []
+  } catch {
+    return []
+  }
 }
 
 type Season = 'Fall' | 'Winter'
@@ -29,8 +38,8 @@ function aggregate(rows: MineStatsRow[]): { total: number; bars: BarDatum[] } {
     if (r.supervisor) {
       supervisorCounts.set(r.supervisor, (supervisorCounts.get(r.supervisor) || 0) + 1)
     }
-    ;[r.responder1, r.responder2, r.responder3].forEach(resp => {
-      if (resp) responderCounts.set(resp, (responderCounts.get(resp) || 0) + 1)
+    parseResponders(r.responders).forEach(resp => {
+      responderCounts.set(resp, (responderCounts.get(resp) || 0) + 1)
     })
   })
 

@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS pcr_call_archive (
     responder1 TEXT,
     responder2 TEXT,
     responder3 TEXT,
+    responders TEXT,
     report_number TEXT,
     chief_complaint TEXT,
     time_notified TEXT,
@@ -357,6 +358,19 @@ export class DatabaseManager {
       if (!columnNames.includes('admin_comments')) {
         this.database.exec('ALTER TABLE pcr_reports ADD COLUMN admin_comments TEXT');
         console.log('Migration: Added admin_comments column to pcr_reports');
+      }
+
+      // Migration: Add responders column (JSON array) to pcr_call_archive,
+      // replacing the fixed responder1/2/3 columns now that a PCR can list
+      // any number of responders. The old columns are left in place so
+      // already-archived rows stay readable (see archivePcrReportsSql and
+      // the stats queries in routes/pcr.ts, which fall back to them).
+      const archiveTableInfo = this.database.prepare('PRAGMA table_info(pcr_call_archive)').all() as Array<{ name: string }>;
+      const archiveColumnNames = archiveTableInfo.map(col => col.name);
+
+      if (!archiveColumnNames.includes('responders')) {
+        this.database.exec('ALTER TABLE pcr_call_archive ADD COLUMN responders TEXT');
+        console.log('Migration: Added responders column to pcr_call_archive');
       }
 
       // Migration: Add login lockout tracking columns to users

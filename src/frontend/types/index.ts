@@ -4,9 +4,8 @@ export interface BasicInformation {
   location: string;
   callNumber: string;
   reportNumber: string;
-  responder1?: string;
-  responder2?: string;
-  responder3?: string;
+  /** Any number of responders present on the call - no fixed limit. */
+  responders?: string[];
   supervisor: string;
   primaryPSM?: string;
   timeNotified: string;
@@ -133,9 +132,8 @@ export interface AdditionalInformation {
 // a PNG data URL produced by the SignaturePad canvas, or absent if unsigned.
 export interface Signatures {
   supervisor?: string;
-  responder1?: string;
-  responder2?: string;
-  responder3?: string;
+  /** Index-aligned with PCRFormData.responders. */
+  responders?: string[];
 }
 
 export interface PCRFormData extends BasicInformation, PatientInformation, MedicalHistory, TreatmentPerformed, OPQRSTAssessment, AdditionalInformation {

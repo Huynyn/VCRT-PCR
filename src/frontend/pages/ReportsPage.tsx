@@ -438,16 +438,19 @@ const ReportsPage = () => {
                             </>
                           )}
 
-                          {/* Delete (works for both draft and submitted) */}
-                          <button
-                            onClick={e => {
-                              e.stopPropagation()
-                              handleDeleteReport(report.id, report.status)
-                            }}
-                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
-                          >
-                            Delete
-                          </button>
+                          {/* Delete: owners can only remove their own drafts; once a
+                              report is submitted, only an admin can delete it. */}
+                          {(isAdmin || report.status === 'draft') && (
+                            <button
+                              onClick={e => {
+                                e.stopPropagation()
+                                handleDeleteReport(report.id, report.status)
+                              }}
+                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

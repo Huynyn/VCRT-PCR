@@ -11,9 +11,18 @@ export interface ApprovedRangeRow {
   patient_care_transferred: string | null
   oxygen_given: string | null
   supervisor: string | null
-  responder1: string | null
-  responder2: string | null
-  responder3: string | null
+  /** JSON-encoded array of responder names, as returned by the backend. */
+  responders: string | null
+}
+
+function parseResponders(raw: string | null): string[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((name): name is string => !!name && typeof name === 'string') : []
+  } catch {
+    return []
+  }
 }
 
 // Matches the navy sampled from the VCRT/EBIC logo (tailwind.config.js navy-800)
@@ -100,9 +109,7 @@ export function generateApprovedCallsExcel(
     { header: 'Transfer to EMS', key: 'transferToEms', width: 15 },
     { header: 'Oxygen Given', key: 'oxygenGiven', width: 13 },
     { header: 'Supervisor', key: 'supervisor', width: 20 },
-    { header: 'Responder 1', key: 'responder1', width: 18 },
-    { header: 'Responder 2', key: 'responder2', width: 18 },
-    { header: 'Responder 3', key: 'responder3', width: 18 },
+    { header: 'Responders', key: 'responders', width: 32 },
   ]
 
   rows.forEach(r => {
@@ -118,9 +125,7 @@ export function generateApprovedCallsExcel(
       transferToEms: r.patient_care_transferred === 'Paramedics' ? 'Yes' : 'No',
       oxygenGiven: r.oxygen_given === 'yes' ? 'Yes' : 'No',
       supervisor: r.supervisor || '',
-      responder1: r.responder1 || '',
-      responder2: r.responder2 || '',
-      responder3: r.responder3 || '',
+      responders: parseResponders(r.responders).join(', '),
     })
   })
 

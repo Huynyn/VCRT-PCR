@@ -182,10 +182,26 @@ router.put('/:id', authenticateToken, logActivity('update_user', 'user'), (req: 
     }
 
     // Check if user exists
-    const existingUser = db.prepare('SELECT id FROM users WHERE id = ?').get(id);
+    const existingUser = db.prepare('SELECT id, role, is_active FROM users WHERE id = ?').get(id) as any;
 
     if (!existingUser) {
       return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Deactivating is otherwise unrestricted (including for admins), but two
+    // cases would strand the account or the whole system:
+    if (isActive === false) {
+      if (id === req.user!.id) {
+        return res.status(400).json({ success: false, message: "You can't deactivate your own account while logged in." });
+      }
+      if (String(existingUser.role).toLowerCase() === 'admin') {
+        const activeAdminCount = (db
+          .prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'admin' AND is_active = 1 AND id != ?")
+          .get(id) as any).c as number;
+        if (activeAdminCount === 0) {
+          return res.status(400).json({ success: false, message: 'Cannot deactivate the last active admin.' });
+        }
+      }
     }
 
     // Build update query

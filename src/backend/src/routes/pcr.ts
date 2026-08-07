@@ -349,6 +349,13 @@ router.delete('/:id', authenticateToken, logActivity('delete_pcr', 'pcr_report')
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
+    // Once a report leaves draft status it's part of the review workflow -
+    // only an admin can remove it from there. Owners can still delete their
+    // own drafts freely.
+    if (!isAdmin && report.status !== 'draft') {
+      return res.status(403).json({ success: false, message: 'Only an admin can delete a submitted report' });
+    }
+
     // Archive stats-relevant fields (de-identified) before removing a finalized report
     db.prepare(archivePcrReportsSql('id = ?')).run(id);
 
@@ -463,13 +470,19 @@ router.get('/stats/mine', authenticateToken, (req: AuthenticatedRequest, res: Re
       SELECT id,
         json_extract(form_data, '$.date') AS date,
         json_extract(form_data, '$.supervisor') AS supervisor,
-        json_extract(form_data, '$.responder1') AS responder1,
-        json_extract(form_data, '$.responder2') AS responder2,
-        json_extract(form_data, '$.responder3') AS responder3
+        COALESCE(
+          json_extract(form_data, '$.responders'),
+          json_array(
+            json_extract(form_data, '$.responder1'),
+            json_extract(form_data, '$.responder2'),
+            json_extract(form_data, '$.responder3')
+          )
+        ) AS responders
       FROM pcr_reports
       WHERE created_by = ? AND status IN ('submitted', 'approved')
       UNION ALL
-      SELECT id, date, supervisor, responder1, responder2, responder3
+      SELECT id, date, supervisor,
+        COALESCE(responders, json_array(responder1, responder2, responder3))
       FROM pcr_call_archive
       WHERE created_by = ?
       ORDER BY date
@@ -517,14 +530,20 @@ router.get('/stats/approved-range', authenticateToken, requireRole(['admin']), (
         json_extract(form_data, '$.patientCareTransferred') AS patient_care_transferred,
         json_extract(form_data, '$.oxygenProtocol.oxygen_given') AS oxygen_given,
         json_extract(form_data, '$.supervisor') AS supervisor,
-        json_extract(form_data, '$.responder1') AS responder1,
-        json_extract(form_data, '$.responder2') AS responder2,
-        json_extract(form_data, '$.responder3') AS responder3
+        COALESCE(
+          json_extract(form_data, '$.responders'),
+          json_array(
+            json_extract(form_data, '$.responder1'),
+            json_extract(form_data, '$.responder2'),
+            json_extract(form_data, '$.responder3')
+          )
+        ) AS responders
       FROM pcr_reports
       WHERE status = 'approved' AND json_extract(form_data, '$.date') BETWEEN ? AND ?
       UNION ALL
       SELECT id, date, report_number, chief_complaint, time_notified, on_scene, cleared_scene,
-        patient_care_transferred, oxygen_given, supervisor, responder1, responder2, responder3
+        patient_care_transferred, oxygen_given, supervisor,
+        COALESCE(responders, json_array(responder1, responder2, responder3))
       FROM pcr_call_archive
       WHERE status = 'approved' AND date BETWEEN ? AND ?
       ORDER BY date

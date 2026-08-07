@@ -56,7 +56,16 @@ export async function apiRequest<T = any>(
     if (response.status === 401) {
       throw new Error('Authentication required');
     }
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    // Backend error responses are { success: false, message: '...' } - surface
+    // that specific reason instead of just the generic HTTP status text.
+    let message = `HTTP ${response.status}: ${response.statusText}`;
+    try {
+      const body = await response.clone().json();
+      if (body?.message) message = body.message;
+    } catch {
+      // Response body wasn't JSON - fall back to the generic message above
+    }
+    throw new Error(message);
   }
 
   const contentType = response.headers.get('content-type');
