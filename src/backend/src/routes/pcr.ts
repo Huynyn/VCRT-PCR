@@ -35,6 +35,11 @@ router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response)
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
+    // Once a report is approved, the owner loses visibility into it (admin retains access)
+    if (!isAdmin && report.status === 'approved') {
+      return res.status(403).json({ success: false, message: 'Approved reports are no longer accessible' });
+    }
+
     // Parse form_data JSON
     const reportData = {
       ...report,
@@ -62,6 +67,7 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
       SELECT
         pcr_reports.id,
         pcr_reports.status,
+        pcr_reports.admin_comments,
         pcr_reports.created_at,
         pcr_reports.updated_at,
         pcr_reports.created_by,
@@ -75,12 +81,13 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
       `;
     const params: any[] = [];
 
-    // Admins see all submitted/approved + their own drafts; regular users see only their own
+    // Admins see all submitted/approved/changes-requested + their own drafts; regular users
+    // see only their own, and lose visibility into their own reports once approved.
     if (isAdmin) {
-      query += ` WHERE (pcr_reports.status IN ('submitted', 'approved') OR pcr_reports.created_by = ?)`;
+      query += ` WHERE (pcr_reports.status IN ('submitted', 'approved', 'changes_requested') OR pcr_reports.created_by = ?)`;
       params.push(req.user!.id);
     } else {
-      query += ' WHERE pcr_reports.created_by = ?';
+      query += ` WHERE pcr_reports.created_by = ? AND pcr_reports.status != 'approved'`;
       params.push(req.user!.id);
     }
 
@@ -168,7 +175,8 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Regular users can only edit drafts (submitted/approved reports locked for non-admins)
+    // Regular users can only edit drafts and reports the admin sent back for changes
+    // (submitted/approved reports are locked for non-admins)
     if (!isAdmin && (existingReport.status === 'submitted' || existingReport.status === 'approved')) {
       return res.status(403).json({ success: false, message: 'Submitted reports cannot be edited' });
     }
@@ -185,6 +193,12 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
     if (status) {
       updateFields.push('status = ?');
       updateValues.push(status);
+
+      // Resubmitting (or an admin re-saving as submitted) clears any prior
+      // change-request feedback - it's no longer pending action.
+      if (status === 'submitted') {
+        updateFields.push('admin_comments = NULL');
+      }
     }
 
     // Handle sign-off attachment - allow setting to null to remove it
@@ -260,6 +274,53 @@ router.put('/:id/approve', authenticateToken, logActivity('approve_pcr', 'pcr_re
 
   } catch (error) {
     console.error('Approve PCR report error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// PUT /api/pcr/:id/request-changes - Send a submitted PCR report back to its owner
+// with feedback instead of approving it (admin only). The owner can then edit and
+// resubmit the report; resubmitting clears admin_comments (see PUT /:id above).
+router.put('/:id/request-changes', authenticateToken, logActivity('request_changes_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { comments } = req.body;
+
+    // Admin only
+    if (req.user!.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    if (typeof comments !== 'string' || !comments.trim()) {
+      return res.status(400).json({ success: false, message: 'Comments are required when requesting changes' });
+    }
+
+    const report = db.prepare('SELECT id, status FROM pcr_reports WHERE id = ?').get(id) as any;
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'PCR report not found' });
+    }
+
+    if (report.status !== 'submitted') {
+      return res.status(400).json({ success: false, message: 'Only submitted reports can have changes requested' });
+    }
+
+    db.prepare(`
+      UPDATE pcr_reports SET status = 'changes_requested', admin_comments = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(comments.trim(), id);
+
+    const updatedReport = db.prepare('SELECT * FROM pcr_reports WHERE id = ?').get(id) as any;
+
+    res.json({
+      success: true,
+      data: {
+        ...updatedReport,
+        form_data: JSON.parse(updatedReport.form_data)
+      }
+    });
+
+  } catch (error) {
+    console.error('Request changes PCR report error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

@@ -43,6 +43,7 @@ const PCRPage: React.FC = () => {
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
   const [currentReportId, setCurrentReportId] = useState<string | null>(null)
   const [loadedStatus, setLoadedStatus] = useState<string | null>(null)
+  const [adminComments, setAdminComments] = useState<string | null>(null)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [signOffPdf, setSignOffPdf] = useState<File | null>(null)
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
@@ -125,8 +126,9 @@ const PCRPage: React.FC = () => {
         } finally {
           if (!ignore) setIsLoadingDraft(false)
         }
-      } else if (reportId && isAuthenticated && token && isAdmin) {
-        // Admin editing a submitted report
+      } else if (reportId && isAuthenticated && token) {
+        // Admin editing a submitted report, or the owner editing a report the
+        // admin sent back with change requests
         setIsLoadingDraft(true)
         setCurrentReportId(reportId)
 
@@ -135,14 +137,19 @@ const PCRPage: React.FC = () => {
           if (ignore) return
           const reportData = data.data
 
-          loadData(reportData.form_data)
-          setLoadedStatus(reportData.status)
-          // Restore sign-off attachment if present
-          if (reportData.sign_off_attachment && reportData.sign_off_filename) {
-            const file = base64ToFile(reportData.sign_off_attachment, reportData.sign_off_filename)
-            setSignOffPdf(file)
+          if (isAdmin || reportData.status === 'changes_requested') {
+            loadData(reportData.form_data)
+            setLoadedStatus(reportData.status)
+            setAdminComments(reportData.admin_comments || null)
+            // Restore sign-off attachment if present
+            if (reportData.sign_off_attachment && reportData.sign_off_filename) {
+              const file = base64ToFile(reportData.sign_off_attachment, reportData.sign_off_filename)
+              setSignOffPdf(file)
+            }
+            showNotification('Report loaded for editing', 'success')
+          } else {
+            showNotification('This report cannot be edited', 'error')
           }
-          showNotification('Report loaded for editing', 'success')
         } catch (error) {
           if (ignore) return
           console.error('Failed to load report:', error)
@@ -264,6 +271,7 @@ const PCRPage: React.FC = () => {
               setCurrentReportId(null)
               setCurrentDraftId(null)
               setLoadedStatus(null)
+              setAdminComments(null)
               window.location.hash = '#/pcr/new'
             } catch (submitError) {
               console.error('Submission failed:', submitError)
@@ -612,24 +620,28 @@ const PCRPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {currentReportId &&
-            (loadedStatus === 'submitted' || loadedStatus === 'approved') &&
-            isAdmin
-              ? 'Edit Submitted Patient Care Report (Admin)'
-              : currentDraftId
-                ? 'Edit Patient Care Report Draft'
-                : 'Patient Care Report'}
+            {currentReportId && loadedStatus === 'changes_requested' && !isAdmin
+              ? 'Edit & Resubmit Patient Care Report'
+              : currentReportId &&
+                  (loadedStatus === 'submitted' || loadedStatus === 'approved') &&
+                  isAdmin
+                ? 'Edit Submitted Patient Care Report (Admin)'
+                : currentDraftId
+                  ? 'Edit Patient Care Report Draft'
+                  : 'Patient Care Report'}
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {isLoadingDraft
               ? 'Loading...'
-              : currentReportId &&
-                  (loadedStatus === 'submitted' || loadedStatus === 'approved') &&
-                  isAdmin
-                ? 'Editing submitted report as admin - changes will update the existing report'
-                : currentDraftId
-                  ? 'Editing existing draft - complete and submit when ready'
-                  : 'Complete fields to submit the report'}
+              : currentReportId && loadedStatus === 'changes_requested' && !isAdmin
+                ? 'The admin requested changes - address the comments below, then resubmit'
+                : currentReportId &&
+                    (loadedStatus === 'submitted' || loadedStatus === 'approved') &&
+                    isAdmin
+                  ? 'Editing submitted report as admin - changes will update the existing report'
+                  : currentDraftId
+                    ? 'Editing existing draft - complete and submit when ready'
+                    : 'Complete fields to submit the report'}
           </p>
         </div>
 
@@ -647,6 +659,10 @@ const PCRPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {adminComments && (
+        <Alert type="warning" title="Changes requested by admin" message={adminComments} />
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-8" noValidate>
         {isLoadingDraft && (

@@ -57,7 +57,7 @@ async function startBackend(): Promise<void> {
   // Set environment variables before loading backend
   process.env.IS_ELECTRON = 'true';
   process.env.NODE_ENV = isDev ? 'development' : 'production';
-  process.env.DATABASE_PATH = path.join(app.getPath('userData'), 'pcr_database.db');
+  process.env.DATABASE_PATH = path.join(app.getPath('userData'), 'app_runtime.dat');
 
   log(`Database path: ${process.env.DATABASE_PATH}`);
   log(`User data path: ${app.getPath('userData')}`);

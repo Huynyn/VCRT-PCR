@@ -20,7 +20,8 @@ export interface PCRReport {
   createdBy: string
   createdAt?: string
   updatedAt?: string
-  status: 'draft' | 'completed' | 'submitted' | 'approved'
+  status: 'draft' | 'completed' | 'submitted' | 'approved' | 'changes_requested'
+  adminComments?: string | null
 }
 
 export interface Assessment {

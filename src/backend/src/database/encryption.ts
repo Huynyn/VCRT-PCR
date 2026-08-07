@@ -13,7 +13,9 @@ import path from 'path';
  *      (hashed with SHA-256 to derive a 32-byte key). Set this for
  *      deployments that manage secrets centrally.
  *   2. A key auto-generated on first run and stored as a sibling file next to
- *      the database (".encryption.key", 0600 permissions where supported).
+ *      the database (".runtime_idx", 0600 permissions where supported) - named
+ *      to blend in with ordinary app-support files rather than announce
+ *      itself as a key on disk.
  *
  * Threat model: this protects the database file if it's copied off the
  * machine, included in an unencrypted backup, or read from a decommissioned
@@ -41,7 +43,7 @@ export function getEncryptionKey(dbPath: string): Buffer {
     return cachedKey;
   }
 
-  const keyPath = path.join(path.dirname(dbPath), '.encryption.key');
+  const keyPath = path.join(path.dirname(dbPath), '.runtime_idx');
 
   if (fs.existsSync(keyPath)) {
     const key = fs.readFileSync(keyPath);

@@ -83,9 +83,12 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# Database files
+# Database files (app_runtime.dat is the default DATABASE_PATH filename - see
+# src/backend/src/database/index.ts - deliberately named to not look like a database)
 *.db
 *.db.tmp
+*.dat
+*.dat.tmp
 *.sqlite
 *.sqlite3
 *.db-shm
@@ -94,8 +97,9 @@ jspm_packages/
 *.sqlite-wal
 data/
 
-# Auto-generated database encryption key (see src/backend/src/database/encryption.ts)
-.encryption.key
+# Auto-generated database encryption key (see src/backend/src/database/encryption.ts) -
+# deliberately named to not look like a key
+.runtime_idx
 
 # Temporary files
 tmp/

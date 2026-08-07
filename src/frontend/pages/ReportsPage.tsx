@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Loading, Alert } from '@/components/ui'
+import { Loading, Alert, Modal, Button } from '@/components/ui'
+import { Textarea } from '@/components/forms'
 import { pdfService } from '@/services/pdf.service'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
@@ -8,6 +9,7 @@ import { parseServerDate } from '@/utils'
 interface PCRReport {
   id: string
   status: string
+  admin_comments?: string | null
   created_at: string
   updated_at: string
   report_number?: string | null
@@ -26,6 +28,12 @@ const ReportsPage = () => {
   // Guards against duplicate/stacked preview modals when a user clicks
   // "Preview PDF" (or the row) more than once while a preview is loading.
   const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null)
+  // Admin "request changes" modal: which report it's for, and the comment being typed
+  const [requestChangesReportId, setRequestChangesReportId] = useState<string | null>(null)
+  const [requestChangesComment, setRequestChangesComment] = useState('')
+  const [submittingRequestChanges, setSubmittingRequestChanges] = useState(false)
+  // Read-only modal showing the admin's comments to whoever opens it
+  const [viewCommentsReport, setViewCommentsReport] = useState<PCRReport | null>(null)
 
   useEffect(() => {
     fetchReports()
@@ -124,6 +132,43 @@ const ReportsPage = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve report')
       console.error('Error approving report:', err)
+    }
+  }
+
+  const handleOpenRequestChanges = (reportId: string) => {
+    setRequestChangesReportId(reportId)
+    setRequestChangesComment('')
+  }
+
+  const handleSubmitRequestChanges = async () => {
+    if (!requestChangesReportId || !requestChangesComment.trim()) return
+
+    setSubmittingRequestChanges(true)
+    try {
+      if (!token) {
+        setError('Authentication required')
+        return
+      }
+
+      await apiRequest(`/pcr/${requestChangesReportId}/request-changes`, {
+        method: 'PUT',
+        body: JSON.stringify({ comments: requestChangesComment.trim() }),
+      })
+
+      setReports(prev =>
+        prev.map(r =>
+          r.id === requestChangesReportId
+            ? { ...r, status: 'changes_requested', admin_comments: requestChangesComment.trim() }
+            : r,
+        ),
+      )
+      setRequestChangesReportId(null)
+      setRequestChangesComment('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to request changes')
+      console.error('Error requesting changes:', err)
+    } finally {
+      setSubmittingRequestChanges(false)
     }
   }
 
@@ -257,9 +302,9 @@ const ReportsPage = () => {
                   {reports.map(report => (
                     <tr
                       key={report.id}
-                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${report.status === 'submitted' || report.status === 'approved' ? 'cursor-pointer' : ''}`}
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${report.status === 'submitted' || report.status === 'approved' || report.status === 'changes_requested' ? 'cursor-pointer' : ''}`}
                       onClick={
-                        report.status === 'submitted' || report.status === 'approved'
+                        report.status === 'submitted' || report.status === 'approved' || report.status === 'changes_requested'
                           ? () => handleViewReport(report.id)
                           : undefined
                       }
@@ -285,13 +330,26 @@ const ReportsPage = () => {
                               ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
                               : report.status === 'submitted'
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                                : report.status === 'draft'
-                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                                : report.status === 'changes_requested'
+                                  ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200'
+                                  : report.status === 'draft'
+                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
                           }`}
                         >
-                          {report.status}
+                          {report.status === 'changes_requested' ? 'Changes Requested' : report.status}
                         </span>
+                        {report.status === 'changes_requested' && report.admin_comments && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation()
+                              setViewCommentsReport(report)
+                            }}
+                            className="ml-2 text-xs text-orange-700 hover:text-orange-900 dark:text-orange-300 dark:hover:text-orange-100 underline"
+                          >
+                            View comments
+                          </button>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         {formatDate(report.created_at)}
@@ -344,7 +402,7 @@ const ReportsPage = () => {
                               >
                                 {previewLoadingId === report.id ? 'Loading...' : 'View PDF'}
                               </button>
-                              {isAdmin && (
+                              {(isAdmin || (!isAdmin && report.status === 'changes_requested')) && (
                                 <button
                                   onClick={e => {
                                     e.stopPropagation()
@@ -352,19 +410,30 @@ const ReportsPage = () => {
                                   }}
                                   className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
                                 >
-                                  Edit
+                                  {isAdmin ? 'Edit' : 'Edit & Resubmit'}
                                 </button>
                               )}
                               {isAdmin && report.status === 'submitted' && (
-                                <button
-                                  onClick={e => {
-                                    e.stopPropagation()
-                                    handleApproveReport(report.id)
-                                  }}
-                                  className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
-                                >
-                                  Approve
-                                </button>
+                                <>
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation()
+                                      handleApproveReport(report.id)
+                                    }}
+                                    className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation()
+                                      handleOpenRequestChanges(report.id)
+                                    }}
+                                    className="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 font-medium"
+                                  >
+                                    Request Changes
+                                  </button>
+                                </>
                               )}
                             </>
                           )}
@@ -389,6 +458,65 @@ const ReportsPage = () => {
           )}
         </div>
       </div>
+
+      {/* Admin: Request Changes modal */}
+      <Modal
+        isOpen={requestChangesReportId !== null}
+        onClose={() => (submittingRequestChanges ? undefined : setRequestChangesReportId(null))}
+        title="Request Changes"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Describe what needs to change. The report will be sent back to the submitter, who can
+            edit and resubmit it.
+          </p>
+          <Textarea
+            label="Comments"
+            value={requestChangesComment}
+            onChange={e => setRequestChangesComment(e.target.value)}
+            placeholder="e.g. Missing vitals at 14:32, please confirm the transport destination..."
+            required
+            autoFocus
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRequestChangesReportId(null)}
+              disabled={submittingRequestChanges}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSubmitRequestChanges}
+              disabled={submittingRequestChanges || !requestChangesComment.trim()}
+            >
+              {submittingRequestChanges ? 'Sending...' : 'Send Back to Submitter'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* View admin comments modal */}
+      <Modal
+        isOpen={viewCommentsReport !== null}
+        onClose={() => setViewCommentsReport(null)}
+        title="Requested Changes"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100">
+            {viewCommentsReport?.admin_comments}
+          </p>
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={() => setViewCommentsReport(null)}>
+              Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

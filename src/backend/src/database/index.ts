@@ -8,7 +8,7 @@ import { getEncryptionKey, encryptBuffer, decryptBuffer, isEncrypted } from './e
 const isElectron = process.env.IS_ELECTRON === 'true';
 
 // Database path: Use env var if in Electron, otherwise use current working directory
-const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), 'pcr_database.db');
+const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), 'app_runtime.dat');
 
 // Embedded schema - avoids file read issues in packaged Electron apps
 const SCHEMA_SQL = `
@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS pcr_reports (
     form_data TEXT NOT NULL,
     sign_off_attachment TEXT,
     sign_off_filename TEXT,
-    status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved')) DEFAULT 'draft',
+    status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved', 'changes_requested')) DEFAULT 'draft',
+    admin_comments TEXT,
     created_by TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -353,6 +354,11 @@ export class DatabaseManager {
         console.log('Migration: Added sign_off_filename column to pcr_reports');
       }
 
+      if (!columnNames.includes('admin_comments')) {
+        this.database.exec('ALTER TABLE pcr_reports ADD COLUMN admin_comments TEXT');
+        console.log('Migration: Added admin_comments column to pcr_reports');
+      }
+
       // Migration: Add login lockout tracking columns to users
       const userTableInfo = this.database.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
       const userColumnNames = userTableInfo.map(col => col.name);
@@ -414,6 +420,54 @@ export class DatabaseManager {
         }
       } catch (migrationError) {
         console.error('Migration error (status constraint):', migrationError);
+      }
+
+      // Migration: Add 'changes_requested' to status CHECK constraint, and
+      // make sure admin_comments (added as a plain column above) survives
+      // the table rebuild. Same gate-on-constraint-text/transaction pattern
+      // as the 'approved' migration above, so it also only ever runs once.
+      try {
+        const tableRow = this.database
+          .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'pcr_reports'")
+          .get() as { sql: string } | undefined;
+        const alreadyMigrated = !!tableRow?.sql && tableRow.sql.includes("'changes_requested'");
+
+        if (!alreadyMigrated) {
+          this.database.exec('BEGIN TRANSACTION');
+          try {
+            this.database.exec('DROP TABLE IF EXISTS pcr_reports_new');
+            this.database.exec(`
+              CREATE TABLE pcr_reports_new (
+                id TEXT PRIMARY KEY,
+                form_data TEXT NOT NULL,
+                sign_off_attachment TEXT,
+                sign_off_filename TEXT,
+                status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved', 'changes_requested')) DEFAULT 'draft',
+                admin_comments TEXT,
+                created_by TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users(id)
+              )
+            `);
+            this.database.exec(`
+              INSERT INTO pcr_reports_new SELECT id, form_data, sign_off_attachment, sign_off_filename, status, admin_comments, created_by, created_at, updated_at FROM pcr_reports
+            `);
+            this.database.exec('DROP TABLE pcr_reports');
+            this.database.exec('ALTER TABLE pcr_reports_new RENAME TO pcr_reports');
+            // Recreate indexes
+            this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_by ON pcr_reports(created_by)');
+            this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_status ON pcr_reports(status)');
+            this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_at ON pcr_reports(created_at)');
+            this.database.exec('COMMIT');
+            console.log('Migration: Updated pcr_reports status constraint to include changes_requested');
+          } catch (migrationError) {
+            this.database.exec('ROLLBACK');
+            console.error('Migration error (changes_requested constraint):', migrationError);
+          }
+        }
+      } catch (migrationError) {
+        console.error('Migration error (changes_requested constraint):', migrationError);
       }
     } catch (error) {
       console.error('Migration error:', error);

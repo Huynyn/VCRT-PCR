@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS pcr_reports (
     form_data TEXT NOT NULL, -- JSON blob of all form data (PCRFormData)
     sign_off_attachment TEXT, -- Base64 encoded PDF of patient signature (optional)
     sign_off_filename TEXT, -- Original filename of the sign-off attachment
-    status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved')) DEFAULT 'draft',
+    status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved', 'changes_requested')) DEFAULT 'draft',
+    admin_comments TEXT, -- Admin feedback when status = 'changes_requested', shown to the owner for edit + resubmit
     created_by TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
