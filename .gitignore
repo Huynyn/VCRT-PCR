@@ -85,6 +85,7 @@ jspm_packages/
 
 # Database files
 *.db
+*.db.tmp
 *.sqlite
 *.sqlite3
 *.db-shm

@@ -5,6 +5,16 @@ import * as fs from 'fs';
 // Environment detection
 const isDev = process.env.NODE_ENV === 'development';
 
+// Only one instance of the app (and its embedded backend + DB connection)
+// should ever run at once - a second launch would duplicate the full
+// Electron/Node memory footprint and risk two processes writing to the same
+// encrypted database file. Bail out of the second launch immediately and
+// just focus the already-running window instead.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
+
 // Debug logging to file (for Windows debugging)
 const logFile = path.join(app.getPath('userData'), 'debug.log');
 function log(message: string): void {
@@ -32,6 +42,8 @@ try {
 
 let mainWindow: BrowserWindow | null = null;
 let serverPort: number = 0;
+let allowClose = false;
+let closeConfirmTimer: NodeJS.Timeout | null = null;
 
 // Backend module - will be loaded dynamically
 let backendModule: { startEmbeddedServer: (dbPath?: string) => Promise<number>; stopEmbeddedServer: () => void } | null = null;
@@ -119,6 +131,10 @@ function createWindow(): void {
       sandbox: false, // Needed for preload to work properly
       webSecurity: true,
       allowRunningInsecureContent: false,
+      // This is a data-entry form app, not a document editor - the background
+      // spellcheck service (dictionary loading + continuous checking across
+      // every text input) costs real memory/CPU for a feature nobody needs here.
+      spellcheck: false,
     },
     title: 'PCR Application',
     icon: path.join(__dirname, '../../assets/icon.png'),
@@ -149,6 +165,26 @@ function createWindow(): void {
     log(`Failed to load: ${errorCode} - ${errorDescription}`);
   });
 
+  // Closing the app should count as a session logout, and if a PCR draft is
+  // being edited, the renderer should get a chance to offer saving it first.
+  // The renderer can't be asked synchronously, so the first close attempt is
+  // intercepted and deferred until it replies via 'confirm-close'.
+  mainWindow.on('close', (event) => {
+    if (allowClose) return;
+    event.preventDefault();
+    log('Close requested - asking renderer to confirm');
+    mainWindow?.webContents.send('app-close-requested');
+
+    if (closeConfirmTimer) clearTimeout(closeConfirmTimer);
+    closeConfirmTimer = setTimeout(() => {
+      // Renderer never responded (frozen page, no listener registered yet,
+      // etc.) - don't let that make the app unclosable.
+      log('No close confirmation from renderer within timeout - closing anyway');
+      allowClose = true;
+      mainWindow?.close();
+    }, 5000);
+  });
+
   // Handle window close
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -164,6 +200,22 @@ function createWindow(): void {
  */
 ipcMain.handle('get-server-port', () => {
   return serverPort;
+});
+
+/**
+ * Renderer's answer to 'app-close-requested': whether it's OK to actually
+ * close the window now (e.g. after saving/discarding a PCR draft, or the
+ * user cancelling the close entirely).
+ */
+ipcMain.on('confirm-close', (_event, shouldClose: boolean) => {
+  if (closeConfirmTimer) {
+    clearTimeout(closeConfirmTimer);
+    closeConfirmTimer = null;
+  }
+  if (shouldClose) {
+    allowClose = true;
+    mainWindow?.close();
+  }
 });
 
 /**
@@ -271,9 +323,22 @@ ipcMain.on('close-window', () => {
 // App lifecycle events
 
 /**
+ * A second launch attempt while we're already running - just focus the
+ * existing window instead of letting it start its own backend/window.
+ */
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
+/**
  * App ready - start backend and create window
  */
 app.whenReady().then(async () => {
+  if (!gotSingleInstanceLock) return; // losing instance - already quitting
+
   log('App ready');
 
   try {

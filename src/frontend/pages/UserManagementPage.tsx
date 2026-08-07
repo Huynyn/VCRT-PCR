@@ -4,7 +4,7 @@ import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
-import { parseServerDate } from '@/utils'
+import { parseServerDate, getPasswordStrengthError } from '@/utils'
 import { RespondersManager } from '@/components/composite'
 import type { User } from '@/types'
 
@@ -117,8 +117,9 @@ const UserManagementPage = () => {
 
     if (!createForm.password.trim()) {
       errors.password = 'Password is required'
-    } else if (createForm.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters'
+    } else {
+      const passwordError = getPasswordStrengthError(createForm.password)
+      if (passwordError) errors.password = passwordError
     }
 
     if (!createForm.confirmPassword.trim()) {
@@ -277,8 +278,9 @@ const UserManagementPage = () => {
 
     if (!passwordForm.newPassword.trim()) {
       errors.newPassword = 'New password is required'
-    } else if (passwordForm.newPassword.length < 8) {
-      errors.newPassword = 'Password must be at least 8 characters'
+    } else {
+      const passwordError = getPasswordStrengthError(passwordForm.newPassword)
+      if (passwordError) errors.newPassword = passwordError
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -554,7 +556,7 @@ const UserManagementPage = () => {
             onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
             error={formErrors.password}
             required
-            helpText="Must be at least 8 characters long"
+            helpText="At least 8 characters, with a lowercase letter, an uppercase letter, and a number"
           />
 
           <Input
@@ -720,7 +722,7 @@ const UserManagementPage = () => {
             onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
             error={passwordFormErrors.newPassword}
             required
-            helpText="Must be at least 8 characters long"
+            helpText="At least 8 characters, with a lowercase letter, an uppercase letter, and a number"
           />
 
           <Input

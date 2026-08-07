@@ -48,6 +48,26 @@ const electronAPI = {
   },
 
   /**
+   * Fires when the user tries to close the window. The renderer gets a
+   * chance to prompt to save an in-progress PCR draft (and log the session
+   * out) before confirming the close via confirmClose(). Returns an
+   * unsubscribe function.
+   */
+  onCloseRequested: (callback: () => void): (() => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('app-close-requested', listener);
+    return () => ipcRenderer.removeListener('app-close-requested', listener);
+  },
+
+  /**
+   * Answer to onCloseRequested: true to actually close the window now,
+   * false to cancel the close entirely.
+   */
+  confirmClose: (shouldClose: boolean): void => {
+    ipcRenderer.send('confirm-close', shouldClose);
+  },
+
+  /**
    * Window controls
    */
   minimizeWindow: (): void => {

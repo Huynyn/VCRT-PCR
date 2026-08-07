@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 import type { AuthContextType, User } from '@/types'
 import { sessionService } from '@/services/session.service'
+import { runPcrCloseHandler } from '@/utils/electronCloseGuard'
 
 interface AuthState {
   user: User | null
@@ -342,6 +343,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       window.removeEventListener('beforeunload', onBeforeUnload);
     };
   }, [state.isLoading, state.isAuthenticated, logout]);
+
+  // Closing the Electron app counts as a logout, same as idle timeout above -
+  // but if a PCR draft is being edited (PCRPage registers this via
+  // electronCloseGuard), give the user a chance to save it first.
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const handleCloseRequested = async () => {
+      const okToClose = await runPcrCloseHandler();
+      if (okToClose && state.isAuthenticated) {
+        await logout();
+      }
+      window.electronAPI?.confirmClose(okToClose);
+    };
+
+    return window.electronAPI.onCloseRequested(handleCloseRequested);
+  }, [state.isAuthenticated, logout]);
 
   const contextValue: AuthContextType = {
     user: state.user,

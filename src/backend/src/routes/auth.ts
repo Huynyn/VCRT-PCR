@@ -4,9 +4,19 @@ import jwt from 'jsonwebtoken';
 import db from '../database';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { logActivity } from '../middleware/logger';
+import { validatePasswordStrength } from '../utils/password';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'pcr-dev-secret-key';
+
+const MAX_LOGIN_ATTEMPTS = 3;
+const LOCKOUT_MS = 10 * 60 * 1000; // 10 minutes
+
+function lockoutMessage(lockedUntil: string): string {
+  const remainingMs = new Date(lockedUntil).getTime() - Date.now();
+  const remainingMin = Math.max(1, Math.ceil(remainingMs / 60000));
+  return `Too many failed attempts. Try again in ${remainingMin} minute${remainingMin === 1 ? '' : 's'}, or ask an admin to reset your password.`;
+}
 
 // Generate simple ID
 function generateId(): string {
@@ -34,15 +44,29 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    // Locked out from too many recent failed attempts?
+    if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) {
+      return res.status(429).json({ success: false, message: lockoutMessage(user.locked_until) });
+    }
+
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
+      const attempts = (user.failed_login_attempts || 0) + 1;
+
+      if (attempts >= MAX_LOGIN_ATTEMPTS) {
+        const lockedUntil = new Date(Date.now() + LOCKOUT_MS).toISOString();
+        db.prepare('UPDATE users SET failed_login_attempts = 0, locked_until = ? WHERE id = ?').run(lockedUntil, user.id);
+        return res.status(429).json({ success: false, message: lockoutMessage(lockedUntil) });
+      }
+
+      db.prepare('UPDATE users SET failed_login_attempts = ? WHERE id = ?').run(attempts, user.id);
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Update last login
-    db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+    // Update last login, and clear any lockout state from earlier failed attempts
+    db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP, failed_login_attempts = 0, locked_until = NULL WHERE id = ?').run(user.id);
 
     // Log successful login activity
     try {
@@ -157,6 +181,11 @@ router.post('/register', authenticateToken, async (req: AuthenticatedRequest, re
       return res.status(400).json({ success: false, message: 'All fields required' });
     }
 
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return res.status(400).json({ success: false, message: passwordError });
+    }
+
     // Check if user already exists
     const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(username) as any;
 
@@ -171,7 +200,7 @@ router.post('/register', authenticateToken, async (req: AuthenticatedRequest, re
     const userId = generateId();
     db.prepare(`
       INSERT INTO users (id, username, password_hash, first_name, last_name, role)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?)
     `).run(userId, username, passwordHash, firstName, lastName, role);
 
     res.json({

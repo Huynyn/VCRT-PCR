@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button, Card, Alert, Modal, Tooltip } from '@/components/ui'
 import {
@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext'
 import { cn, getCurrentTime, formatDate, generateId, MARKER_COLORS } from '../utils'
 import { pdfService } from '../services/pdf.service'
 import { apiRequest } from '../utils/api'
+import { setPcrCloseHandler } from '../utils/electronCloseGuard'
 import type { PCRFormData, VitalSign, OPQRSTEntry, Signatures } from '../types'
 
 const PCRPage: React.FC = () => {
@@ -47,6 +48,8 @@ const PCRPage: React.FC = () => {
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
   const [responderOptions, setResponderOptions] = useState<string[]>([])
   const [signerIndex, setSignerIndex] = useState(0)
+  const [showCloseSaveModal, setShowCloseSaveModal] = useState(false)
+  const closeResolveRef = useRef<((okToClose: boolean) => void) | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -349,6 +352,33 @@ const PCRPage: React.FC = () => {
     } finally {
       setIsSavingDraft(false)
     }
+  }
+
+  // Registers with the Electron close flow (see electronCloseGuard) so that
+  // closing the app while this form has unsaved changes prompts to save the
+  // draft first, instead of silently discarding it.
+  useEffect(() => {
+    const handleAppCloseRequest = (): Promise<boolean> => {
+      if (!isDirty) return Promise.resolve(true)
+      return new Promise<boolean>(resolve => {
+        closeResolveRef.current = resolve
+        setShowCloseSaveModal(true)
+      })
+    }
+
+    setPcrCloseHandler(handleAppCloseRequest)
+    return () => setPcrCloseHandler(null)
+  }, [isDirty])
+
+  const resolveCloseSaveModal = (okToClose: boolean) => {
+    setShowCloseSaveModal(false)
+    closeResolveRef.current?.(okToClose)
+    closeResolveRef.current = null
+  }
+
+  const handleSaveDraftAndClose = async () => {
+    await handleSaveDraft()
+    resolveCloseSaveModal(true)
   }
 
   const handleVitalSignsChange = (vitalSigns: VitalSign[]) => {
@@ -1609,6 +1639,39 @@ const PCRPage: React.FC = () => {
             </Button>
             <Button variant="danger" onClick={confirmReset}>
               Reset Form
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Closing the app while this draft has unsaved changes */}
+      <Modal
+        isOpen={showCloseSaveModal}
+        onClose={() => resolveCloseSaveModal(false)}
+        title="Save Draft Before Closing?"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-gray-900 dark:text-gray-100">
+                You have unsaved changes on this PCR. Closing the app will also log you out.
+              </p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                Save this as a draft first so you can pick up where you left off?
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 pt-4">
+            <Button variant="outline" onClick={() => resolveCloseSaveModal(false)} disabled={isSavingDraft}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={() => resolveCloseSaveModal(true)} disabled={isSavingDraft}>
+              Discard &amp; Close
+            </Button>
+            <Button onClick={handleSaveDraftAndClose} loading={isSavingDraft} disabled={isSavingDraft}>
+              Save Draft &amp; Close
             </Button>
           </div>
         </div>

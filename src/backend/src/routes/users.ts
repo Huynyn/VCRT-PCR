@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import db from '../database';
 import { authenticateToken, AuthenticatedRequest, requireRole } from '../middleware/auth';
 import { logActivity } from '../middleware/logger';
+import { validatePasswordStrength } from '../utils/password';
 
 const router = Router();
 
@@ -22,6 +23,11 @@ router.post('/', authenticateToken, requireRole(['admin']), logActivity('create_
         success: false,
         message: 'Username, password, first name, and last name are required'
       });
+    }
+
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return res.status(400).json({ success: false, message: passwordError });
     }
 
     // Check if username already exists
@@ -334,6 +340,11 @@ router.post('/:id/change-password', authenticateToken, logActivity('change_passw
       return res.status(400).json({ success: false, message: 'New password required' });
     }
 
+    const passwordError = validatePasswordStrength(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ success: false, message: passwordError });
+    }
+
     // Get user
     const user = db.prepare('SELECT id, password_hash FROM users WHERE id = ?').get(id) as any;
 
@@ -357,8 +368,13 @@ router.post('/:id/change-password', authenticateToken, logActivity('change_passw
     // Hash new password
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    // Update password
-    db.prepare('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(passwordHash, id);
+    // Update password - also clears any login lockout, since a password
+    // reset is the documented way out of a locked account
+    db.prepare(`
+      UPDATE users
+      SET password_hash = ?, updated_at = CURRENT_TIMESTAMP, failed_login_attempts = 0, locked_until = NULL
+      WHERE id = ?
+    `).run(passwordHash, id);
 
     res.json({ success: true, message: 'Password updated successfully' });
 

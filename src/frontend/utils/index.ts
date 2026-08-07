@@ -43,6 +43,24 @@ export function validatePhone(phone: string): boolean {
   return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10
 }
 
+// Mirrors the backend's validatePasswordStrength (src/backend/src/utils/password.ts)
+// so users see the same requirement client-side instead of only on submit.
+export function getPasswordStrengthError(password: string): string | null {
+  if (!password || password.length < 8) {
+    return 'Password must be at least 8 characters'
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must include a lowercase letter'
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must include an uppercase letter'
+  }
+  if (!/[0-9]/.test(password)) {
+    return 'Password must include a number'
+  }
+  return null
+}
+
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number

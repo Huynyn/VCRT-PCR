@@ -25,7 +25,9 @@ CREATE TABLE IF NOT EXISTS users (
     is_active BOOLEAN DEFAULT true,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME
+    last_login DATETIME,
+    failed_login_attempts INTEGER DEFAULT 0,
+    locked_until TEXT
 );
 
 -- PCR Reports/Drafts table (single table for both drafts and completed reports)
@@ -229,7 +231,22 @@ class DatabaseWrapper {
       const data = this.db.export();
       const key = getEncryptionKey(this.dbPath);
       const encrypted = encryptBuffer(Buffer.from(data), key);
-      fs.writeFileSync(this.dbPath, encrypted);
+
+      // Write-then-rename instead of overwriting pcr_database.db directly: a
+      // rename that replaces an existing file is atomic on both Windows and
+      // POSIX, so a crash or power loss mid-save can never leave the only
+      // copy of the database partially written/corrupted - it's always
+      // either the complete old file or the complete new file, never
+      // something truncated in between.
+      const tempPath = `${this.dbPath}.tmp`;
+      const fd = fs.openSync(tempPath, 'w');
+      try {
+        fs.writeSync(fd, encrypted);
+        fs.fsyncSync(fd); // flush to physical disk, not just the OS cache, before the rename
+      } finally {
+        fs.closeSync(fd);
+      }
+      fs.renameSync(tempPath, this.dbPath);
     } catch (error) {
       console.error('Error saving database:', error);
     }
@@ -334,6 +351,20 @@ export class DatabaseManager {
       if (!columnNames.includes('sign_off_filename')) {
         this.database.exec('ALTER TABLE pcr_reports ADD COLUMN sign_off_filename TEXT');
         console.log('Migration: Added sign_off_filename column to pcr_reports');
+      }
+
+      // Migration: Add login lockout tracking columns to users
+      const userTableInfo = this.database.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
+      const userColumnNames = userTableInfo.map(col => col.name);
+
+      if (!userColumnNames.includes('failed_login_attempts')) {
+        this.database.exec('ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0');
+        console.log('Migration: Added failed_login_attempts column to users');
+      }
+
+      if (!userColumnNames.includes('locked_until')) {
+        this.database.exec('ALTER TABLE users ADD COLUMN locked_until TEXT');
+        console.log('Migration: Added locked_until column to users');
       }
 
       // Migration: Add 'approved' to status CHECK constraint.

@@ -49,6 +49,19 @@ export interface ElectronAPI {
   }>;
 
   /**
+   * Fires when the user tries to close the window - a chance to prompt to
+   * save an in-progress PCR draft before confirming the close. Returns an
+   * unsubscribe function.
+   */
+  onCloseRequested: (callback: () => void) => () => void;
+
+  /**
+   * Answer to onCloseRequested: true to actually close the window now,
+   * false to cancel the close entirely.
+   */
+  confirmClose: (shouldClose: boolean) => void;
+
+  /**
    * Window controls
    */
   minimizeWindow: () => void;
