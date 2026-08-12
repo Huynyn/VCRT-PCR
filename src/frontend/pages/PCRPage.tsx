@@ -630,7 +630,8 @@ const PCRPage: React.FC = () => {
   const hasTourniquet =
     Array.isArray(data.hemorrhageControl) && data.hemorrhageControl.includes('Tourniquet')
 
-  // No fixed limit on responders - always show at least one row to fill in.
+  // Always show at least one row to fill in, up to 4 responders (on top of the supervisor).
+  const MAX_RESPONDERS = 4
   const responderList = data.responders && data.responders.length > 0 ? data.responders : ['']
   const updateResponderAt = (index: number, value: string) => {
     const next = [...responderList]
@@ -641,6 +642,7 @@ const PCRPage: React.FC = () => {
     updateField('responders', responderList.filter((_, i) => i !== index))
   }
   const addResponder = () => {
+    if (responderList.length >= MAX_RESPONDERS) return
     updateField('responders', [...responderList, ''])
   }
 
@@ -842,15 +844,17 @@ const PCRPage: React.FC = () => {
                 </button>
               </div>
             ))}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addResponder}
-              leftIcon={<Plus className="w-4 h-4" />}
-            >
-              Add Responder
-            </Button>
+            {responderList.length < MAX_RESPONDERS && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addResponder}
+                leftIcon={<Plus className="w-4 h-4" />}
+              >
+                Add Responder
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1338,7 +1342,7 @@ const PCRPage: React.FC = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {opqrstEntries.length === 0
                 ? 'No OPQRST sections added yet.'
-                : `${opqrstEntries.length} of 4 section${opqrstEntries.length === 1 ? '' : 's'} added.`}
+                : `${opqrstEntries.length} section${opqrstEntries.length === 1 ? '' : 's'} added.`}
             </p>
             {opqrstEntries.length < 4 && (
               <Button

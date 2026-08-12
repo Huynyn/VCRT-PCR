@@ -1,12 +1,13 @@
 /**
  * De-identified stats archive for PCR reports.
  *
- * Whenever a finalized (submitted/approved) PCR report is deleted — manually
- * or via the retention cleanup job — its stats-relevant fields are copied
+ * Whenever a finalized (submitted/approved/completed) PCR report is deleted
+ * — via the retention cleanup job — its stats-relevant fields are copied
  * into pcr_call_archive before the row is removed. This keeps call-history
  * stats (calendar, season bar chart, admin export) intact even after the
  * source report and its attachments are gone. Patient name and free-text
- * comments are intentionally never copied.
+ * comments are intentionally never copied. Cancelled reports are never
+ * archived here - they're meant to disappear from stats entirely.
  */
 
 /**
@@ -48,6 +49,6 @@ export function archivePcrReportsSql(whereExtra: string): string {
       created_by,
       created_at
     FROM pcr_reports
-    WHERE status IN ('submitted', 'approved') AND ${whereExtra}
+    WHERE status IN ('submitted', 'approved', 'completed') AND ${whereExtra}
   `;
 }

@@ -193,6 +193,11 @@ const ActivityLogsPage = () => {
     return colors[action] || 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
   }
 
+  const formatAction = (action: string) => {
+    const titled = action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    return titled.replace(/\bPcr\b/g, 'PCR')
+  }
+
   const formatUserName = (log: ActivityLog) => {
     if (log.first_name && log.last_name) {
       return `${log.first_name} ${log.last_name}`
@@ -406,7 +411,7 @@ const ActivityLogsPage = () => {
 
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getActionBadgeColor(log.action)}`}>
-                            {log.action.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            {formatAction(log.action)}
                           </span>
                         </td>
                       </tr>

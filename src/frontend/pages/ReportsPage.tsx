@@ -26,7 +26,7 @@ const ReportsPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   // Guards against duplicate/stacked preview modals when a user clicks
-  // "Preview PDF" (or the row) more than once while a preview is loading.
+  // "Preview PDF"/"View PDF" more than once while a preview is loading.
   const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null)
   // Admin "request changes" modal: which report it's for, and the comment being typed
   const [requestChangesReportId, setRequestChangesReportId] = useState<string | null>(null)
@@ -34,6 +34,14 @@ const ReportsPage = () => {
   const [submittingRequestChanges, setSubmittingRequestChanges] = useState(false)
   // Read-only modal showing the admin's comments to whoever opens it
   const [viewCommentsReport, setViewCommentsReport] = useState<PCRReport | null>(null)
+  // Admin "Edit" chooser modal (submitted -> Edit or Request; changes_requested ->
+  // Edit or update the existing comments) - which report it's for
+  const [editChoiceReport, setEditChoiceReport] = useState<PCRReport | null>(null)
+  // Admin "complete" and "cancel" confirmation modals: which report they're for
+  const [completeReportId, setCompleteReportId] = useState<string | null>(null)
+  const [submittingComplete, setSubmittingComplete] = useState(false)
+  const [cancelReportId, setCancelReportId] = useState<string | null>(null)
+  const [submittingCancel, setSubmittingCancel] = useState(false)
 
   useEffect(() => {
     fetchReports()
@@ -135,9 +143,65 @@ const ReportsPage = () => {
     }
   }
 
-  const handleOpenRequestChanges = (reportId: string) => {
+  const handleOpenComplete = (reportId: string) => {
+    setCompleteReportId(reportId)
+  }
+
+  const handleConfirmComplete = async () => {
+    if (!completeReportId) return
+
+    setSubmittingComplete(true)
+    try {
+      if (!token) {
+        setError('Authentication required')
+        return
+      }
+
+      await apiRequest(`/pcr/${completeReportId}/complete`, { method: 'PUT' })
+
+      setReports(prev =>
+        prev.map(r => (r.id === completeReportId ? { ...r, status: 'completed' } : r)),
+      )
+      setCompleteReportId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete report')
+      console.error('Error completing report:', err)
+    } finally {
+      setSubmittingComplete(false)
+    }
+  }
+
+  const handleOpenCancel = (reportId: string) => {
+    setCancelReportId(reportId)
+  }
+
+  const handleConfirmCancel = async () => {
+    if (!cancelReportId) return
+
+    setSubmittingCancel(true)
+    try {
+      if (!token) {
+        setError('Authentication required')
+        return
+      }
+
+      await apiRequest(`/pcr/${cancelReportId}/cancel`, { method: 'PUT' })
+
+      setReports(prev =>
+        prev.map(r => (r.id === cancelReportId ? { ...r, status: 'cancelled' } : r)),
+      )
+      setCancelReportId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel report')
+      console.error('Error cancelling report:', err)
+    } finally {
+      setSubmittingCancel(false)
+    }
+  }
+
+  const handleOpenRequestChanges = (reportId: string, initialComment: string = '') => {
     setRequestChangesReportId(reportId)
-    setRequestChangesComment('')
+    setRequestChangesComment(initialComment)
   }
 
   const handleSubmitRequestChanges = async () => {
@@ -300,15 +364,7 @@ const ReportsPage = () => {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {reports.map(report => (
-                    <tr
-                      key={report.id}
-                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${report.status === 'submitted' || report.status === 'approved' || report.status === 'changes_requested' ? 'cursor-pointer' : ''}`}
-                      onClick={
-                        report.status === 'submitted' || report.status === 'approved' || report.status === 'changes_requested'
-                          ? () => handleViewReport(report.id)
-                          : undefined
-                      }
-                    >
+                    <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                         {displayReportId(report)}
                       </td>
@@ -334,22 +390,15 @@ const ReportsPage = () => {
                                   ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200'
                                   : report.status === 'draft'
                                     ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                                    : report.status === 'completed'
+                                      ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200'
+                                      : report.status === 'cancelled'
+                                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
+                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
                           }`}
                         >
-                          {report.status === 'changes_requested' ? 'Changes Requested' : report.status}
+                          {report.status === 'changes_requested' ? 'changes requested' : report.status}
                         </span>
-                        {report.status === 'changes_requested' && report.admin_comments && (
-                          <button
-                            onClick={e => {
-                              e.stopPropagation()
-                              setViewCommentsReport(report)
-                            }}
-                            className="ml-2 text-xs text-orange-700 hover:text-orange-900 dark:text-orange-300 dark:hover:text-orange-100 underline"
-                          >
-                            View comments
-                          </button>
-                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         {formatDate(report.created_at)}
@@ -362,90 +411,105 @@ const ReportsPage = () => {
                           {report.status === 'draft' ? (
                             <>
                               <button
-                                onClick={e => {
-                                  e.stopPropagation()
-                                  handleViewReport(report.id)
-                                }}
+                                onClick={() => handleViewReport(report.id)}
                                 disabled={previewLoadingId === report.id}
                                 className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium disabled:opacity-50 disabled:cursor-wait"
                               >
                                 {previewLoadingId === report.id ? 'Loading...' : 'Preview PDF'}
                               </button>
                               <button
-                                onClick={e => {
-                                  e.stopPropagation()
-                                  handleEditDraft(report.id)
-                                }}
+                                onClick={() => handleEditDraft(report.id)}
                                 className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
                               >
                                 Edit
                               </button>
-                              <button
-                                onClick={e => {
-                                  e.stopPropagation()
-                                  handleEditDraft(report.id)
-                                }}
-                                className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
-                              >
-                                Submit
-                              </button>
                             </>
+                          ) : report.status === 'completed' || report.status === 'cancelled' ? (
+                            <button
+                              onClick={() => handleViewReport(report.id)}
+                              disabled={previewLoadingId === report.id}
+                              className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium disabled:opacity-50 disabled:cursor-wait"
+                            >
+                              {previewLoadingId === report.id ? 'Loading...' : 'View PDF'}
+                            </button>
                           ) : (
                             <>
                               <button
-                                onClick={e => {
-                                  e.stopPropagation()
-                                  handleViewReport(report.id)
-                                }}
+                                onClick={() => handleViewReport(report.id)}
                                 disabled={previewLoadingId === report.id}
                                 className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium disabled:opacity-50 disabled:cursor-wait"
                               >
                                 {previewLoadingId === report.id ? 'Loading...' : 'View PDF'}
                               </button>
-                              {(isAdmin || (!isAdmin && report.status === 'changes_requested')) && (
+                              {!isAdmin && report.status === 'changes_requested' && (
                                 <button
-                                  onClick={e => {
-                                    e.stopPropagation()
-                                    handleEditReport(report.id)
-                                  }}
+                                  onClick={() => handleEditReport(report.id)}
                                   className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
                                 >
-                                  {isAdmin ? 'Edit' : 'Edit & Resubmit'}
+                                  Edit & Resubmit
+                                </button>
+                              )}
+                              {isAdmin && report.status === 'approved' && (
+                                <button
+                                  onClick={() => handleEditReport(report.id)}
+                                  className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              {/* Edit on submitted/changes_requested opens a chooser: edit it
+                                  directly, or send/update comments back to the submitter */}
+                              {isAdmin && (report.status === 'submitted' || report.status === 'changes_requested') && (
+                                <button
+                                  onClick={() => setEditChoiceReport(report)}
+                                  className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
+                                >
+                                  Edit
                                 </button>
                               )}
                               {isAdmin && report.status === 'submitted' && (
                                 <>
                                   <button
-                                    onClick={e => {
-                                      e.stopPropagation()
-                                      handleApproveReport(report.id)
-                                    }}
+                                    onClick={() => handleApproveReport(report.id)}
                                     className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
                                   >
                                     Approve
                                   </button>
                                   <button
-                                    onClick={e => {
-                                      e.stopPropagation()
-                                      handleOpenRequestChanges(report.id)
-                                    }}
-                                    className="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 font-medium"
+                                    onClick={() => handleOpenCancel(report.id)}
+                                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
                                   >
-                                    Request Changes
+                                    Cancel
                                   </button>
                                 </>
+                              )}
+                              {isAdmin && report.status === 'approved' && (
+                                <button
+                                  onClick={() => handleOpenComplete(report.id)}
+                                  className="text-purple-500 hover:text-purple-700 dark:text-purple-300 dark:hover:text-purple-200 font-medium"
+                                >
+                                  Complete
+                                </button>
                               )}
                             </>
                           )}
 
-                          {/* Delete: owners can only remove their own drafts; once a
-                              report is submitted, only an admin can delete it. */}
-                          {(isAdmin || report.status === 'draft') && (
+                          {/* View comments: only meaningful once the admin has sent a
+                              report back with feedback */}
+                          {report.status === 'changes_requested' && report.admin_comments && (
                             <button
-                              onClick={e => {
-                                e.stopPropagation()
-                                handleDeleteReport(report.id, report.status)
-                              }}
+                              onClick={() => setViewCommentsReport(report)}
+                              className="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 font-medium"
+                            >
+                              View Comments
+                            </button>
+                          )}
+
+                          {/* Delete: the only status a PCR can be deleted from is draft,
+                              by its owner - not even admins can delete beyond that. */}
+                          {report.status === 'draft' && (
+                            <button
+                              onClick={() => handleDeleteReport(report.id, report.status)}
                               className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
                             >
                               Delete
@@ -462,11 +526,56 @@ const ReportsPage = () => {
         </div>
       </div>
 
-      {/* Admin: Request Changes modal */}
+      {/* Admin: Edit chooser modal - edit directly, or send/update comments instead */}
+      <Modal
+        isOpen={editChoiceReport !== null}
+        onClose={() => setEditChoiceReport(null)}
+        title="Edit"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {editChoiceReport?.status === 'submitted'
+              ? 'Edit this report yourself, or send it back with comments instead.'
+              : 'Edit this report yourself, or update the comments sent back to the submitter.'}
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const r = editChoiceReport
+                setEditChoiceReport(null)
+                if (r) handleOpenRequestChanges(r.id, r.status === 'changes_requested' ? r.admin_comments || '' : '')
+              }}
+            >
+              {editChoiceReport?.status === 'submitted' ? 'Request' : 'Comments'}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                const r = editChoiceReport
+                setEditChoiceReport(null)
+                if (r) handleEditReport(r.id)
+              }}
+            >
+              Edit
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Admin: Request Changes modal (also used to update existing comments) */}
       <Modal
         isOpen={requestChangesReportId !== null}
         onClose={() => (submittingRequestChanges ? undefined : setRequestChangesReportId(null))}
-        title="Request Changes"
+        title={
+          reports.find(r => r.id === requestChangesReportId)?.status === 'changes_requested'
+            ? 'Update Comments'
+            : 'Request Changes'
+        }
         size="md"
       >
         <div className="space-y-4">
@@ -496,7 +605,7 @@ const ReportsPage = () => {
               onClick={handleSubmitRequestChanges}
               disabled={submittingRequestChanges || !requestChangesComment.trim()}
             >
-              {submittingRequestChanges ? 'Sending...' : 'Send Back to Submitter'}
+              {submittingRequestChanges ? 'Saving...' : 'Send Back'}
             </Button>
           </div>
         </div>
@@ -516,6 +625,71 @@ const ReportsPage = () => {
           <div className="flex justify-end">
             <Button type="button" variant="outline" onClick={() => setViewCommentsReport(null)}>
               Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Admin: Complete confirmation modal */}
+      <Modal
+        isOpen={completeReportId !== null}
+        onClose={() => (submittingComplete ? undefined : setCompleteReportId(null))}
+        title="Complete PCR"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-900 dark:text-gray-100">
+            Make sure this PCR was downloaded and uploaded onto Microsoft Teams before completing
+            it.
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Once completed, this report will only be viewable as a PDF and will be permanently
+            deleted after 1 week.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCompleteReportId(null)}
+              disabled={submittingComplete}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleConfirmComplete} disabled={submittingComplete}>
+              {submittingComplete ? 'Completing...' : 'Complete'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Admin: Cancel confirmation modal */}
+      <Modal
+        isOpen={cancelReportId !== null}
+        onClose={() => (submittingCancel ? undefined : setCancelReportId(null))}
+        title="Cancel PCR"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-900 dark:text-gray-100">
+            Are you sure this PCR is not needed? Cancelling it will lock it to view-only, and it
+            will be permanently deleted after 1 week.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCancelReportId(null)}
+              disabled={submittingCancel}
+            >
+              Back
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleConfirmCancel}
+              disabled={submittingCancel}
+            >
+              {submittingCancel ? 'Cancelling...' : 'Cancel PCR'}
             </Button>
           </div>
         </div>

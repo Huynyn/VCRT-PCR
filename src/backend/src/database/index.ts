@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS pcr_reports (
     form_data TEXT NOT NULL,
     sign_off_attachment TEXT,
     sign_off_filename TEXT,
-    status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved', 'changes_requested')) DEFAULT 'draft',
+    status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved', 'changes_requested', 'cancelled')) DEFAULT 'draft',
     admin_comments TEXT,
     created_by TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -482,6 +482,52 @@ export class DatabaseManager {
         }
       } catch (migrationError) {
         console.error('Migration error (changes_requested constraint):', migrationError);
+      }
+
+      // Migration: Add 'cancelled' to status CHECK constraint. Same
+      // gate-on-constraint-text/transaction pattern as the migrations above.
+      try {
+        const tableRow = this.database
+          .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'pcr_reports'")
+          .get() as { sql: string } | undefined;
+        const alreadyMigrated = !!tableRow?.sql && tableRow.sql.includes("'cancelled'");
+
+        if (!alreadyMigrated) {
+          this.database.exec('BEGIN TRANSACTION');
+          try {
+            this.database.exec('DROP TABLE IF EXISTS pcr_reports_new');
+            this.database.exec(`
+              CREATE TABLE pcr_reports_new (
+                id TEXT PRIMARY KEY,
+                form_data TEXT NOT NULL,
+                sign_off_attachment TEXT,
+                sign_off_filename TEXT,
+                status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved', 'changes_requested', 'cancelled')) DEFAULT 'draft',
+                admin_comments TEXT,
+                created_by TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users(id)
+              )
+            `);
+            this.database.exec(`
+              INSERT INTO pcr_reports_new SELECT id, form_data, sign_off_attachment, sign_off_filename, status, admin_comments, created_by, created_at, updated_at FROM pcr_reports
+            `);
+            this.database.exec('DROP TABLE pcr_reports');
+            this.database.exec('ALTER TABLE pcr_reports_new RENAME TO pcr_reports');
+            // Recreate indexes
+            this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_by ON pcr_reports(created_by)');
+            this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_status ON pcr_reports(status)');
+            this.database.exec('CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_at ON pcr_reports(created_at)');
+            this.database.exec('COMMIT');
+            console.log('Migration: Updated pcr_reports status constraint to include cancelled');
+          } catch (migrationError) {
+            this.database.exec('ROLLBACK');
+            console.error('Migration error (cancelled constraint):', migrationError);
+          }
+        }
+      } catch (migrationError) {
+        console.error('Migration error (cancelled constraint):', migrationError);
       }
     } catch (error) {
       console.error('Migration error:', error);

@@ -7,6 +7,10 @@ export class CleanupService {
   // Configurable retention periods
   private readonly PCR_RETENTION_DAYS = 730
   private readonly LOG_RETENTION_DAYS = 7
+  // Completed/cancelled PCRs are only kept around for a week (after that,
+  // completed ones are folded into pcr_call_archive first; cancelled ones
+  // are just dropped so they never count toward stats)
+  private readonly FINALIZED_RETENTION_DAYS = 7
 
   start(): void {
     console.log('📅 Starting cleanup service...')
@@ -35,15 +39,19 @@ export class CleanupService {
       // Delete PCR reports older than configured retention
       const pcrResult = this.cleanupPCRReports()
 
+      // Delete completed/cancelled PCR reports a week after they were finalized
+      const finalizedResult = this.cleanupFinalizedReports()
+
       // Delete activity logs older than configured retention
       const logsResult = this.cleanupActivityLogs()
 
-      if (pcrResult.changes > 0 || logsResult.changes > 0) {
+      if (pcrResult.changes > 0 || finalizedResult.changes > 0 || logsResult.changes > 0) {
         console.log(`🗑️  Deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_DAYS} days`)
+        console.log(`🗑️  Deleted ${finalizedResult.changes} completed/cancelled PCR report(s) older than ${this.FINALIZED_RETENTION_DAYS} days`)
         console.log(`🗑️  Deleted ${logsResult.changes} activity log(s) older than ${this.LOG_RETENTION_DAYS} days`)
 
         // Log the cleanup activity
-        this.logCleanupActivity(pcrResult.changes, logsResult.changes)
+        this.logCleanupActivity(pcrResult.changes + finalizedResult.changes, logsResult.changes)
       } else {
         console.log('✅ No records to clean up')
       }
@@ -61,6 +69,18 @@ export class CleanupService {
       WHERE status IN ('submitted','draft','approved')
       AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_DAYS} days')
     `
+    return db.prepare(deleteQuery).run()
+  }
+
+  private cleanupFinalizedReports(): { changes: number } {
+    const ageCondition = `status IN ('completed', 'cancelled') AND datetime(updated_at) < datetime('now', '-${this.FINALIZED_RETENTION_DAYS} days')`
+
+    // Archive completed rows so their stats survive deletion. archivePcrReportsSql only
+    // ever matches 'submitted'/'approved'/'completed' statuses, so cancelled rows are
+    // naturally skipped here and simply disappear from stats once deleted below.
+    db.prepare(archivePcrReportsSql(ageCondition)).run()
+
+    const deleteQuery = `DELETE FROM pcr_reports WHERE ${ageCondition}`
     return db.prepare(deleteQuery).run()
   }
 

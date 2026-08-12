@@ -3,7 +3,6 @@ import db from '../database';
 import { authenticateToken, AuthenticatedRequest, requireRole } from '../middleware/auth';
 import { logActivity } from '../middleware/logger';
 import { cleanupService } from '../services/cleanup';
-import { archivePcrReportsSql } from '../services/pcrArchive';
 
 const router = Router();
 
@@ -35,8 +34,9 @@ router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response)
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Once a report is approved, the owner loses visibility into it (admin retains access)
-    if (!isAdmin && report.status === 'approved') {
+    // Once a report is approved (or completed, which only follows approved), the owner
+    // loses visibility into it (admin retains access)
+    if (!isAdmin && (report.status === 'approved' || report.status === 'completed')) {
       return res.status(403).json({ success: false, message: 'Approved reports are no longer accessible' });
     }
 
@@ -81,13 +81,14 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
       `;
     const params: any[] = [];
 
-    // Admins see all submitted/approved/changes-requested + their own drafts; regular users
-    // see only their own, and lose visibility into their own reports once approved.
+    // Admins see all submitted/approved/changes-requested/completed/cancelled + their own
+    // drafts; regular users see only their own, and lose visibility into their own reports
+    // once approved (and, by extension, once a completed report moves past approved).
     if (isAdmin) {
-      query += ` WHERE (pcr_reports.status IN ('submitted', 'approved', 'changes_requested') OR pcr_reports.created_by = ?)`;
+      query += ` WHERE (pcr_reports.status IN ('submitted', 'approved', 'changes_requested', 'completed', 'cancelled') OR pcr_reports.created_by = ?)`;
       params.push(req.user!.id);
     } else {
-      query += ` WHERE pcr_reports.created_by = ? AND pcr_reports.status != 'approved'`;
+      query += ` WHERE pcr_reports.created_by = ? AND pcr_reports.status NOT IN ('approved', 'completed')`;
       params.push(req.user!.id);
     }
 
@@ -175,10 +176,16 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Regular users can only edit drafts and reports the admin sent back for changes
-    // (submitted/approved reports are locked for non-admins)
-    if (!isAdmin && (existingReport.status === 'submitted' || existingReport.status === 'approved')) {
-      return res.status(403).json({ success: false, message: 'Submitted reports cannot be edited' });
+    // Completed/cancelled reports are locked for everyone, including admins - they're
+    // view-only (PDF) until the retention cleanup job removes them a week later
+    if (existingReport.status === 'completed' || existingReport.status === 'cancelled') {
+      return res.status(403).json({ success: false, message: 'This report is locked and cannot be edited' });
+    }
+
+    // Regular users can only edit drafts and reports the admin sent back for changes -
+    // submitted/approved reports are locked for non-admins
+    if (!isAdmin && existingReport.status !== 'draft' && existingReport.status !== 'changes_requested') {
+      return res.status(403).json({ success: false, message: 'This report cannot be edited' });
     }
 
     // Update report
@@ -278,9 +285,95 @@ router.put('/:id/approve', authenticateToken, logActivity('approve_pcr', 'pcr_re
   }
 });
 
+// PUT /api/pcr/:id/complete - Mark an approved PCR report as completed (admin only).
+// Completion means the admin has downloaded the PDF and uploaded it to Microsoft
+// Teams; completed reports keep read-only access (View PDF only) until the retention
+// cleanup job removes them a week later.
+router.put('/:id/complete', authenticateToken, logActivity('complete_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Admin only
+    if (req.user!.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const report = db.prepare('SELECT id, status FROM pcr_reports WHERE id = ?').get(id) as any;
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'PCR report not found' });
+    }
+
+    if (report.status !== 'approved') {
+      return res.status(400).json({ success: false, message: 'Only approved reports can be completed' });
+    }
+
+    db.prepare(`
+      UPDATE pcr_reports SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(id);
+
+    const updatedReport = db.prepare('SELECT * FROM pcr_reports WHERE id = ?').get(id) as any;
+
+    res.json({
+      success: true,
+      data: {
+        ...updatedReport,
+        form_data: JSON.parse(updatedReport.form_data)
+      }
+    });
+
+  } catch (error) {
+    console.error('Complete PCR report error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// PUT /api/pcr/:id/cancel - Cancel a submitted PCR report that's no longer needed
+// (admin only). Cancelled reports keep read-only access (View PDF only) until the
+// retention cleanup job removes them a week later, and are never counted in stats.
+router.put('/:id/cancel', authenticateToken, logActivity('cancel_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Admin only
+    if (req.user!.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const report = db.prepare('SELECT id, status FROM pcr_reports WHERE id = ?').get(id) as any;
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'PCR report not found' });
+    }
+
+    if (report.status !== 'submitted') {
+      return res.status(400).json({ success: false, message: 'Only submitted reports can be cancelled' });
+    }
+
+    db.prepare(`
+      UPDATE pcr_reports SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(id);
+
+    const updatedReport = db.prepare('SELECT * FROM pcr_reports WHERE id = ?').get(id) as any;
+
+    res.json({
+      success: true,
+      data: {
+        ...updatedReport,
+        form_data: JSON.parse(updatedReport.form_data)
+      }
+    });
+
+  } catch (error) {
+    console.error('Cancel PCR report error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 // PUT /api/pcr/:id/request-changes - Send a submitted PCR report back to its owner
-// with feedback instead of approving it (admin only). The owner can then edit and
-// resubmit the report; resubmitting clears admin_comments (see PUT /:id above).
+// with feedback instead of approving it (admin only), or update the comments on a
+// report that's already changes_requested. The owner can then edit and resubmit the
+// report; resubmitting clears admin_comments (see PUT /:id above).
 router.put('/:id/request-changes', authenticateToken, logActivity('request_changes_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -301,8 +394,10 @@ router.put('/:id/request-changes', authenticateToken, logActivity('request_chang
       return res.status(404).json({ success: false, message: 'PCR report not found' });
     }
 
-    if (report.status !== 'submitted') {
-      return res.status(400).json({ success: false, message: 'Only submitted reports can have changes requested' });
+    // Allow both the initial request (from submitted) and updating the comments
+    // while the report is still sitting in changes_requested, waiting on the submitter.
+    if (report.status !== 'submitted' && report.status !== 'changes_requested') {
+      return res.status(400).json({ success: false, message: 'Only submitted or pending-changes reports can have changes requested' });
     }
 
     db.prepare(`
@@ -349,15 +444,12 @@ router.delete('/:id', authenticateToken, logActivity('delete_pcr', 'pcr_report')
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Once a report leaves draft status it's part of the review workflow -
-    // only an admin can remove it from there. Owners can still delete their
-    // own drafts freely.
-    if (!isAdmin && report.status !== 'draft') {
-      return res.status(403).json({ success: false, message: 'Only an admin can delete a submitted report' });
+    // Manual deletion is only ever allowed while a report is still a draft - once
+    // submitted, a report can only leave the system via Complete/Cancel followed by
+    // the retention cleanup job a week later (not even admins can delete it directly).
+    if (report.status !== 'draft') {
+      return res.status(403).json({ success: false, message: 'Only draft reports can be deleted' });
     }
-
-    // Archive stats-relevant fields (de-identified) before removing a finalized report
-    db.prepare(archivePcrReportsSql('id = ?')).run(id);
 
     // If there are child rows, delete them first or ensure FK ON DELETE CASCADE
     db.prepare('DELETE FROM pcr_reports WHERE id = ?').run(id);
@@ -479,7 +571,7 @@ router.get('/stats/mine', authenticateToken, (req: AuthenticatedRequest, res: Re
           )
         ) AS responders
       FROM pcr_reports
-      WHERE created_by = ? AND status IN ('submitted', 'approved')
+      WHERE created_by = ? AND status IN ('submitted', 'approved', 'completed')
       UNION ALL
       SELECT id, date, supervisor,
         COALESCE(responders, json_array(responder1, responder2, responder3))
@@ -539,13 +631,13 @@ router.get('/stats/approved-range', authenticateToken, requireRole(['admin']), (
           )
         ) AS responders
       FROM pcr_reports
-      WHERE status = 'approved' AND json_extract(form_data, '$.date') BETWEEN ? AND ?
+      WHERE status IN ('approved', 'completed') AND json_extract(form_data, '$.date') BETWEEN ? AND ?
       UNION ALL
       SELECT id, date, report_number, chief_complaint, time_notified, on_scene, cleared_scene,
         patient_care_transferred, oxygen_given, supervisor,
         COALESCE(responders, json_array(responder1, responder2, responder3))
       FROM pcr_call_archive
-      WHERE status = 'approved' AND date BETWEEN ? AND ?
+      WHERE status IN ('approved', 'completed') AND date BETWEEN ? AND ?
       ORDER BY date
     `).all(start, end, start, end);
 

@@ -64,6 +64,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   user,
 }) => {
+  const isAdmin = user?.role === 'admin'
+
   const navigationItems: SidebarItem[] = [
     {
       id: 'dashboard',
@@ -72,13 +74,19 @@ const Sidebar: React.FC<SidebarProps> = ({
       href: '/dashboard',
       isActive: currentPath === '/dashboard',
     },
-    {
-      id: 'new-pcr',
-      label: 'New PCR',
-      icon: <Plus className="w-5 h-5" />,
-      href: '/pcr/new',
-      isActive: currentPath === '/pcr/new',
-    },
+    // Admins only manage/review existing PCRs - they don't submit their own,
+    // so there's no need for a "New PCR" entry point in their sidebar.
+    ...(isAdmin
+      ? []
+      : [
+          {
+            id: 'new-pcr',
+            label: 'New PCR',
+            icon: <Plus className="w-5 h-5" />,
+            href: '/pcr/new',
+            isActive: currentPath === '/pcr/new',
+          },
+        ]),
     {
       id: 'pcr-list',
       label: 'PCR Reports',
