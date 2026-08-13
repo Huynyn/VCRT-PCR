@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Clock } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { apiRequest } from '../utils/api'
-import { parseServerDate } from '../utils'
 import {
   UserCallStats,
   AdminCallStats,
@@ -42,17 +41,6 @@ const DashboardPage = () => {
     fetchDrafts()
   }, [isAuthenticated])
 
-  const formatTimeAgo = (dateString: string) => {
-    const date = parseServerDate(dateString)
-
-    return date.toLocaleDateString('en-CA', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-    })
-  }
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Welcome section */}
@@ -67,57 +55,18 @@ const DashboardPage = () => {
         </p>
       </div>
 
-      {/* Drafts in Progress */}
+      {/* Drafts in Progress notice */}
       {!draftsLoading && drafts.length > 0 && (
         <div className="mb-6">
-          <div className="card">
-            <div className="card-header">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    Drafts in Progress
-                  </h3>
-                </div>
-                <a
-                  href="#/reports"
-                  className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
-                >
-                  View all reports
-                </a>
-              </div>
-            </div>
-            <div className="card-body">
-              <div className="space-y-3">
-                {drafts.slice(0, 5).map(draft => (
-                  <a
-                    key={draft.id}
-                    href={`#/pcr/new?draftId=${draft.id}`}
-                    className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {draft.report_number ? `#${draft.report_number}` : 'No Report ID'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0 text-xs text-gray-500 dark:text-gray-400">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatTimeAgo(draft.updated_at)}</span>
-                    </div>
-                  </a>
-                ))}
-                {drafts.length > 5 && (
-                  <a
-                    href="#/reports"
-                    className="block text-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 pt-1"
-                  >
-                    +{drafts.length - 5} more drafts
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
+          <a
+            href="#/reports"
+            className="flex items-center gap-3 p-4 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 transition-colors"
+          >
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+              {drafts.length} draft{drafts.length === 1 ? '' : 's'} in progress
+            </span>
+          </a>
         </div>
       )}
 

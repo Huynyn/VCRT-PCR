@@ -124,9 +124,11 @@ export const useTimeout = ({
       resetTimer()
     }
 
-    // Add event listeners
+    // Add event listeners. Passive + capture so this never has to wait its
+    // turn (or make the browser wait on it) during a scroll/click that the
+    // page's own handlers are already busy with.
     activityEvents.forEach((event) => {
-      document.addEventListener(event, handleActivity, true)
+      document.addEventListener(event, handleActivity, { capture: true, passive: true })
     })
 
     // Initial timer setup
@@ -135,7 +137,7 @@ export const useTimeout = ({
     return () => {
       // Remove event listeners
       activityEvents.forEach((event) => {
-        document.removeEventListener(event, handleActivity, true)
+        document.removeEventListener(event, handleActivity, { capture: true })
       })
 
       // Clear timers

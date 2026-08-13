@@ -10,6 +10,8 @@ interface SearchableSelectProps {
   placeholder?: string
   error?: string
   required?: boolean
+  /** Extra action rendered inside the box, to the right of the clear button (e.g. a remove-row control). */
+  rightIcon?: React.ReactNode
 }
 
 const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -20,6 +22,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   placeholder = 'Search or type a name...',
   error,
   required,
+  rightIcon,
 }) => {
   const [query, setQuery] = useState(value)
   const [open, setOpen] = useState(false)
@@ -91,24 +94,27 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
             }
           }}
           placeholder={placeholder}
-          className={cn('form-input pr-8', error && 'form-input-error')}
+          className={cn('form-input', rightIcon ? 'pr-16' : 'pr-8', error && 'form-input-error')}
           autoComplete="off"
         />
 
-        {query && (
-          <button
-            type="button"
-            onClick={() => {
-              setQuery('')
-              onChange('')
-              setOpen(true)
-            }}
-            className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            title="Clear"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        <div className="absolute inset-y-0 right-0 pr-2 flex items-center gap-0.5">
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('')
+                onChange('')
+                setOpen(true)
+              }}
+              className="p-1 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              title="Clear"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+          {rightIcon}
+        </div>
 
         {open && (
           <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-56 overflow-y-auto">

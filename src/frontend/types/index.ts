@@ -116,7 +116,8 @@ export interface OxygenProtocol {
   deliveryDevice?: 'NC' | 'NRB' | 'BVM';
   flowRateAlterations?: Array<{ time?: string; flowRate?: string }>;
   reasonForEndingTherapy?: string;
-  whoStartedTherapy?: 'Protection' | 'VCRT' | 'Lifeguard' | 'Sports Services';
+  whoStartedTherapy?: 'Protection' | 'VCRT' | 'Lifeguard' | 'Sports Services' | 'Other';
+  whoStartedTherapyOther?: string;
 }
 
 export interface AdditionalInformation {

@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS responders (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Admin-managed list of Primary Protection Services Member (PSM) names, used
+-- to populate the searchable "Primary PSM" dropdown on the PCR form (a name
+-- can still be typed in freeform if they're not on this list).
+CREATE TABLE IF NOT EXISTS psm_members (
+    id TEXT PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- De-identified snapshot of finalized PCR reports, written just before a
 -- submitted/approved report is deleted (manually or by retention cleanup),
 -- so call-stats history survives deletion. No patient name or free-text

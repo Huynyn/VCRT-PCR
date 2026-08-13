@@ -66,6 +66,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
     { value: 'VCRT', label: 'VCRT' },
     { value: 'Lifeguard', label: 'Lifeguard' },
     { value: 'Sports Services', label: 'Sports Services' },
+    { value: 'Other', label: 'Other' },
   ]
 
   return (
@@ -254,14 +255,25 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                 rows={3}
               />
               
-              <RadioGroup
-                name="whoStartedTherapy"
-                label="Who Started Therapy"
-                options={whoStartedOptions}
-                value={data.whoStartedTherapy}
-                onChange={(value) => handleFieldChange('whoStartedTherapy', value as 'Protection Services' | 'VCRT' | 'Lifeguard' | 'Sports Services')}
-                error={errors.whoStartedTherapy}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <RadioGroup
+                  name="whoStartedTherapy"
+                  label="Who Started Therapy"
+                  options={whoStartedOptions}
+                  value={data.whoStartedTherapy}
+                  onChange={(value) => handleFieldChange('whoStartedTherapy', value as 'Protection Services' | 'VCRT' | 'Lifeguard' | 'Sports Services' | 'Other')}
+                  error={errors.whoStartedTherapy}
+                />
+
+                {data.whoStartedTherapy === 'Other' && (
+                  <Input
+                    label="Other (specify)"
+                    value={data.whoStartedTherapyOther || ''}
+                    onChange={(e) => handleFieldChange('whoStartedTherapyOther', e.target.value)}
+                    placeholder="Please specify"
+                  />
+                )}
+              </div>
             </div>
           </FormSection>
         </>

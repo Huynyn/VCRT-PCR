@@ -57,6 +57,21 @@ function normalizeLegacyResponders(formData: PCRFormData): PCRFormData {
   }
 }
 
+const FIRST_AGENCY_ON_SCENE_OPTIONS = [
+  'Protection Services',
+  'VCRT',
+  'Fire Services',
+  'Paramedics',
+  'Lifeguards',
+]
+
+const PARAMEDICS_CALLED_BY_OPTIONS = [
+  'Protection Services',
+  'VCRT',
+  'Sports Services',
+  'Lifeguards',
+]
+
 const PCRPage: React.FC = () => {
   const {
     data,
@@ -83,6 +98,7 @@ const PCRPage: React.FC = () => {
   const [signOffPdf, setSignOffPdf] = useState<File | null>(null)
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
   const [responderOptions, setResponderOptions] = useState<string[]>([])
+  const [psmOptions, setPsmOptions] = useState<string[]>([])
   const [signerIndex, setSignerIndex] = useState(0)
   const [showCloseSaveModal, setShowCloseSaveModal] = useState(false)
   const closeResolveRef = useRef<((okToClose: boolean) => void) | null>(null)
@@ -93,6 +109,11 @@ const PCRPage: React.FC = () => {
       .then(res => setResponderOptions((res.data || []).map((r: { name: string }) => r.name)))
       .catch(() => {
         // Silently fail - responders just won't be suggested, free text still works
+      })
+    apiRequest('/psm-members')
+      .then(res => setPsmOptions((res.data || []).map((m: { name: string }) => m.name)))
+      .catch(() => {
+        // Silently fail - PSM members just won't be suggested, free text still works
       })
   }, [isAuthenticated])
 
@@ -794,7 +815,7 @@ const PCRPage: React.FC = () => {
               value={data.supervisor || ''}
               onChange={e => updateField('supervisor', e.target.value)}
               error={errors.supervisor}
-              placeholder="Supervisor name"
+              placeholder="Select self or type..."
               required
               rightIcon={
                 currentUser && (
@@ -813,36 +834,36 @@ const PCRPage: React.FC = () => {
               }
             />
 
-            <Input
+            <SearchableSelect
               label="Primary PSM"
               value={data.primaryPSM || ''}
-              onChange={e => updateField('primaryPSM', e.target.value)}
-              placeholder="Primary PSM name"
+              onChange={value => updateField('primaryPSM', value)}
+              options={psmOptions}
+              placeholder="Search or type..."
             />
           </div>
 
           <div className="space-y-3">
             <label className="form-label"></label>
             {responderList.map((name, index) => (
-              <div key={index} className="flex items-end gap-2">
-                <div className="flex-1">
-                  <SearchableSelect
-                    label={`Responder ${index + 1}`}
-                    value={name}
-                    onChange={value => updateResponderAt(index, value)}
-                    options={responderOptions}
-                    placeholder="Search responders..."
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeResponderAt(index)}
-                  className="mb-2 p-2 text-gray-400 hover:text-emergency-600 dark:hover:text-emergency-400"
-                  aria-label={`Remove responder ${index + 1}`}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              <SearchableSelect
+                key={index}
+                label={`Responder ${index + 1}`}
+                value={name}
+                onChange={value => updateResponderAt(index, value)}
+                options={responderOptions}
+                placeholder="Search or type..."
+                rightIcon={
+                  <button
+                    type="button"
+                    onClick={() => removeResponderAt(index)}
+                    className="p-1 rounded text-gray-400 hover:text-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    aria-label={`Remove responder ${index + 1}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                }
+              />
             ))}
             {responderList.length < MAX_RESPONDERS && (
               <Button
@@ -890,21 +911,33 @@ const PCRPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Paramedics Called by"
-              value={data.paramedicsCalledBy || ''}
-              onChange={e => updateField('paramedicsCalledBy', e.target.value)}
-              placeholder="Who called paramedics"
-            />
+            <div>
+              <SearchableSelect
+                label="Paramedics Called by"
+                value={data.paramedicsCalledBy || ''}
+                onChange={value => updateField('paramedicsCalledBy', value)}
+                options={PARAMEDICS_CALLED_BY_OPTIONS}
+                placeholder="Search or type..."
+              />
+              <p className="form-help">
+                For Bystander, add their name if known
+              </p>
+            </div>
 
-            <Input
-              label="First Agency on Scene"
-              value={data.firstAgencyOnScene || ''}
-              onChange={e => updateField('firstAgencyOnScene', e.target.value)}
-              error={errors.firstAgencyOnScene}
-              placeholder="First responding agency"
-              required
-            />
+            <div>
+              <SearchableSelect
+                label="First Agency on Scene"
+                value={data.firstAgencyOnScene || ''}
+                onChange={value => updateField('firstAgencyOnScene', value)}
+                options={FIRST_AGENCY_ON_SCENE_OPTIONS}
+                error={errors.firstAgencyOnScene}
+                placeholder="Search or type..."
+                required
+              />
+              <p className="form-help">
+                If Protection Services were on scene upon arrival, enter that
+              </p>
+            </div>
           </div>
         </FormSection>
 
@@ -939,6 +972,7 @@ const PCRPage: React.FC = () => {
               onChange={e => handleAgeChange(e.target.value)}
               error={errors.age}
               placeholder="Age in years"
+              helpText="Filled automatically if Date of Birth entered"
               required
             />
           </div>
@@ -994,6 +1028,16 @@ const PCRPage: React.FC = () => {
                 requireUnknown
               />
             )}
+
+            {(data.status === 'Student' || data.status === 'Employee') && (
+              <Input
+                label="Student/Employee Number"
+                value={data.studentEmployeeNumber || ''}
+                onChange={e => updateField('studentEmployeeNumber', e.target.value)}
+                placeholder="ID number"
+                requireUnknown
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1007,14 +1051,6 @@ const PCRPage: React.FC = () => {
               orientation="horizontal"
               value={data.workplaceInjury}
               onChange={value => updateField('workplaceInjury', value)}
-            />
-
-            <Input
-              label="Student/Employee Number"
-              value={data.studentEmployeeNumber || ''}
-              onChange={e => updateField('studentEmployeeNumber', e.target.value)}
-              placeholder="ID number"
-              requireUnknown
             />
           </div>
 
@@ -1032,7 +1068,7 @@ const PCRPage: React.FC = () => {
               type="tel"
               value={data.emergencyContactPhone || ''}
               onChange={e => updateField('emergencyContactPhone', e.target.value)}
-              placeholder="(XXX) XXX-XXXX"
+              placeholder="XXX-XXX-XXXX"
               requireUnknown
             />
           </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Loading, Alert, Modal, Button } from '@/components/ui'
+import { Eye, Edit, Trash2, Ban, ThumbsUp, Archive, type LucideIcon } from 'lucide-react'
+import { Loading, Alert, Modal, Button, Tooltip } from '@/components/ui'
 import { Textarea } from '@/components/forms'
 import { pdfService } from '@/services/pdf.service'
 import { useAuth } from '@/context/AuthContext'
@@ -19,6 +20,33 @@ interface PCRReport {
   creator_username?: string | null
 }
 
+// Fixed action-button "slots" per row, so the Actions column never grows or
+// shrinks based on status - every row for a given role renders the same
+// number of same-width buttons, disabling (rather than hiding) ones that
+// don't apply to the report's current status.
+type ActionColor = 'blue' | 'amber' | 'emerald' | 'red' | 'purple'
+
+interface ActionSlot {
+  label: string
+  icon: LucideIcon
+  color: ActionColor
+  onClick: () => void
+  disabled?: boolean
+}
+
+const actionColorClasses: Record<ActionColor, string> = {
+  blue: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900/40',
+  amber:
+    'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800 dark:hover:bg-amber-900/40',
+  emerald:
+    'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900/40',
+  red: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/40',
+  purple:
+    'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800 dark:hover:bg-purple-900/40',
+}
+
+const noop = () => undefined
+
 const ReportsPage = () => {
   const { token, isAuthenticated, user: currentUser } = useAuth()
   const isAdmin = currentUser?.role === 'admin'
@@ -32,12 +60,12 @@ const ReportsPage = () => {
   const [requestChangesReportId, setRequestChangesReportId] = useState<string | null>(null)
   const [requestChangesComment, setRequestChangesComment] = useState('')
   const [submittingRequestChanges, setSubmittingRequestChanges] = useState(false)
-  // Read-only modal showing the admin's comments to whoever opens it
-  const [viewCommentsReport, setViewCommentsReport] = useState<PCRReport | null>(null)
   // Admin "Edit" chooser modal (submitted -> Edit or Request; changes_requested ->
   // Edit or update the existing comments) - which report it's for
   const [editChoiceReport, setEditChoiceReport] = useState<PCRReport | null>(null)
-  // Admin "complete" and "cancel" confirmation modals: which report they're for
+  // Admin "approve", "complete" and "cancel" confirmation modals: which report they're for
+  const [approveReportId, setApproveReportId] = useState<string | null>(null)
+  const [submittingApprove, setSubmittingApprove] = useState(false)
   const [completeReportId, setCompleteReportId] = useState<string | null>(null)
   const [submittingComplete, setSubmittingComplete] = useState(false)
   const [cancelReportId, setCancelReportId] = useState<string | null>(null)
@@ -124,22 +152,32 @@ const ReportsPage = () => {
     window.location.hash = `/pcr/new?${params.toString()}`
   }
 
-  const handleApproveReport = async (reportId: string) => {
+  const handleOpenApprove = (reportId: string) => {
+    setApproveReportId(reportId)
+  }
+
+  const handleConfirmApprove = async () => {
+    if (!approveReportId) return
+
+    setSubmittingApprove(true)
     try {
       if (!token) {
         setError('Authentication required')
         return
       }
 
-      await apiRequest(`/pcr/${reportId}/approve`, { method: 'PUT' })
+      await apiRequest(`/pcr/${approveReportId}/approve`, { method: 'PUT' })
 
       // Optimistic UI: update status in local state
       setReports(prev =>
-        prev.map(r => (r.id === reportId ? { ...r, status: 'approved' } : r))
+        prev.map(r => (r.id === approveReportId ? { ...r, status: 'approved' } : r))
       )
+      setApproveReportId(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve report')
       console.error('Error approving report:', err)
+    } finally {
+      setSubmittingApprove(false)
     }
   }
 
@@ -257,6 +295,97 @@ const ReportsPage = () => {
     }
   }
 
+  // Builds the fixed set of action-button slots for a row: 3 slots for
+  // regular users (View, Edit, Delete/Cancel), 4 for admins (View, Edit,
+  // context action, Cancel). A `null` entry renders an empty placeholder
+  // cell (used for admin rows on the user's own drafts, which have no
+  // 4th action) so column widths stay identical across every row.
+  const getActionSlots = (report: PCRReport): (ActionSlot | null)[] => {
+    const isPreview = report.status === 'draft' || report.status === 'changes_requested'
+    const viewSlot: ActionSlot = {
+      label: previewLoadingId === report.id ? 'Loading...' : isPreview ? 'Preview PDF' : 'View PDF',
+      icon: Eye,
+      color: 'blue',
+      onClick: () => handleViewReport(report.id),
+      disabled: previewLoadingId === report.id,
+    }
+
+    if (!isAdmin) {
+      switch (report.status) {
+        case 'draft':
+          return [
+            viewSlot,
+            { label: 'Edit & Submit', icon: Edit, color: 'amber', onClick: () => handleEditDraft(report.id) },
+            {
+              label: 'Delete',
+              icon: Trash2,
+              color: 'red',
+              onClick: () => handleDeleteReport(report.id, report.status),
+            },
+          ]
+        case 'changes_requested':
+          return [
+            viewSlot,
+            { label: 'Edit & Resubmit', icon: Edit, color: 'amber', onClick: () => handleEditReport(report.id) },
+            { label: 'Cancel', icon: Ban, color: 'red', onClick: noop, disabled: true },
+          ]
+        default:
+          // submitted, cancelled: locked down to view-only
+          return [
+            viewSlot,
+            { label: 'Edit & Resubmit', icon: Edit, color: 'amber', onClick: noop, disabled: true },
+            { label: 'Cancel', icon: Ban, color: 'red', onClick: noop, disabled: true },
+          ]
+      }
+    }
+
+    switch (report.status) {
+      case 'draft':
+        // Admin's own draft - same as a regular user's draft, plus an empty
+        // 4th cell so the row still matches the admin's 4-column grid.
+        return [
+          viewSlot,
+          { label: 'Edit & Submit', icon: Edit, color: 'amber', onClick: () => handleEditDraft(report.id) },
+          {
+            label: 'Delete',
+            icon: Trash2,
+            color: 'red',
+            onClick: () => handleDeleteReport(report.id, report.status),
+          },
+          null,
+        ]
+      case 'submitted':
+        return [
+          viewSlot,
+          { label: 'Edit / Request Changes', icon: Edit, color: 'amber', onClick: () => setEditChoiceReport(report) },
+          { label: 'Approve', icon: ThumbsUp, color: 'emerald', onClick: () => handleOpenApprove(report.id) },
+          { label: 'Cancel', icon: Ban, color: 'red', onClick: () => handleOpenCancel(report.id) },
+        ]
+      case 'approved':
+        return [
+          viewSlot,
+          { label: 'Edit & Resubmit', icon: Edit, color: 'amber', onClick: () => handleEditReport(report.id) },
+          { label: 'Complete', icon: Archive, color: 'purple', onClick: () => handleOpenComplete(report.id) },
+          { label: 'Cancel', icon: Ban, color: 'red', onClick: noop, disabled: true },
+        ]
+      case 'changes_requested':
+        return [
+          viewSlot,
+          { label: 'Edit / View Comments', icon: Edit, color: 'amber', onClick: () => setEditChoiceReport(report) },
+          { label: 'Approve', icon: ThumbsUp, color: 'emerald', onClick: () => handleOpenApprove(report.id) },
+          { label: 'Cancel', icon: Ban, color: 'red', onClick: noop, disabled: true },
+        ]
+      default:
+        // completed, cancelled: fully locked, view-only
+        return [
+          viewSlot,
+          { label: 'Edit', icon: Edit, color: 'amber', onClick: noop, disabled: true },
+          { label: 'Complete', icon: Archive, color: 'purple', onClick: noop, disabled: true },
+          { label: 'Cancel', icon: Ban, color: 'red', onClick: noop, disabled: true },
+        ]
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return parseServerDate(dateString).toLocaleDateString('en-CA', {
       year: 'numeric',
@@ -340,24 +469,24 @@ const ReportsPage = () => {
               <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[100px]">
                       Report ID
                     </th>
                     {isAdmin && (
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Created By
                       </th>
                     )}
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Created
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Last Updated
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -381,20 +510,20 @@ const ReportsPage = () => {
 
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${
                             report.status === 'approved'
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                              ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-700/60'
                               : report.status === 'submitted'
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                                ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-200 dark:border-green-700/60'
                                 : report.status === 'changes_requested'
-                                  ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200'
+                                  ? 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-200 dark:border-orange-700/60'
                                   : report.status === 'draft'
-                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-200 dark:border-yellow-700/60'
                                     : report.status === 'completed'
-                                      ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200'
+                                      ? 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-700/60'
                                       : report.status === 'cancelled'
-                                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
-                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                                        ? 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-200 dark:border-red-700/60'
+                                        : 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500/60'
                           }`}
                         >
                           {report.status === 'changes_requested' ? 'changes requested' : report.status}
@@ -406,114 +535,32 @@ const ReportsPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         {formatDate(report.updated_at)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          {report.status === 'draft' ? (
-                            <>
-                              <button
-                                onClick={() => handleViewReport(report.id)}
-                                disabled={previewLoadingId === report.id}
-                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium disabled:opacity-50 disabled:cursor-wait"
-                              >
-                                {previewLoadingId === report.id ? 'Loading...' : 'Preview PDF'}
-                              </button>
-                              <button
-                                onClick={() => handleEditDraft(report.id)}
-                                className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
-                              >
-                                Edit
-                              </button>
-                            </>
-                          ) : report.status === 'completed' || report.status === 'cancelled' ? (
-                            <button
-                              onClick={() => handleViewReport(report.id)}
-                              disabled={previewLoadingId === report.id}
-                              className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium disabled:opacity-50 disabled:cursor-wait"
-                            >
-                              {previewLoadingId === report.id ? 'Loading...' : 'View PDF'}
-                            </button>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleViewReport(report.id)}
-                                disabled={previewLoadingId === report.id}
-                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium disabled:opacity-50 disabled:cursor-wait"
-                              >
-                                {previewLoadingId === report.id ? 'Loading...' : 'View PDF'}
-                              </button>
-                              {!isAdmin && report.status === 'changes_requested' && (
-                                <button
-                                  onClick={() => handleEditReport(report.id)}
-                                  className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
-                                >
-                                  Edit & Resubmit
-                                </button>
-                              )}
-                              {isAdmin && report.status === 'approved' && (
-                                <button
-                                  onClick={() => handleEditReport(report.id)}
-                                  className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                              {/* Edit on submitted/changes_requested opens a chooser: edit it
-                                  directly, or send/update comments back to the submitter */}
-                              {isAdmin && (report.status === 'submitted' || report.status === 'changes_requested') && (
-                                <button
-                                  onClick={() => setEditChoiceReport(report)}
-                                  className="text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                              {isAdmin && report.status === 'submitted' && (
-                                <>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div
+                          className={`grid gap-2 ${
+                            isAdmin ? 'grid-cols-[40px_40px_40px_40px]' : 'grid-cols-[40px_40px_40px]'
+                          }`}
+                        >
+                          {getActionSlots(report).map((slot, idx) =>
+                            slot ? (
+                              <Tooltip key={idx} content={slot.label}>
+                                <span className="inline-block">
                                   <button
-                                    onClick={() => handleApproveReport(report.id)}
-                                    className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
+                                    type="button"
+                                    aria-label={slot.label}
+                                    onClick={slot.disabled ? undefined : slot.onClick}
+                                    disabled={slot.disabled}
+                                    className={`flex w-full items-center justify-center rounded-md border p-2 transition-colors ${
+                                      actionColorClasses[slot.color]
+                                    } ${slot.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
                                   >
-                                    Approve
+                                    <slot.icon className="w-4 h-4" />
                                   </button>
-                                  <button
-                                    onClick={() => handleOpenCancel(report.id)}
-                                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
-                                  >
-                                    Cancel
-                                  </button>
-                                </>
-                              )}
-                              {isAdmin && report.status === 'approved' && (
-                                <button
-                                  onClick={() => handleOpenComplete(report.id)}
-                                  className="text-purple-500 hover:text-purple-700 dark:text-purple-300 dark:hover:text-purple-200 font-medium"
-                                >
-                                  Complete
-                                </button>
-                              )}
-                            </>
-                          )}
-
-                          {/* View comments: only meaningful once the admin has sent a
-                              report back with feedback */}
-                          {report.status === 'changes_requested' && report.admin_comments && (
-                            <button
-                              onClick={() => setViewCommentsReport(report)}
-                              className="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 font-medium"
-                            >
-                              View Comments
-                            </button>
-                          )}
-
-                          {/* Delete: the only status a PCR can be deleted from is draft,
-                              by its owner - not even admins can delete beyond that. */}
-                          {report.status === 'draft' && (
-                            <button
-                              onClick={() => handleDeleteReport(report.id, report.status)}
-                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
-                            >
-                              Delete
-                            </button>
+                                </span>
+                              </Tooltip>
+                            ) : (
+                              <div key={idx} />
+                            ),
                           )}
                         </div>
                       </td>
@@ -611,20 +658,29 @@ const ReportsPage = () => {
         </div>
       </Modal>
 
-      {/* View admin comments modal */}
+      {/* Admin: Approve confirmation modal */}
       <Modal
-        isOpen={viewCommentsReport !== null}
-        onClose={() => setViewCommentsReport(null)}
-        title="Requested Changes"
-        size="md"
+        isOpen={approveReportId !== null}
+        onClose={() => (submittingApprove ? undefined : setApproveReportId(null))}
+        title="Approve PCR"
+        size="sm"
       >
         <div className="space-y-4">
-          <p className="whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100">
-            {viewCommentsReport?.admin_comments}
+          <p className="text-sm text-gray-900 dark:text-gray-100">
+            Are you sure you want to approve this PCR? The submitter will no longer be able to
+            make changes to it.
           </p>
-          <div className="flex justify-end">
-            <Button type="button" variant="outline" onClick={() => setViewCommentsReport(null)}>
-              Close
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setApproveReportId(null)}
+              disabled={submittingApprove}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleConfirmApprove} disabled={submittingApprove}>
+              {submittingApprove ? 'Approving...' : 'Approve'}
             </Button>
           </div>
         </div>
@@ -635,7 +691,7 @@ const ReportsPage = () => {
         isOpen={completeReportId !== null}
         onClose={() => (submittingComplete ? undefined : setCompleteReportId(null))}
         title="Complete PCR"
-        size="md"
+        size="sm"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-900 dark:text-gray-100">

@@ -245,7 +245,7 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
   }
 });
 
-// PUT /api/pcr/:id/approve - Approve a submitted PCR report (admin only)
+// PUT /api/pcr/:id/approve - Approve a submitted (or changes-requested) PCR report (admin only)
 router.put('/:id/approve', authenticateToken, logActivity('approve_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -261,12 +261,14 @@ router.put('/:id/approve', authenticateToken, logActivity('approve_pcr', 'pcr_re
       return res.status(404).json({ success: false, message: 'PCR report not found' });
     }
 
-    if (report.status !== 'submitted') {
-      return res.status(400).json({ success: false, message: 'Only submitted reports can be approved' });
+    if (report.status !== 'submitted' && report.status !== 'changes_requested') {
+      return res.status(400).json({ success: false, message: 'Only submitted or changes-requested reports can be approved' });
     }
 
+    // Approving directly from changes_requested (skipping resubmission) means
+    // that feedback is no longer pending action - clear it, same as a resubmit does.
     db.prepare(`
-      UPDATE pcr_reports SET status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      UPDATE pcr_reports SET status = 'approved', admin_comments = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `).run(id);
 
     const updatedReport = db.prepare('SELECT * FROM pcr_reports WHERE id = ?').get(id) as any;

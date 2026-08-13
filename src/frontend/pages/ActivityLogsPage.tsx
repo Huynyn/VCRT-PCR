@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { History, Filter, Calendar, User, Activity, RefreshCw, ChevronLeft, ChevronRight, Search, Trash2 } from 'lucide-react'
+import { History, Filter, User, Activity, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Select, DatePicker } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
@@ -33,7 +33,6 @@ const ActivityLogsPage = () => {
   })
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
-  const [refreshing, setRefreshing] = useState(false)
   const [showCleanModal, setShowCleanModal] = useState(false)
   const [cleaning, setCleaning] = useState(false)
   const [usernameOptions, setUsernameOptions] = useState<{ value: string; label: string }[]>([
@@ -84,7 +83,7 @@ const ActivityLogsPage = () => {
 
   const fetchLogs = async () => {
     try {
-      if (!refreshing) setLoading(true)
+      setLoading(true)
 
       if (!isAuthenticated || !token) {
         setError('Please log in to view activity logs')
@@ -110,13 +109,7 @@ const ActivityLogsPage = () => {
       console.error('Error fetching logs:', err)
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
-  }
-
-  const handleRefresh = () => {
-    setRefreshing(true)
-    fetchLogs()
   }
 
   const handleCleanLogs = async () => {
@@ -171,31 +164,34 @@ const ActivityLogsPage = () => {
 
   const getActionBadgeColor = (action: string) => {
     const colors: Record<string, string> = {
-      login: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
-      logout: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-200',
-      create_user: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
-      update_user: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
-      delete_user: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200',
-      change_password: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
-      create_responder: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200',
-      update_responder: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200',
-      delete_responder: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-200',
-      create_pcr: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200',
-      update_pcr: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
-      submit_pcr: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200',
-      delete_pcr: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
-      approve_pcr: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
-      manual_cleanup: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
-      update_setting: 'bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-200',
-      cleanup_pcr_reports: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-200',
-      cleanup_activity_logs: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-200',
+      login: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-200 dark:border-green-700/60',
+      logout: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/40 dark:text-slate-200 dark:border-slate-600/60',
+      create_user: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-700/60',
+      update_user: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-700/60',
+      delete_user: 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/40 dark:text-rose-200 dark:border-rose-700/60',
+      change_password: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-200 dark:border-orange-700/60',
+      create_responder: 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-900/40 dark:text-cyan-200 dark:border-cyan-700/60',
+      update_responder: 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/40 dark:text-sky-200 dark:border-sky-700/60',
+      delete_responder: 'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-900/40 dark:text-pink-200 dark:border-pink-700/60',
+      create_psm_member: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-700/60',
+      update_psm_member: 'bg-stone-100 text-stone-800 border-stone-200 dark:bg-stone-900/40 dark:text-stone-200 dark:border-stone-600/60',
+      delete_psm_member: 'bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-900/40 dark:text-zinc-200 dark:border-zinc-600/60',
+      create_pcr: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-200 dark:border-indigo-700/60',
+      update_pcr: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-200 dark:border-yellow-700/60',
+      submit_pcr: 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/40 dark:text-teal-200 dark:border-teal-700/60',
+      delete_pcr: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-200 dark:border-red-700/60',
+      approve_pcr: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-700/60',
+      manual_cleanup: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-700/60',
+      update_setting: 'bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-900/40 dark:text-lime-200 dark:border-lime-700/60',
+      cleanup_pcr_reports: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200 dark:bg-fuchsia-900/40 dark:text-fuchsia-200 dark:border-fuchsia-700/60',
+      cleanup_activity_logs: 'bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/40 dark:text-violet-200 dark:border-violet-700/60',
     }
-    return colors[action] || 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+    return colors[action] || 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500/60'
   }
 
   const formatAction = (action: string) => {
     const titled = action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-    return titled.replace(/\bPcr\b/g, 'PCR')
+    return titled.replace(/\bPcr\b/g, 'PCR').replace(/\bPsm\b/g, 'PSM')
   }
 
   const formatUserName = (log: ActivityLog) => {
@@ -231,7 +227,7 @@ const ActivityLogsPage = () => {
     )
   }
 
-  if (loading && !refreshing) {
+  if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
@@ -268,14 +264,6 @@ const ActivityLogsPage = () => {
             >
               Clean
             </Button>
-            <Button
-              leftIcon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
-              onClick={handleRefresh}
-              disabled={refreshing}
-              variant="secondary"
-            >
-              Refresh
-            </Button>
           </div>
         </div>
       </div>
@@ -292,7 +280,7 @@ const ActivityLogsPage = () => {
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Filters</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.1fr_1.1fr_0.6fr] gap-4">
             <Select
               label="Action"
               value={filters.action}
@@ -308,6 +296,9 @@ const ActivityLogsPage = () => {
                 { value: 'create_responder', label: 'Create Responder' },
                 { value: 'update_responder', label: 'Update Responder' },
                 { value: 'delete_responder', label: 'Delete Responder' },
+                { value: 'create_psm_member', label: 'Create PSM Member' },
+                { value: 'update_psm_member', label: 'Update PSM Member' },
+                { value: 'delete_psm_member', label: 'Delete PSM Member' },
                 { value: 'create_pcr', label: 'Create PCR' },
                 { value: 'update_pcr', label: 'Update PCR' },
                 { value: 'submit_pcr', label: 'Submit PCR' },
@@ -346,7 +337,7 @@ const ActivityLogsPage = () => {
                 onClick={clearFilters}
                 className="w-full"
               >
-                Clear Filters
+                Clear
               </Button>
             </div>
           </div>
@@ -410,7 +401,7 @@ const ActivityLogsPage = () => {
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getActionBadgeColor(log.action)}`}>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getActionBadgeColor(log.action)}`}>
                             {formatAction(log.action)}
                           </span>
                         </td>
@@ -423,49 +414,29 @@ const ActivityLogsPage = () => {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 mt-4">
-                  <div className="flex flex-1 justify-between sm:hidden">
-                    <Button
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Showing page <span className="font-medium">{filters.page}</span> of{' '}
+                    <span className="font-medium">{totalPages}</span>
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
                       onClick={() => handlePageChange(filters.page - 1)}
                       disabled={filters.page <= 1}
-                      variant="secondary"
+                      aria-label="Previous page"
+                      className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-blue-400 dark:hover:bg-blue-900/30"
                     >
-                      Previous
-                    </Button>
-                    <Button
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handlePageChange(filters.page + 1)}
                       disabled={filters.page >= totalPages}
-                      variant="secondary"
+                      aria-label="Next page"
+                      className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-blue-400 dark:hover:bg-blue-900/30"
                     >
-                      Next
-                    </Button>
-                  </div>
-                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        Showing page <span className="font-medium">{filters.page}</span> of{' '}
-                        <span className="font-medium">{totalPages}</span>
-                      </p>
-                    </div>
-                    <div>
-                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
-                        <Button
-                          onClick={() => handlePageChange(filters.page - 1)}
-                          disabled={filters.page <= 1}
-                          variant="secondary"
-                          leftIcon={<ChevronLeft className="w-4 h-4" />}
-                        >
-                          Previous
-                        </Button>
-                        <Button
-                          onClick={() => handlePageChange(filters.page + 1)}
-                          disabled={filters.page >= totalPages}
-                          variant="secondary"
-                          rightIcon={<ChevronRight className="w-4 h-4" />}
-                        >
-                          Next
-                        </Button>
-                      </nav>
-                    </div>
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
               )}

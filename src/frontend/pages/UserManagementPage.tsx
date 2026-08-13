@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, UserCog, Shield, User as UserIcon, Edit, Trash2, KeyRound } from 'lucide-react'
+import { Plus, UserCog, Shield, ShieldCheck, User as UserIcon, Users as UsersIcon, Edit, Trash2, KeyRound, CheckSquare, XSquare } from 'lucide-react'
 import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
 import { parseServerDate, getPasswordStrengthError } from '@/utils'
-import { RespondersManager } from '@/components/composite'
+import { NameListManager } from '@/components/composite'
 import type { User } from '@/types'
 
 interface CreateUserForm {
@@ -66,11 +66,13 @@ const UserManagementPage = () => {
   })
   const [passwordFormErrors, setPasswordFormErrors] = useState<Partial<PasswordForm>>({})
 
-  // Alphabetical by name, with admin accounts pushed to the bottom (also alphabetical among themselves)
+  // Admin accounts always sink to the very bottom, below inactive regular
+  // users too; within the regular-user group, active users come before
+  // inactive ones; and within each of those groups, alphabetical by name.
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
-      if (a.role === 'admin' && b.role !== 'admin') return 1
-      if (a.role !== 'admin' && b.role === 'admin') return -1
+      if (a.role !== b.role) return a.role === 'admin' ? 1 : -1
+      if (a.isActive !== b.isActive) return a.isActive ? -1 : 1
       const nameA = `${a.firstName} ${a.lastName}`.toLowerCase()
       const nameB = `${b.firstName} ${b.lastName}`.toLowerCase()
       return nameA.localeCompare(nameB)
@@ -414,22 +416,22 @@ const UserManagementPage = () => {
               <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[200px]">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[200px]">
                       User
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[120px]">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[120px]">
                       Role
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[100px]">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[100px]">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[160px]">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[160px]">
                       Created
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[160px]">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[160px]">
                       Last Login
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[180px]">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[180px]">
                       Actions
                     </th>
                   </tr>
@@ -457,10 +459,10 @@ const UserManagementPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {getRoleIcon(user.role)}
-                          <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${
                             user.role === 'admin'
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                              ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-700/60'
+                              : 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500/60'
                           }`}>
                             {user.role}
                           </span>
@@ -468,10 +470,10 @@ const UserManagementPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${
                             user.isActive
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
+                              ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-200 dark:border-green-700/60'
+                              : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-200 dark:border-red-700/60'
                           }`}
                         >
                           {user.isActive ? 'Active' : 'Inactive'}
@@ -490,6 +492,7 @@ const UserManagementPage = () => {
                             size="sm"
                             onClick={() => handleEditUser(user)}
                             leftIcon={<Edit className="w-4 h-4" />}
+                            className="w-28 justify-center"
                           >
                             Edit
                           </Button>
@@ -497,6 +500,14 @@ const UserManagementPage = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleToggleUserStatus(user.id, user.isActive)}
+                            leftIcon={
+                              user.isActive ? (
+                                <XSquare className="w-4 h-4" />
+                              ) : (
+                                <CheckSquare className="w-4 h-4" />
+                              )
+                            }
+                            className="w-28 justify-center"
                             disabled={
                               user.id === currentUser?.id ||
                               (user.role === 'admin' && user.isActive && activeAdminCount <= 1)
@@ -522,7 +533,29 @@ const UserManagementPage = () => {
       </div>
 
       <div className="mt-8">
-        <RespondersManager />
+        <NameListManager
+          apiPath="/responders"
+          title="Responders"
+          description="Manage the names available in the PCR responder dropdown"
+          emptyStateText="No responders yet. Add one to populate the PCR dropdown."
+          emptyStateIcon={UsersIcon}
+          itemLabel="Responder"
+          itemLabelLower="responder"
+        />
+      </div>
+
+      <div className="mt-8">
+        <NameListManager
+          apiPath="/psm-members"
+          title="Primary PSM"
+          description="Manage the names available in the PCR Primary PSM dropdown"
+          emptyStateText="No PSM members yet. Add one to populate the PCR dropdown."
+          emptyStateIcon={ShieldCheck}
+          itemLabel="PSM Member"
+          itemLabelLower="PSM member"
+          namePlaceholder="e.g. J. Tremblay"
+          nameHelpText="Use initial + last name, e.g. J. Tremblay"
+        />
       </div>
 
       {/* Create User Modal */}

@@ -10,6 +10,7 @@ import pcrRoutes from './routes/pcr';
 import userRoutes from './routes/users';
 import logsRoutes from './routes/logs';
 import respondersRoutes from './routes/responders';
+import psmMembersRoutes from './routes/psmMembers';
 import settingsRoutes from './routes/settings';
 
 // Import database to initialize
@@ -63,6 +64,7 @@ function createApp(): express.Application {
   app.use('/api/users', userRoutes);
   app.use('/api/logs', logsRoutes);
   app.use('/api/responders', respondersRoutes);
+  app.use('/api/psm-members', psmMembersRoutes);
   app.use('/api/settings', settingsRoutes);
 
   // Special route for submissions to match frontend expectation
