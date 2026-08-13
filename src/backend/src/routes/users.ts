@@ -4,6 +4,7 @@ import db from '../database';
 import { authenticateToken, AuthenticatedRequest, requireRole } from '../middleware/auth';
 import { logActivity } from '../middleware/logger';
 import { validatePasswordStrength } from '../utils/password';
+import { archivePcrReportsSql } from '../services/pcrArchive';
 
 const router = Router();
 
@@ -313,14 +314,45 @@ router.delete(
         // return res.status(400).json({ success: false, message: 'Cannot delete an admin user.' });
       }
 
-      // Attempt hard delete
+      // Block deletion while the user has a PCR anywhere in the active review
+      // workflow. Completed and cancelled reports don't count - those are
+      // already finished and just waiting on the retention cleanup job, so
+      // they shouldn't hold up removing the account.
+      const pendingCount = (db
+        .prepare(`
+          SELECT COUNT(*) AS c FROM pcr_reports
+          WHERE created_by = ? AND status IN ('draft', 'submitted', 'approved', 'changes_requested')
+        `)
+        .get(id) as any).c as number;
+
+      if (pendingCount > 0) {
+        return res.status(409).json({
+          success: false,
+          message:
+            'Cannot delete this user: they still have a PCR report in progress (draft, submitted, approved, or changes requested). Resolve it first, then try again.',
+        });
+      }
+
+      // Any reports still on file for this user are therefore completed or
+      // cancelled. Archive stats for the completed ones (cancelled ones are
+      // never archived, same as the retention cleanup job), then clear the
+      // rows so the foreign key doesn't block deleting the user - their call
+      // history survives in the archive even though the account is gone.
       try {
+        db.exec('BEGIN TRANSACTION');
+        db.prepare(archivePcrReportsSql('created_by = ?')).run(id);
+        db.prepare(`
+          DELETE FROM pcr_reports WHERE created_by = ? AND status IN ('completed', 'cancelled')
+        `).run(id);
+
         const result = db.prepare('DELETE FROM users WHERE id = ?').run(id);
         if (result.changes === 0) {
+          db.exec('ROLLBACK');
           return res.status(404).json({ success: false, message: 'User not found' });
         }
+        db.exec('COMMIT');
       } catch (err: any) {
-        // Foreign key constraint? e.g., user referenced elsewhere (PCRs, etc.)
+        db.exec('ROLLBACK');
         const msg = String(err?.message || '');
         if (msg.includes('FOREIGN KEY')) {
           return res.status(409).json({
