@@ -822,7 +822,7 @@ const PCRPage: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            <label className="form-label">Responders Involved</label>
+            <label className="form-label"></label>
             {responderList.map((name, index) => (
               <div key={index} className="flex items-end gap-2">
                 <div className="flex-1">
