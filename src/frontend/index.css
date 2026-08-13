@@ -14,9 +14,25 @@
     --shadow-strength: 1%;
   }
 
-  /* Improved focus styles */
+  /* Improved focus styles - only for keyboard navigation, so a mouse click
+     doesn't leave a lingering ring on whatever was clicked. */
   *:focus {
-    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+    @apply outline-none;
+  }
+
+  *:focus-visible {
+    @apply ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  /* Many components (buttons, sidebar nav items, the theme toggle, form
+     selects...) set their own explicit focus:ring and focus:outline-none
+     classes, which generate :focus rules independent of the two rules
+     above and would otherwise still leave a ring after a mouse click.
+     Strip that visual ring/outline whenever focus isn't from the keyboard,
+     regardless of which component applied it. */
+  *:focus:not(:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   /* Custom scrollbar styles */

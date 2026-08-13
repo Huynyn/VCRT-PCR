@@ -72,6 +72,13 @@ const SamplePcrSection: React.FC = () => {
               Sample PCR
             </h3>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300"
+              >
+                {copied ? 'Copied' : 'Copy'}
+              </button>
               {isAdmin && (
                 <button
                   type="button"
@@ -82,13 +89,6 @@ const SamplePcrSection: React.FC = () => {
                   Edit
                 </button>
               )}
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300"
-              >
-                {copied ? 'Copied' : 'Copy'}
-              </button>
             </div>
           </div>
         </div>

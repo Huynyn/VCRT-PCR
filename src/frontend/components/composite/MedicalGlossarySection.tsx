@@ -230,23 +230,11 @@ const MedicalGlossarySection: React.FC = () => {
       <div className="card">
         <div className="card-header">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Medical Glossary Terms
-              </h3>
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={openEdit}
-                  className="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300 inline-flex items-center gap-1"
-                >
-                  <Edit className="w-3 h-3" />
-                  Edit
-                </button>
-              )}
-            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+              Medical Glossary Terms
+            </h3>
 
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:ml-auto">
               <input
                 value={acronymQuery}
                 onChange={e => setAcronymQuery(e.target.value)}
@@ -264,6 +252,16 @@ const MedicalGlossarySection: React.FC = () => {
                   </option>
                 ))}
               </select>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={openEdit}
+                  className="text-xs px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300 inline-flex items-center justify-center gap-1 shrink-0"
+                >
+                  <Edit className="w-3 h-3" />
+                  Edit
+                </button>
+              )}
             </div>
           </div>
         </div>
