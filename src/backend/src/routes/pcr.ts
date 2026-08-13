@@ -589,6 +589,34 @@ router.get('/stats/mine', authenticateToken, (req: AuthenticatedRequest, res: Re
   }
 });
 
+// GET /api/pcr/stats/next-call-number?date=YYYY-MM-DD - Next sequential call
+// number for a given call date, based on every draft/submitted PCR (across
+// all users) already using that date - so it starts back at 001 once the
+// date rolls over past midnight.
+router.get('/stats/next-call-number', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { date } = req.query;
+    if (!date || typeof date !== 'string') {
+      return res.status(400).json({ success: false, message: 'date query parameter is required' });
+    }
+
+    const result = db.prepare(`
+      SELECT MAX(CAST(json_extract(form_data, '$.callNumber') AS INTEGER)) AS maxCallNumber
+      FROM pcr_reports
+      WHERE status IN ('draft', 'submitted')
+        AND json_extract(form_data, '$.date') = ?
+    `).get(date) as { maxCallNumber: number | null };
+
+    const next = (result.maxCallNumber || 0) + 1;
+    const callNumber = String(next).padStart(3, '0');
+
+    res.json({ success: true, data: { callNumber } });
+  } catch (error) {
+    console.error('Get next call number error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 // GET /api/pcr/stats/pending-approval-count - Count of PCRs awaiting approval (admin only)
 router.get('/stats/pending-approval-count', authenticateToken, requireRole(['admin']), (req: AuthenticatedRequest, res: Response) => {
   try {

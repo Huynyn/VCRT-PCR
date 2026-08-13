@@ -1,4 +1,5 @@
-import React, { forwardRef } from 'react'
+import React, { forwardRef, useRef } from 'react'
+import { Minimize2 } from 'lucide-react'
 import { cn } from '@/utils'
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -24,6 +25,22 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
   ...props
 }, ref) => {
   const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`
+  const innerRef = useRef<HTMLTextAreaElement | null>(null)
+
+  const setRefs = (node: HTMLTextAreaElement | null) => {
+    innerRef.current = node
+    if (typeof ref === 'function') ref(node)
+    else if (ref) (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = node
+  }
+
+  // Dragging the native resize handle sets an inline height/width on the
+  // element - clearing it lets the box snap back to its CSS default size.
+  const handleResetSize = () => {
+    const node = innerRef.current
+    if (!node) return
+    node.style.height = ''
+    node.style.width = ''
+  }
 
   const resizeClasses = {
     none: 'resize-none',
@@ -57,25 +74,39 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
         </label>
       )}
       
-      <textarea
-        ref={ref}
-        id={textareaId}
-        className={cn(
-          'form-input min-h-[80px]',
-          resizeClasses[resize],
-          error && 'form-input-error',
-          className
+      <div className="relative">
+        <textarea
+          ref={setRefs}
+          id={textareaId}
+          className={cn(
+            'form-input min-h-[80px]',
+            resizeClasses[resize],
+            error && 'form-input-error',
+            className
+          )}
+          aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={
+            error ? `${textareaId}-error` : helpText ? `${textareaId}-help` : undefined
+          }
+          required={isRequired}
+          onInvalid={handleInvalid}
+          onInput={handleInput}
+          {...props}
+        />
+        {resize !== 'none' && (
+          <button
+            type="button"
+            onClick={handleResetSize}
+            title="Reset size"
+            aria-label="Reset size"
+            tabIndex={-1}
+            className="absolute top-1.5 right-1.5 p-1 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:text-gray-500 dark:hover:text-primary-400 dark:hover:bg-primary-900/30 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
+          >
+            <Minimize2 className="w-3.5 h-3.5" />
+          </button>
         )}
-        aria-invalid={error ? 'true' : 'false'}
-        aria-describedby={
-          error ? `${textareaId}-error` : helpText ? `${textareaId}-help` : undefined
-        }
-        required={isRequired}
-        onInvalid={handleInvalid}
-        onInput={handleInput}
-        {...props}
-      />
-      
+      </div>
+
       {error && (
         <p id={`${textareaId}-error`} className="form-error" role="alert">
           {error}

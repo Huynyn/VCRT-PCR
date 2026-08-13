@@ -576,9 +576,9 @@ private addPageWithHeader(
       pdf,
       [
         { label: 'Date:', value: data.date || '' },
-        { label: 'Location:', value: data.location || '' },
-        { label: 'Call #:', value: data.callNumber || '' },
         { label: 'Report #:', value: data.reportNumber || '' },
+        { label: 'Call #:', value: data.callNumber || '' },
+        { label: 'Location:', value: data.location || '' },
       ],
       [1, 1, 1, 1], 
       yPosition,
@@ -1506,9 +1506,12 @@ private addPageWithHeader(
   }
 
   /**
-   * E-signature strip pinned to the very bottom of the page: always 4 even
-   * columns (Supervisor, Responder 1-3), even for responder slots that
-   * weren't used on this call - unused/unsigned columns are left blank.
+   * E-signature strip pinned to the very bottom of the page: a fixed 4-slot
+   * grid (Supervisor, Responder 1-3) that never reflows based on how many
+   * responders were actually on the call - unused slots are just left
+   * blank. The one overflow case is a 4th responder (the form allows up to
+   * four): rather than squeeze a 5th column into the row, it spills onto a
+   * second, shorter row of its own.
    */
   private async addSignaturesAndFooter(
     pdf: jsPDF,
@@ -1525,9 +1528,34 @@ private addPageWithHeader(
     const x1 = pageW - options.margins.right
     const contentW = x1 - x0
 
-    // fixed strip height at bottom - tall enough for a label, the signature
-    // image itself, and a signature line/caption underneath
-    const stripHeight = 34
+    type SigCol = { label: string; name: string; image?: string }
+
+    const namedResponders: SigCol[] = (data.responders || [])
+      .map((name, i) => ({
+        label: `Responder ${i + 1}`,
+        name: (name || '').trim(),
+        image: data.signatures?.responders?.[i],
+      }))
+      .filter(col => col.name !== '')
+
+    // Row 1 is always Supervisor + 3 responder slots, blank-filled if a slot
+    // wasn't used. A 4th responder (beyond the normal 1 sup + 3 resp case)
+    // overflows onto row 2 instead of adding a 5th column to row 1.
+    const row1: SigCol[] = [
+      { label: 'Supervisor', name: data.supervisor || '', image: data.signatures?.supervisor },
+    ]
+    for (let i = 0; i < 3; i++) {
+      row1.push(namedResponders[i] || { label: `Responder ${i + 1}`, name: '', image: undefined })
+    }
+    const row2: SigCol[] = namedResponders.length > 3 ? [namedResponders[3]] : []
+    const hasSecondRow = row2.length > 0
+
+    // Shrink the per-row height when a second row is needed so the combined
+    // strip doesn't blow up the footer - still tall enough for a label, the
+    // signature image, and a signature line/caption underneath.
+    const rowHeight = hasSecondRow ? 26 : 34
+    const imageH = hasSecondRow ? 11 : 15
+    const stripHeight = hasSecondRow ? rowHeight * 2 : rowHeight
     const stripTopY = pageH - bottom - stripHeight
 
     // if we collide with content, push to a new page
@@ -1540,75 +1568,69 @@ private addPageWithHeader(
     pdf.setLineWidth(0.4)
     pdf.line(x0, stripTopY, x1, stripTopY)
 
-    // One column per responder that was actually filled in - unlike the old
-    // fixed 3-slot layout, an empty responder row just doesn't get a column
-    // rather than reserving blank space for it.
-    const responderColumns = (data.responders || [])
-      .map((name, i) => ({
-        label: `Responder ${i + 1}`,
-        name: name || '',
-        image: data.signatures?.responders?.[i],
-      }))
-      .filter(col => col.name.trim() !== '')
+    const colW = contentW / 4
 
-    const columns: Array<{ label: string; name: string; image?: string }> = [
-      { label: 'Supervisor', name: data.supervisor || '', image: data.signatures?.supervisor },
-      ...responderColumns,
-    ]
+    const drawRow = async (rowCols: SigCol[], rowTopY: number) => {
+      const normalizedImages = await Promise.all(
+        rowCols.map(col => (col.image ? this.normalizeSignatureImage(col.image) : Promise.resolve(undefined)))
+      )
 
-    const normalizedImages = await Promise.all(
-      columns.map(col => (col.image ? this.normalizeSignatureImage(col.image) : Promise.resolve(undefined)))
-    )
+      const labelY = rowTopY + 5
+      const imageY = rowTopY + 10
+      const lineY = imageY + imageH + 2
+      const captionY = lineY + 4
 
-    const colW = contentW / columns.length
-    const imageH = 15
-    const labelY = stripTopY + 5
-    const imageY = stripTopY + 10
-    const lineY = imageY + imageH + 2
-    const captionY = lineY + 4
+      rowCols.forEach((col, i) => {
+        const colX0 = x0 + i * colW
+        const colCenterX = colX0 + colW / 2
 
-    columns.forEach((col, i) => {
-      const colX0 = x0 + i * colW
-      const colCenterX = colX0 + colW / 2
-
-      // divider between columns (skip before the first one)
-      if (i > 0) {
-        pdf.setDrawColor(220)
-        pdf.setLineWidth(0.2)
-        pdf.line(colX0, stripTopY + 2, colX0, lineY)
-      }
-
-      // Supervisor is always included even if unfilled, so this only ever
-      // fires for that case - every responder column here was already
-      // filtered down to ones with a name.
-      if (!col.name) return
-
-      pdf.setFont('helvetica', 'bold')
-      pdf.setFontSize(7.5)
-      pdf.setTextColor(0)
-      const nameLabel = `${col.label}: ${col.name}`
-      pdf.text(pdf.splitTextToSize(nameLabel, colW - 6), colCenterX, labelY, { align: 'center' })
-
-      const normalizedImage = normalizedImages[i]
-      if (normalizedImage) {
-        try {
-          const imgW = colW - 10
-          pdf.addImage(normalizedImage, 'PNG', colX0 + 5, imageY, imgW, imageH, undefined, 'FAST')
-        } catch {
-          // Corrupt/unsupported signature image data - leave the line blank below
+        // divider between columns (skip before the first one)
+        if (i > 0) {
+          pdf.setDrawColor(220)
+          pdf.setLineWidth(0.2)
+          pdf.line(colX0, rowTopY + 2, colX0, lineY)
         }
-      }
 
-      pdf.setDrawColor(150)
+        // Blank/unused slot - leave the column empty.
+        if (!col.name) return
+
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(7.5)
+        pdf.setTextColor(0)
+        const nameLabel = `${col.label}: ${col.name}`
+        pdf.text(pdf.splitTextToSize(nameLabel, colW - 6), colCenterX, labelY, { align: 'center' })
+
+        const normalizedImage = normalizedImages[i]
+        if (normalizedImage) {
+          try {
+            const imgW = colW - 10
+            pdf.addImage(normalizedImage, 'PNG', colX0 + 5, imageY, imgW, imageH, undefined, 'FAST')
+          } catch {
+            // Corrupt/unsupported signature image data - leave the line blank below
+          }
+        }
+
+        pdf.setDrawColor(150)
+        pdf.setLineWidth(0.2)
+        pdf.line(colX0 + 5, lineY, colX0 + colW - 5, lineY)
+
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(6.5)
+        pdf.setTextColor(120)
+        pdf.text('Signature', colCenterX, captionY, { align: 'center' })
+        pdf.setTextColor(0)
+      })
+    }
+
+    await drawRow(row1, stripTopY)
+
+    if (hasSecondRow) {
+      const row2TopY = stripTopY + rowHeight
+      pdf.setDrawColor(220)
       pdf.setLineWidth(0.2)
-      pdf.line(colX0 + 5, lineY, colX0 + colW - 5, lineY)
-
-      pdf.setFont('helvetica', 'normal')
-      pdf.setFontSize(6.5)
-      pdf.setTextColor(120)
-      pdf.text('Signature', colCenterX, captionY, { align: 'center' })
-      pdf.setTextColor(0)
-    })
+      pdf.line(x0, row2TopY, x1, row2TopY)
+      await drawRow(row2, row2TopY)
+    }
 
     return pageH - bottom
   }

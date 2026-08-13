@@ -20,6 +20,7 @@ import { cn, getCurrentTime, formatDate, generateId, MARKER_COLORS } from '../ut
 import { pdfService } from '../services/pdf.service'
 import { apiRequest } from '../utils/api'
 import { setPcrCloseHandler } from '../utils/electronCloseGuard'
+import { setPcrNavigationGuard } from '../utils/navigationGuard'
 import type { PCRFormData, VitalSign, OPQRSTEntry } from '../types'
 
 // Reshapes form_data saved before responders became a plain list: those rows
@@ -100,7 +101,9 @@ const PCRPage: React.FC = () => {
   const [responderOptions, setResponderOptions] = useState<string[]>([])
   const [psmOptions, setPsmOptions] = useState<string[]>([])
   const [signerIndex, setSignerIndex] = useState(0)
+  const [autoCallNumber, setAutoCallNumber] = useState<string | null>(null)
   const [showCloseSaveModal, setShowCloseSaveModal] = useState(false)
+  const [closeReason, setCloseReason] = useState<'app-close' | 'navigate'>('app-close')
   const closeResolveRef = useRef<((okToClose: boolean) => void) | null>(null)
 
   useEffect(() => {
@@ -227,6 +230,37 @@ const PCRPage: React.FC = () => {
       ignore = true
     }
   }, [isAuthenticated, token, isAdmin, loadData, showNotification])
+
+  // Auto-populate Call Number for a brand-new report: 001 for the first
+  // draft/submitted PCR of the call date (across all users), incrementing
+  // from there. Only applies while starting fresh (not editing an existing
+  // draft/report) and never overwrites a value the user typed themselves -
+  // re-fetched whenever the Date field changes, since that's what "the
+  // first call of the day" is scoped to.
+  useEffect(() => {
+    if (currentDraftId || currentReportId) return
+    if (!isAuthenticated || !data.date) return
+    if (data.callNumber && data.callNumber !== autoCallNumber) return
+
+    let ignore = false
+    apiRequest(`/pcr/stats/next-call-number?date=${encodeURIComponent(data.date)}`)
+      .then(res => {
+        if (ignore) return
+        const next = res.data?.callNumber
+        if (next) {
+          updateField('callNumber', next)
+          setAutoCallNumber(next)
+        }
+      })
+      .catch(() => {
+        // Silently fail - Call Number just won't be pre-filled, still editable by hand
+      })
+
+    return () => {
+      ignore = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.date, currentDraftId, currentReportId, isAuthenticated])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -418,6 +452,21 @@ const PCRPage: React.FC = () => {
     }
   }
 
+  // Ctrl+S (or Cmd+S on macOS) saves a draft without leaving the page,
+  // instead of triggering the browser/OS "save page" dialog.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        if (!isSavingDraft) handleSaveDraft()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSavingDraft, isAuthenticated, token, currentDraftId, data, signOffPdf])
+
   // Registers with the Electron close flow (see electronCloseGuard) so that
   // closing the app while this form has unsaved changes prompts to save the
   // draft first, instead of silently discarding it.
@@ -426,12 +475,30 @@ const PCRPage: React.FC = () => {
       if (!isDirty) return Promise.resolve(true)
       return new Promise<boolean>(resolve => {
         closeResolveRef.current = resolve
+        setCloseReason('app-close')
         setShowCloseSaveModal(true)
       })
     }
 
     setPcrCloseHandler(handleAppCloseRequest)
     return () => setPcrCloseHandler(null)
+  }, [isDirty])
+
+  // Same idea, but for navigating away in-app (e.g. clicking another sidebar
+  // item) instead of closing the whole app - see navigationGuard. Works the
+  // same in Electron and in a plain browser tab.
+  useEffect(() => {
+    const handleNavigateAway = (): Promise<boolean> => {
+      if (!isDirty) return Promise.resolve(true)
+      return new Promise<boolean>(resolve => {
+        closeResolveRef.current = resolve
+        setCloseReason('navigate')
+        setShowCloseSaveModal(true)
+      })
+    }
+
+    setPcrNavigationGuard(handleNavigateAway)
+    return () => setPcrNavigationGuard(null)
   }, [isDirty])
 
   const resolveCloseSaveModal = (okToClose: boolean) => {
@@ -782,11 +849,11 @@ const PCRPage: React.FC = () => {
             />
 
             <Input
-              label="Location"
-              value={data.location || ''}
-              onChange={e => updateField('location', e.target.value)}
-              error={errors.location}
-              placeholder="Incident location"
+              label="Report Number"
+              value={data.reportNumber || ''}
+              onChange={e => updateField('reportNumber', e.target.value)}
+              error={errors.reportNumber}
+              placeholder="Report #"
               required
             />
 
@@ -802,11 +869,11 @@ const PCRPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Input
-              label="Report Number"
-              value={data.reportNumber || ''}
-              onChange={e => updateField('reportNumber', e.target.value)}
-              error={errors.reportNumber}
-              placeholder="Report #"
+              label="Location"
+              value={data.location || ''}
+              onChange={e => updateField('location', e.target.value)}
+              error={errors.location}
+              placeholder="Incident location"
               required
             />
 
@@ -1773,18 +1840,20 @@ const PCRPage: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Closing the app while this draft has unsaved changes */}
+      {/* Closing the app, or navigating away in-app, while this draft has unsaved changes */}
       <Modal
         isOpen={showCloseSaveModal}
         onClose={() => resolveCloseSaveModal(false)}
-        title="Save Draft Before Closing?"
+        title={closeReason === 'app-close' ? 'Save Draft Before Closing?' : 'Save Draft Before Leaving?'}
       >
         <div className="space-y-4">
           <div className="flex items-start space-x-3">
             <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-gray-900 dark:text-gray-100">
-                You have unsaved changes on this PCR. Closing the app will also log you out.
+                {closeReason === 'app-close'
+                  ? 'You have unsaved changes on this PCR. Closing the app will also log you out.'
+                  : 'You have unsaved changes on this PCR.'}
               </p>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
                 Save this as a draft first so you can pick up where you left off?
@@ -1792,15 +1861,12 @@ const PCRPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 pt-4">
-            <Button variant="outline" onClick={() => resolveCloseSaveModal(false)} disabled={isSavingDraft}>
-              Cancel
-            </Button>
+          <div className="flex items-center justify-between pt-4">
             <Button variant="danger" onClick={() => resolveCloseSaveModal(true)} disabled={isSavingDraft}>
-              Discard &amp; Close
+              {closeReason === 'app-close' ? 'Discard & Close' : 'Discard & Leave'}
             </Button>
             <Button onClick={handleSaveDraftAndClose} loading={isSavingDraft} disabled={isSavingDraft}>
-              Save Draft &amp; Close
+              {closeReason === 'app-close' ? 'Save Draft & Close' : 'Save Draft & Leave'}
             </Button>
           </div>
         </div>

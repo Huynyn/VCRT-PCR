@@ -5,6 +5,7 @@ import { Loading } from '@/components/ui'
 import { LoginPage, PCRPage, ActivityLogsPage, DashboardPage } from '@/pages'
 import { AuthProvider, NotificationProvider, FormProvider, useAuth } from '@/context'
 import { useTimeout } from '@/hooks'
+import { runPcrNavigationGuard } from '@/utils/navigationGuard'
 import ReportsPage from './pages/ReportsPage'
 import UserManagementPage from './pages/UserManagementPage'
 
@@ -73,8 +74,13 @@ const AppContent: React.FC = () => {
     }
   }, [darkMode])
 
-  // Handle navigation
-  const handleNavigate = (href: string) => {
+  // Handle navigation - if the New PCR page has unsaved changes, it gets a
+  // chance to prompt "save draft before leaving?" first (see navigationGuard).
+  const handleNavigate = async (href: string) => {
+    if (href !== currentPath) {
+      const okToLeave = await runPcrNavigationGuard()
+      if (!okToLeave) return
+    }
     navigate(href)
     setCurrentPath(href)
   }
