@@ -1593,7 +1593,7 @@ const PCRPage: React.FC = () => {
               value={data.comments || ''}
               onChange={e => updateField('comments', e.target.value)}
               error={errors.comments}
-              placeholder="Detailed description of the call..."
+              placeholder="Detailed description of the call... (refer to Sample PCR in Dashboard)"
               rows={4}
               required
             />
@@ -1603,7 +1603,8 @@ const PCRPage: React.FC = () => {
               value={data.transferComments || ''}
               onChange={e => updateField('transferComments', e.target.value)}
               error={errors.transferComments}
-              placeholder="Details about patient transfer..."
+              placeholder="Details about patient transfer (advice given, who was care transfered to)..."
+              helpText="Remember to mention all responders' full names again"
               rows={3}
               required
             />
