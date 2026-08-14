@@ -2,6 +2,7 @@ import React from 'react'
 import { LogOut, Moon, Sun, Menu } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
 import { cn } from '@/utils'
+import NotificationBell from './NotificationBell'
 
 interface HeaderProps {
   user?: {
@@ -11,6 +12,7 @@ interface HeaderProps {
   }
   pageTitle?: string
   onLogout?: () => void
+  onNavigate?: (href: string) => void
   onToggleTheme?: () => void
   onToggleSidebar?: () => void
   darkMode?: boolean
@@ -21,6 +23,7 @@ const Header: React.FC<HeaderProps> = ({
   user,
   pageTitle,
   onLogout,
+  onNavigate,
   onToggleTheme,
   onToggleSidebar,
   darkMode = false,
@@ -67,22 +70,22 @@ const Header: React.FC<HeaderProps> = ({
             </Button>
           </Tooltip>
 
+          {/* Notifications */}
+          {user && <NotificationBell user={user} onNavigate={onNavigate} />}
+
           {/* Logout */}
           {user && (
-            <>
-              <div className="w-px h-5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
-              <Tooltip content="Logout">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onLogout}
-                  className="text-gray-500 hover:text-burgundy-600 dark:text-gray-400 dark:hover:text-burgundy-400"
-                  aria-label="Logout"
-                >
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </Tooltip>
-            </>
+            <Tooltip content="Logout">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onLogout}
+                className="text-gray-500 hover:text-burgundy-600 dark:text-gray-400 dark:hover:text-burgundy-400"
+                aria-label="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </Tooltip>
           )}
         </div>
       </div>

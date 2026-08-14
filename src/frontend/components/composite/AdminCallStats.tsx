@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  AlertTriangle,
   Activity,
   Siren,
   MapPin,
@@ -199,20 +198,10 @@ const StatTile: React.FC<{
 }
 
 const AdminCallStats: React.FC = () => {
-  const [pendingCount, setPendingCount] = useState<number | null>(null)
-
   const [period, setPeriod] = useState<Period>('daily')
   const [rows, setRows] = useState<DigestRow[]>([])
   const [digestLoading, setDigestLoading] = useState(true)
   const [digestError, setDigestError] = useState('')
-
-  useEffect(() => {
-    apiRequest('/pcr/stats/pending-approval-count')
-      .then(res => setPendingCount(res.data?.count ?? 0))
-      .catch(() => {
-        // Silently fail - banner is non-critical
-      })
-  }, [])
 
   const range = useMemo(() => getPeriodRange(period, new Date()), [period])
 
@@ -261,18 +250,6 @@ const AdminCallStats: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {pendingCount !== null && pendingCount > 0 && (
-        <a
-          href="#/reports"
-          className="flex items-center gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 transition-colors"
-        >
-          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-          <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
-            {pendingCount} PCR{pendingCount === 1 ? '' : 's'} awaiting approval
-          </span>
-        </a>
-      )}
-
       <div className="card">
         <div className="card-header">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

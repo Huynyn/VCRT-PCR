@@ -83,7 +83,18 @@
       "Bash(NODE_PATH=\"c:/Users/jeanp/Downloads/VCRT/VCRT-PCR/node_modules\" node -e \"require\\('module'\\).Module._initPaths\\(\\); require\\('C:\\\\\\\\Users\\\\\\\\jeanp\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\c--Users-jeanp-Downloads-VCRT-VCRT-PCR\\\\\\\\59876800-bfee-4e61-9d5f-34da50ee64c9\\\\\\\\scratchpad\\\\\\\\generate-signoff-pdf.js'\\)\")",
       "Bash(cp \"C:\\\\Users\\\\jeanp\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-jeanp-Downloads-VCRT-VCRT-PCR\\\\59876800-bfee-4e61-9d5f-34da50ee64c9\\\\scratchpad\\\\generate-signoff-pdf.js\" \"c:/Users/jeanp/Downloads/VCRT/VCRT-PCR/_gen_signoff_pdf_tmp.js\")",
       "Bash(node \"_gen_signoff_pdf_tmp.js\")",
-      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")"
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(cp \"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/add_letterhead.js\" ./__add_letterhead.js)",
+      "Bash(node ./__add_letterhead.js \"docs_signoff_test.pdf\")",
+      "Bash(cp \"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/add_emergency_footer.js\" ./__add_emergency_footer.js)",
+      "Bash(node ./__add_emergency_footer.js \"docs_signoff_test.pdf\")",
+      "Bash(cp \"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/fix_emergency_footer.js\" ./__fix_footer.js)",
+      "Bash(node ./__fix_footer.js \"docs_signoff_test.pdf\")",
+      "Bash(WIDE_SRC=\"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/orig_pristine_wide.pdf\" node ./__add_letterhead.js \"docs_signoff_test.pdf\")",
+      "Bash(cp \"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/add_row_divider.js\" ./__add_divider.js)",
+      "Bash(node ./__add_divider.js \"docs_signoff_test.pdf\")",
+      "Bash(WIDE_SRC=\"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/orig_pristine_base.pdf\" node ./__add_letterhead.js \"docs_signoff_test.pdf\")",
+      "Bash(WIDE_SRC=\"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/orig_pristine_base2.pdf\" node ./__add_letterhead.js \"docs_signoff_test.pdf\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\jeanp\\Downloads\\VCRT\\VCRT-PCR"

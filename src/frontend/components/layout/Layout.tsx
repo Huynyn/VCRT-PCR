@@ -69,6 +69,7 @@ const Layout: React.FC<LayoutProps> = ({
             user={user}
             pageTitle={pageTitleFor(currentPath)}
             onLogout={onLogout}
+            onNavigate={onNavigate}
             onToggleTheme={onToggleTheme}
             onToggleSidebar={toggleSidebar}
             darkMode={darkMode}
