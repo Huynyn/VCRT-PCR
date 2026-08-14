@@ -897,7 +897,7 @@ const PCRPage: React.FC = () => {
                       onClick={() =>
                         updateField('supervisor', `${currentUser.firstName} ${currentUser.lastName}`)
                       }
-                      className="p-1 rounded text-gray-400 hover:text-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      className="p-1 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:text-primary-400 dark:hover:bg-primary-900/30 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
                     >
                       <UserCheck className="w-4 h-4" />
                     </button>
@@ -929,7 +929,7 @@ const PCRPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => removeResponderAt(index)}
-                    className="p-1 rounded text-gray-400 hover:text-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    className="p-1 rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-burgundy-500 transition-colors"
                     aria-label={`Remove responder ${index + 1}`}
                   >
                     <Trash2 className="w-4 h-4" />

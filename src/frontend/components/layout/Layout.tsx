@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
-import Footer from './Footer'
 import { cn } from '@/utils'
 
 interface LayoutProps {
@@ -16,6 +15,20 @@ interface LayoutProps {
   onNavigate?: (href: string) => void
   darkMode?: boolean
   onToggleTheme?: () => void
+}
+
+const PAGE_TITLES: Array<[string, string]> = [
+  ['/dashboard', 'Dashboard'],
+  ['/pcr/new', 'New PCR'],
+  ['/reports', 'PCR Reports'],
+  ['/pcr', 'PCR Reports'],
+  ['/logs', 'Activity Logs'],
+  ['/admin/users', 'User Management'],
+  ['/profile', 'Profile'],
+]
+
+function pageTitleFor(path: string): string {
+  return PAGE_TITLES.find(([prefix]) => path.startsWith(prefix))?.[1] || 'Patient Care Report'
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -54,6 +67,7 @@ const Layout: React.FC<LayoutProps> = ({
           {/* Header */}
           <Header
             user={user}
+            pageTitle={pageTitleFor(currentPath)}
             onLogout={onLogout}
             onToggleTheme={onToggleTheme}
             onToggleSidebar={toggleSidebar}
@@ -67,9 +81,6 @@ const Layout: React.FC<LayoutProps> = ({
               {children}
             </div>
           </main>
-
-          {/* Footer */}
-          <Footer />
         </div>
       </div>
     </div>

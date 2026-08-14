@@ -34,15 +34,17 @@ interface ActionSlot {
   disabled?: boolean
 }
 
+// Colored only on hover/focus - at rest these look like any other neutral
+// icon button (see the shared border/bg/text classes where this is used).
 const actionColorClasses: Record<ActionColor, string> = {
-  blue: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900/40',
+  blue: 'hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 focus-visible:bg-blue-50 focus-visible:text-blue-700 focus-visible:border-blue-200 dark:hover:bg-blue-900/20 dark:hover:text-blue-300 dark:hover:border-blue-800 dark:focus-visible:bg-blue-900/20 dark:focus-visible:text-blue-300 dark:focus-visible:border-blue-800',
   amber:
-    'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800 dark:hover:bg-amber-900/40',
+    'hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 focus-visible:bg-amber-50 focus-visible:text-amber-700 focus-visible:border-amber-200 dark:hover:bg-amber-900/20 dark:hover:text-amber-300 dark:hover:border-amber-800 dark:focus-visible:bg-amber-900/20 dark:focus-visible:text-amber-300 dark:focus-visible:border-amber-800',
   emerald:
-    'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900/40',
-  red: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/40',
+    'hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 focus-visible:bg-emerald-50 focus-visible:text-emerald-700 focus-visible:border-emerald-200 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300 dark:hover:border-emerald-800 dark:focus-visible:bg-emerald-900/20 dark:focus-visible:text-emerald-300 dark:focus-visible:border-emerald-800',
+  red: 'hover:bg-burgundy-50 hover:text-burgundy-700 hover:border-burgundy-200 focus-visible:bg-burgundy-50 focus-visible:text-burgundy-700 focus-visible:border-burgundy-200 dark:hover:bg-burgundy-900/20 dark:hover:text-burgundy-300 dark:hover:border-burgundy-800 dark:focus-visible:bg-burgundy-900/20 dark:focus-visible:text-burgundy-300 dark:focus-visible:border-burgundy-800',
   purple:
-    'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800 dark:hover:bg-purple-900/40',
+    'hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 focus-visible:bg-purple-50 focus-visible:text-purple-700 focus-visible:border-purple-200 dark:hover:bg-purple-900/20 dark:hover:text-purple-300 dark:hover:border-purple-800 dark:focus-visible:bg-purple-900/20 dark:focus-visible:text-purple-300 dark:focus-visible:border-purple-800',
 }
 
 const noop = () => undefined
@@ -465,7 +467,14 @@ const ReportsPage = () => {
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+            <>
+              <div className="mb-4 text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Scroll horizontally to view all columns
+              </div>
+              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-xl">
               <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
@@ -543,14 +552,14 @@ const ReportsPage = () => {
                         >
                           {getActionSlots(report).map((slot, idx) =>
                             slot ? (
-                              <Tooltip key={idx} content={slot.label}>
+                              <Tooltip key={idx} content={slot.label} disabled={slot.disabled}>
                                 <span className="inline-block">
                                   <button
                                     type="button"
                                     aria-label={slot.label}
                                     onClick={slot.disabled ? undefined : slot.onClick}
                                     disabled={slot.disabled}
-                                    className={`flex w-full items-center justify-center rounded-md border p-2 transition-colors ${
+                                    className={`flex w-full items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-600 dark:bg-gray-700/60 dark:text-gray-400 p-2 transition-colors disabled:hover:bg-gray-50 disabled:hover:text-gray-500 disabled:hover:border-gray-200 dark:disabled:hover:bg-gray-700/60 dark:disabled:hover:text-gray-400 dark:disabled:hover:border-gray-600 ${
                                       actionColorClasses[slot.color]
                                     } ${slot.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
                                   >
@@ -569,6 +578,7 @@ const ReportsPage = () => {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       </div>

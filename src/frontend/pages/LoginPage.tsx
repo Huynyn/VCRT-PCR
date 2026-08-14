@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Eye, EyeOff, Moon, Sun } from 'lucide-react'
+import { Eye, EyeOff, Lock, Moon, Sun, X, XCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, Alert, Tooltip } from '@/components/ui'
+import { Button, Card, Tooltip } from '@/components/ui'
 import { Input } from '@/components/forms'
 import { useAuth } from '@/context'
+import { cn } from '@/utils'
 
 const LoginPage: React.FC = () => {
   const { login, isLoading, isAuthenticated } = useAuth()
@@ -14,6 +15,8 @@ const LoginPage: React.FC = () => {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [lockoutMessage, setLockoutMessage] = useState('')
+  const [shake, setShake] = useState(false)
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('pcr_theme')
     return saved ? saved === 'dark' : true
@@ -43,6 +46,7 @@ const LoginPage: React.FC = () => {
     e.preventDefault()
     console.log('Form submitted with:', formData)
     setError('')
+    setLockoutMessage('')
 
     if (!formData.username || !formData.password) {
       setError('Please enter both username and password')
@@ -55,7 +59,20 @@ const LoginPage: React.FC = () => {
       console.log('Login returned successfully')
     } catch (err) {
       console.error('Login error:', err)
-      setError(err instanceof Error ? err.message : 'Login failed')
+      const status = (err as { status?: number } | undefined)?.status
+
+      if (status === 429) {
+        // Account temporarily locked - the backend's message already
+        // includes how long, so surface it as-is rather than our own copy.
+        setLockoutMessage(err instanceof Error ? err.message : 'Too many failed attempts.')
+      } else {
+        // Wrong username/password (or any other failure): a generic message
+        // so a mistyped username can't be distinguished from a wrong password.
+        setError('Incorrect username or password.')
+      }
+
+      setFormData({ username: '', password: '' })
+      setShake(true)
     }
   }
 
@@ -65,13 +82,11 @@ const LoginPage: React.FC = () => {
       [e.target.name]: e.target.value,
     })
     if (error) setError('') // Clear error when user starts typing
+    if (lockoutMessage) setLockoutMessage('')
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-medical-50 to-primary-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      {/* Background pattern */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none" />
-
+    <div className="relative min-h-screen bg-gradient-to-br from-primary-50 via-white to-burgundy-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4 overflow-hidden">
       {/* Theme toggle */}
       <div className="absolute top-4 right-4">
         <Tooltip content={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
@@ -116,11 +131,42 @@ const LoginPage: React.FC = () => {
 
         {/* Right side - Login form */}
         <div className="w-full max-w-md mx-auto">
-          <Card>
+          <Card
+            className={cn('overflow-hidden', shake && 'animate-shake motion-reduce:animate-none')}
+            onAnimationEnd={() => setShake(false)}
+          >
+            <div className="h-1 bg-gradient-to-r from-primary-700 to-burgundy-700" />
             <Card.Body>
               <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <Alert type="error" message={error} dismissible onDismiss={() => setError('')} />
+                {lockoutMessage ? (
+                  <div className="flex gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800/60 dark:bg-amber-900/20">
+                    <span className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                      <Lock className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                        Account temporarily locked
+                      </p>
+                      <p className="mt-0.5 text-sm text-amber-700 dark:text-amber-300">
+                        {lockoutMessage}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  error && (
+                    <div className="flex items-center gap-3 p-4 rounded-lg border border-burgundy-200 bg-burgundy-50 dark:border-burgundy-800/60 dark:bg-burgundy-900/20">
+                      <XCircle className="w-5 h-5 text-burgundy-500 dark:text-burgundy-400 shrink-0" />
+                      <p className="flex-1 text-sm text-burgundy-800 dark:text-burgundy-200">{error}</p>
+                      <button
+                        type="button"
+                        onClick={() => setError('')}
+                        aria-label="Dismiss"
+                        className="shrink-0 p-1 rounded text-burgundy-500 hover:text-burgundy-700 hover:bg-burgundy-100 dark:text-burgundy-400 dark:hover:text-burgundy-200 dark:hover:bg-burgundy-900/40"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )
                 )}
 
                 <Input

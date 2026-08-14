@@ -65,25 +65,40 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
 
   const columns = customColumns || defaultColumns
 
+  // Textareas don't grow with their content on their own - resize on mount
+  // (when a cell becomes editable) and on every keystroke.
+  const autoGrow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
+
   const renderCell = (rowIndex: number, column: typeof columns[0]) => {
     const value = data[rowIndex]?.[column.key] || ''
     const isEditing = editingCell?.row === rowIndex && editingCell?.field === column.key
-    
+
     if (isEditing) {
       return (
-        <input
-          type="text"
+        <textarea
+          ref={autoGrow}
+          rows={1}
           value={value}
-          onChange={(e) => handleCellChange(rowIndex, column.key, e.target.value)}
+          onChange={(e) => {
+            handleCellChange(rowIndex, column.key, e.target.value)
+            autoGrow(e.target)
+          }}
           onBlur={handleCellBlur}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter') {
+          onKeyDown={(e) => {
+            // Enter saves (matches the "Press Enter to save" hint below);
+            // Shift+Enter still allows a deliberate line break.
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
               handleCellBlur()
             }
           }}
-          className="w-full border-0 px-2 py-1 bg-yellow-50 dark:bg-yellow-900/20 
-                    text-gray-900 dark:text-gray-300 
-                    focus:outline-none focus:ring-1 focus:ring-primary-500"
+          className="block w-full min-h-9 border-0 px-2.5 py-2 bg-primary-50 dark:bg-primary-900/20
+                    text-gray-900 dark:text-gray-100 text-sm resize-none overflow-hidden
+                    focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
           autoFocus
         />
       )
@@ -92,26 +107,24 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
     return (
       <div
         onClick={() => handleCellClick(rowIndex, column.key)}
-        className="w-full px-2 py-1 cursor-text hover:bg-gray-50 dark:hover:bg-gray-700 min-h-[2rem] flex items-center text-gray-900 dark:text-gray-100"
+        className="w-full min-h-9 px-2.5 py-2 cursor-text hover:bg-primary-50/60 dark:hover:bg-gray-700/60 flex items-start text-sm text-gray-900 dark:text-gray-100 transition-colors"
       >
         {column.key === 'time' && value && (
-          <div className="flex items-center space-x-1">
-            <Clock className="w-3 h-3 text-gray-400" />
-            <span className="text-gray-900 dark:text-gray-100">{value}</span>
+          <div className="flex items-start gap-1.5">
+            <Clock className="w-3 h-3 text-gray-400 shrink-0 mt-0.5" />
+            <span className="tabular-nums whitespace-pre-wrap break-words">{value}</span>
           </div>
         )}
         {column.key !== 'time' && value && (
-          <span className="text-gray-900 dark:text-gray-100">{value}</span>
+          <span className="whitespace-pre-wrap break-words">{value}</span>
         )}
-        {!value && (
-          <span className="text-gray-400 text-sm">Click to edit</span>
-        )}
+        {!value && <span className="text-gray-400 dark:text-gray-500 italic">Click to edit</span>}
       </div>
     )
   }
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-3', className)}>
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
           {title}
@@ -131,53 +144,66 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="vital-signs-table">
+      <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 rounded-xl">
+        {/* No min-w-full: with table-fixed, an ancestor forcing the table
+            wider than the sum of its column widths would make browsers
+            redistribute the extra space across every column - including
+            ones whose content only shows up conditionally (the trash-icon
+            column below), which is exactly what made columns "narrow" once
+            a second row appeared. Letting the table be exactly as wide as
+            its columns keeps every column's width constant regardless of
+            row count; overflow-x-auto above still handles narrow screens. */}
+        <table className="table-fixed border-collapse">
           <thead>
-            <tr>
+            <tr className="bg-gray-50 dark:bg-gray-800">
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={cn('text-center font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 px-3 py-2 border border-gray-200 dark:border-gray-600', column.width)}
+                  className={cn(
+                    'text-center align-top font-semibold text-sm uppercase tracking-wide text-gray-600 dark:text-gray-300 px-3 py-2.5 border-b border-l border-gray-200 dark:border-gray-700 first:border-l-0',
+                    column.width,
+                  )}
                 >
                   {column.label}
                   {column.hint && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 font-normal mt-1">
+                    <div className="mt-0.5 text-[10px] font-normal normal-case tracking-normal text-gray-400 dark:text-gray-500">
                       {column.hint}
                     </div>
                   )}
                 </th>
               ))}
-              <th className="w-8 text-center font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 px-1 py-2 border border-gray-200 dark:border-gray-600"></th>
+              <th className="w-9 border-b border-l border-gray-200 dark:border-gray-700" />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {Array.from({ length: Math.max(data.length, 1) }).map((_, rowIndex) => (
               <tr
                 key={rowIndex}
-                className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="bg-white dark:bg-gray-800 even:bg-gray-50/60 dark:even:bg-gray-800/60"
               >
                 {columns.map((column) => (
-                  <td key={column.key} className="table-editable border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
+                  <td key={column.key} className="p-0 border-l border-gray-100 dark:border-gray-700 first:border-l-0">
                     {renderCell(rowIndex, column)}
                   </td>
                 ))}
-                <td className="px-1 py-1 text-center border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
-                  <div className="flex items-center justify-center space-x-1">
-                    {data.length > 1 && (
-                      <Tooltip content="Remove row">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeRow(rowIndex)}
-                          className="p-1 h-6 w-6 text-emergency-500 hover:text-emergency-600"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </Tooltip>
-                    )}
-                  </div>
+                <td className="p-0 text-center align-top border-l border-gray-100 dark:border-gray-700">
+                  {/* Always rendered (just hidden below the minimum of 1 row)
+                      so this column's width is never dependent on whether
+                      any row happens to show the button. */}
+                  <Tooltip content="Remove row">
+                    <button
+                      type="button"
+                      onClick={() => removeRow(rowIndex)}
+                      aria-label={`Remove row ${rowIndex + 1}`}
+                      tabIndex={data.length > 1 ? 0 : -1}
+                      className={cn(
+                        'flex items-center justify-center h-9 w-9 rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:text-gray-500 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-burgundy-500 transition-colors',
+                        data.length <= 1 && 'invisible',
+                      )}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </Tooltip>
                 </td>
               </tr>
             ))}
@@ -185,7 +211,7 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
         </table>
       </div>
 
-      <div className="text-sm text-gray-500 dark:text-gray-400">
+      <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
         <p>Use 24-hour format for time entries (e.g., 14:30 for 2:30 PM).</p>
         <p>If value was not obtained, enter DNO or UTO based on case and explain in comments.</p>
         <p>Click on any cell to edit. Press Enter to save changes.</p>

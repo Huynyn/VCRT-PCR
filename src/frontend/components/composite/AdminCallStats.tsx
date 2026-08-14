@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import {
+  AlertTriangle,
+  Activity,
+  Siren,
+  MapPin,
+  Clock,
+  User,
+  ShieldCheck,
+} from 'lucide-react'
 import { apiRequest } from '@/utils/api'
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'semesterly'
@@ -160,20 +168,27 @@ const StatTile: React.FC<{
   label: string
   value: number
   periodKey: string
+  icon: React.ReactNode
+  accent?: 'primary' | 'burgundy'
   decimals?: number
   suffix?: string
   sublabel?: string
-}> = ({ label, value, periodKey, decimals = 0, suffix = '', sublabel }) => {
+}> = ({ label, value, periodKey, icon, accent = 'primary', decimals = 0, suffix = '', sublabel }) => {
   const animated = useCountUp(value, periodKey)
   const shown = decimals > 0 ? animated.toFixed(decimals) : Math.round(animated).toString()
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-4">
+      <span
+        className={`icon-chip ${accent === 'burgundy' ? 'icon-chip-burgundy' : 'icon-chip-primary'} w-8 h-8 mb-2.5`}
+      >
+        {icon}
+      </span>
       <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
         {shown}
         {suffix}
       </p>
-      <p className="mt-1 text-xs font-medium text-gray-600 dark:text-gray-400">{label}</p>
+      <p className="mt-0.5 text-xs font-semibold text-gray-600 dark:text-gray-400">{label}</p>
       {sublabel && (
         <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500 truncate" title={sublabel}>
           {sublabel}
@@ -249,7 +264,7 @@ const AdminCallStats: React.FC = () => {
       {pendingCount !== null && pendingCount > 0 && (
         <a
           href="#/reports"
-          className="flex items-center gap-3 p-4 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 transition-colors"
+          className="flex items-center gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 transition-colors"
         >
           <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
           <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
@@ -261,9 +276,14 @@ const AdminCallStats: React.FC = () => {
       <div className="card">
         <div className="card-header">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Call Digest</h3>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{range.label}</p>
+            <div className="flex items-center gap-3">
+              <span className="icon-chip icon-chip-primary w-9 h-9">
+                <Activity className="w-4 h-4" />
+              </span>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Call Digest</h3>
+                <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{range.label}</p>
+              </div>
             </div>
             <div className="inline-flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden self-start">
               {PERIOD_OPTIONS.map((opt, i) => (
@@ -293,14 +313,26 @@ const AdminCallStats: React.FC = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <StatTile label="Total Calls" value={stats.totalCalls} periodKey={periodKey} />
-              <StatTile label="Required Paramedics" value={stats.paramedicCalls} periodKey={periodKey} />
+              <StatTile
+                label="Total Calls"
+                value={stats.totalCalls}
+                periodKey={periodKey}
+                icon={<Activity className="w-4 h-4" />}
+              />
+              <StatTile
+                label="Required Paramedics"
+                value={stats.paramedicCalls}
+                periodKey={periodKey}
+                icon={<Siren className="w-4 h-4" />}
+                accent="burgundy"
+              />
               <StatTile
                 label="Avg Time to Scene"
                 value={stats.avgTimeToScene}
                 periodKey={periodKey}
                 decimals={1}
                 suffix=" min"
+                icon={<MapPin className="w-4 h-4" />}
               />
               <StatTile
                 label="Avg Time on Scene"
@@ -308,18 +340,23 @@ const AdminCallStats: React.FC = () => {
                 periodKey={periodKey}
                 decimals={1}
                 suffix=" min"
+                icon={<Clock className="w-4 h-4" />}
               />
               <StatTile
                 label="Top Responder"
                 value={stats.topResponder?.count ?? 0}
                 periodKey={periodKey}
                 sublabel={stats.topResponder?.names.join(', ') ?? 'No data'}
+                icon={<User className="w-4 h-4" />}
+                accent="burgundy"
               />
               <StatTile
                 label="Top Supervisor"
                 value={stats.topSupervisor?.count ?? 0}
                 periodKey={periodKey}
                 sublabel={stats.topSupervisor?.names.join(', ') ?? 'No data'}
+                icon={<ShieldCheck className="w-4 h-4" />}
+                accent="burgundy"
               />
             </div>
           )}

@@ -31,9 +31,14 @@ const SupplyFormQrSection: React.FC = () => {
     <div className="mb-6">
       <div className="card">
         <div className="card-header">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            Report Supplies Used
-          </h3>
+          <div className="flex items-center gap-3">
+            <span className="icon-chip icon-chip-primary w-9 h-9">
+              <ClipboardList className="w-4 h-4" />
+            </span>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+              Report Supplies Used
+            </h3>
+          </div>
         </div>
         <div className="card-body">
           {loading ? (
@@ -52,7 +57,7 @@ const SupplyFormQrSection: React.FC = () => {
                   if no supplies were used, so we can track usage and ensure we have enough supplies.
                 </p>
               </div>
-              <div className="shrink-0 p-3 bg-white rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="shrink-0 p-3 bg-white rounded-xl border border-gray-200 dark:border-gray-600">
                 {qrDataUrl && (
                   <img src={qrDataUrl} alt="QR code for supply usage form" width={160} height={160} />
                 )}

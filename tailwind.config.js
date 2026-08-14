@@ -8,18 +8,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Medical/Healthcare theme colors
+        // Brand accent, sampled from the VCRT/EBIC badge's navy star-of-life
+        // (was a stock Tailwind blue - kept the same 50-900 steps so every
+        // existing primary-* usage across the app repaints for free).
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#f0f2f9',
+          100: '#e2e5f4',
+          200: '#c4cce8',
+          300: '#98a6d7',
+          400: '#6579c3',
+          500: '#4056a5',
+          600: '#334584',
+          700: '#283567',
+          800: '#1f2a51',
+          900: '#171f3b',
         },
         secondary: {
           50: '#f8fafc',
@@ -103,6 +105,7 @@ export default {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-in': 'slideIn 0.3s ease-out',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'shake': 'shake 0.4s ease-in-out',
       },
       keyframes: {
         fadeIn: {
@@ -112,6 +115,13 @@ export default {
         slideIn: {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(0)' },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '20%': { transform: 'translateX(-8px)' },
+          '40%': { transform: 'translateX(8px)' },
+          '60%': { transform: 'translateX(-6px)' },
+          '80%': { transform: 'translateX(6px)' },
         },
       },
       boxShadow: {

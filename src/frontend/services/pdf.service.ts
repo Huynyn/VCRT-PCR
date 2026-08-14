@@ -302,7 +302,7 @@ export class PDFService {
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">${allowDownload ? 'Download Preview' : 'Submission Preview'}</h3>
           <div class="flex space-x-2">
             ${allowDownload ? `
-              <button id="download-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              <button id="download-btn" class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700">
                 Download
               </button>
             ` : ''}
@@ -383,7 +383,7 @@ export class PDFService {
             <div class="flex items-center space-x-2 mb-4">
               <button
                 id="preview-download-btn"
-                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
               >
                 Preview
               </button>
@@ -393,7 +393,7 @@ export class PDFService {
                   ? `
                     <button
                       id="direct-download-btn"
-                      class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                      class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
                     >
                       Download
                     </button>

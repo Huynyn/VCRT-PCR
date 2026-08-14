@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
-import { Save } from 'lucide-react'
+import { Save, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/forms'
 import { apiRequest } from '@/utils/api'
@@ -58,12 +58,19 @@ const SupplyFormQrAdmin: React.FC = () => {
     <div className="mb-6">
       <div className="card">
         <div className="card-header">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            Supply Usage Form QR Code
-          </h3>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Set the Microsoft Form link responders use to report supplies used from the bags
-          </p>
+          <div className="flex items-center gap-3">
+            <span className="icon-chip icon-chip-primary w-9 h-9">
+              <QrCode className="w-4 h-4" />
+            </span>
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                Supply Usage Form QR Code
+              </h3>
+              <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">
+                Set the Microsoft Form link responders use to report supplies used from the bags
+              </p>
+            </div>
+          </div>
         </div>
         <div className="card-body">
           {loading ? (
@@ -91,7 +98,7 @@ const SupplyFormQrAdmin: React.FC = () => {
               </div>
 
               {qrDataUrl && (
-                <div className="shrink-0 p-3 bg-white rounded-lg border border-gray-200 dark:border-gray-600">
+                <div className="shrink-0 p-3 bg-white rounded-xl border border-gray-200 dark:border-gray-600">
                   <img src={qrDataUrl} alt="QR code preview" width={160} height={160} />
                 </div>
               )}

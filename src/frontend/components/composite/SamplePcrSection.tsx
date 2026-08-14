@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Edit } from 'lucide-react'
+import { Edit, FileText } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
 import { Modal, Button } from '@/components/ui'
@@ -68,9 +68,14 @@ const SamplePcrSection: React.FC = () => {
       <div className="card">
         <div className="card-header">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-              Sample PCR
-            </h3>
+            <div className="flex items-center gap-3">
+              <span className="icon-chip icon-chip-primary w-9 h-9">
+                <FileText className="w-4 h-4" />
+              </span>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                Sample PCR
+              </h3>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -97,7 +102,7 @@ const SamplePcrSection: React.FC = () => {
           {loading ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
           ) : (
-            <pre className="text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+            <pre className="font-mono text-sm leading-relaxed whitespace-pre-wrap text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900/40 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
               {text}
             </pre>
           )}

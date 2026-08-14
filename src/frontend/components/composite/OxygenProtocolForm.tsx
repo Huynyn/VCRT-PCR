@@ -165,6 +165,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                     type="number"
                     min="0"
                     max="15"
+                    step="any"
                     value={data.flowRate || ''}
                     onChange={(e) => handleFieldChange('flowRate', e.target.value)}
                     error={errors.flowRate}
@@ -223,20 +224,27 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                           type="number"
                           min="0"
                           max="15"
+                          step="any"
                           value={alteration.flowRate || ''}
                           onChange={(e) => handleFlowRateChange(index, 'flowRate', e.target.value)}
                         />
                       </div>
                       
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeFlowRateRow(index)}
-                        className="text-emergency-500 hover:text-emergency-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div>
+                        {/* Invisible label so the button's own height matches
+                            the label+input columns beside it, and centering
+                            it (rather than aligning to the row's shared
+                            items-end baseline) lines it up with the input box. */}
+                        <label className="form-label opacity-0 select-none" aria-hidden="true">&nbsp;</label>
+                        <button
+                          type="button"
+                          onClick={() => removeFlowRateRow(index)}
+                          aria-label="Remove flow rate change"
+                          className="h-10 w-10 flex items-center justify-center rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:text-gray-500 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-burgundy-500 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </Card.Body>
                 </Card>

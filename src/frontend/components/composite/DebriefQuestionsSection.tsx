@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp, Edit, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Edit, HelpCircle, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
 import { Modal, Button } from '@/components/ui'
@@ -144,9 +144,14 @@ const DebriefQuestionsSection: React.FC = () => {
       <div className="card">
         <div className="card-header">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-              Debrief Questions
-            </h3>
+            <div className="flex items-center gap-3">
+              <span className="icon-chip icon-chip-primary w-9 h-9">
+                <HelpCircle className="w-4 h-4" />
+              </span>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                Debrief Questions
+              </h3>
+            </div>
             {isAdmin && (
               <button
                 type="button"

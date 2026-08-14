@@ -179,7 +179,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const result = await response.json()
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Login failed')
+        const loginError = new Error(result.message || 'Login failed') as Error & { status?: number }
+        loginError.status = response.status
+        throw loginError
       }
 
       const { user: userData, token, expiresIn } = result.data

@@ -89,7 +89,10 @@ const CallCalendar: React.FC<CallCalendarProps> = ({ markedDates, selectedDate, 
                 hasCall
                   ? 'cursor-pointer font-semibold text-primary-700 dark:text-primary-200 bg-primary-100 dark:bg-primary-700/50 hover:bg-primary-200 dark:hover:bg-primary-600/60'
                   : 'text-gray-300 dark:text-gray-600 cursor-default',
-                isSelected && 'bg-primary-600 hover:bg-primary-600 text-white dark:text-white',
+                // A distinct hue (not just a darker/lighter shade of the same
+                // primary blue used for "has calls") so the selected day is
+                // still unambiguous against that tint in dark mode.
+                isSelected && 'bg-burgundy-600 hover:bg-burgundy-600 dark:bg-burgundy-500 dark:hover:bg-burgundy-500 text-white dark:text-white',
                 isToday && !isSelected && 'ring-1 ring-primary-400'
               )}
             >

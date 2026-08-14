@@ -360,7 +360,7 @@ const ActivityLogsPage = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-xl">
                 <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
@@ -424,7 +424,7 @@ const ActivityLogsPage = () => {
                       onClick={() => handlePageChange(filters.page - 1)}
                       disabled={filters.page <= 1}
                       aria-label="Previous page"
-                      className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-blue-400 dark:hover:bg-blue-900/30"
+                      className="p-1.5 rounded-md text-primary-600 hover:bg-primary-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/30"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -433,7 +433,7 @@ const ActivityLogsPage = () => {
                       onClick={() => handlePageChange(filters.page + 1)}
                       disabled={filters.page >= totalPages}
                       aria-label="Next page"
-                      className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-blue-400 dark:hover:bg-blue-900/30"
+                      className="p-1.5 rounded-md text-primary-600 hover:bg-primary-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/30"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>

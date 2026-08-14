@@ -82,7 +82,11 @@
       "Bash(node \"C:\\\\Users\\\\jeanp\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-jeanp-Downloads-VCRT-VCRT-PCR\\\\59876800-bfee-4e61-9d5f-34da50ee64c9\\\\scratchpad\\\\generate-signoff-pdf.js\")",
       "Bash(NODE_PATH=\"c:/Users/jeanp/Downloads/VCRT/VCRT-PCR/node_modules\" node -e \"require\\('module'\\).Module._initPaths\\(\\); require\\('C:\\\\\\\\Users\\\\\\\\jeanp\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\c--Users-jeanp-Downloads-VCRT-VCRT-PCR\\\\\\\\59876800-bfee-4e61-9d5f-34da50ee64c9\\\\\\\\scratchpad\\\\\\\\generate-signoff-pdf.js'\\)\")",
       "Bash(cp \"C:\\\\Users\\\\jeanp\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-jeanp-Downloads-VCRT-VCRT-PCR\\\\59876800-bfee-4e61-9d5f-34da50ee64c9\\\\scratchpad\\\\generate-signoff-pdf.js\" \"c:/Users/jeanp/Downloads/VCRT/VCRT-PCR/_gen_signoff_pdf_tmp.js\")",
-      "Bash(node \"_gen_signoff_pdf_tmp.js\")"
+      "Bash(node \"_gen_signoff_pdf_tmp.js\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\jeanp\\Downloads\\VCRT\\VCRT-PCR"
     ]
   }
 }

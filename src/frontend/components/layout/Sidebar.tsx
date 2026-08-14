@@ -33,14 +33,14 @@ const SidebarItemComponent: React.FC<{ item: SidebarItem; onClick: (href: string
   <button
     onClick={() => onClick(item.href)}
     className={cn(
-      'w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200',
+      'w-full flex items-center gap-3 pl-[9px] pr-3 py-2 text-sm rounded-md border-l-[3px] transition-colors duration-150',
       'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800',
       item.isActive
-        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100',
+        ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold dark:border-primary-400 dark:bg-primary-900/40 dark:text-primary-300'
+        : 'border-transparent text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100',
     )}
   >
-    <span className="mr-3 flex-shrink-0">{item.icon}</span>
+    <span className="flex-shrink-0">{item.icon}</span>
     <span className="flex-1 text-left">{item.label}</span>
     {item.badge && (
       <span
@@ -56,6 +56,13 @@ const SidebarItemComponent: React.FC<{ item: SidebarItem; onClick: (href: string
     )}
   </button>
 )
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
 
 const Sidebar: React.FC<SidebarProps> = ({
   isOpen = true,
@@ -146,30 +153,67 @@ const Sidebar: React.FC<SidebarProps> = ({
             <img
               src="./images/vcrt_logo.png"
               alt="PCR logo"
-              className="h-6 md:h-8 w-auto object-contain rounded-md"
+              className="h-8 md:h-9 w-auto object-contain rounded-md"
             />
-            <span className="ml-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Patient Care Report
-            </span>
+            <div className="ml-3 leading-tight">
+              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                VCRT <span className="font-medium">|</span> ÉBIC
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Patient Care Report</p>
+            </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 overflow-y-auto">
-            <div className="space-y-1">
+          <nav className="flex-1 px-3 py-5 overflow-y-auto">
+            <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-wider uppercase text-gray-400 dark:text-gray-500">
+              Workflow
+            </p>
+            <div className="space-y-0.5">
               {navigationItems.map(item => (
                 <SidebarItemComponent key={item.id} item={item} onClick={handleItemClick} />
               ))}
-              {user?.role === 'admin' &&
-                adminItems.map(item => (
-                  <SidebarItemComponent key={item.id} item={item} onClick={handleItemClick} />
-                ))}
             </div>
+            {isAdmin && (
+              <>
+                <p className="mt-5 mb-1.5 px-3 text-[11px] font-semibold tracking-wider uppercase text-gray-400 dark:text-gray-500">
+                  Admin
+                </p>
+                <div className="space-y-0.5">
+                  {adminItems.map(item => (
+                    <SidebarItemComponent key={item.id} item={item} onClick={handleItemClick} />
+                  ))}
+                </div>
+              </>
+            )}
           </nav>
 
           {/* Footer */}
-          <div className="flex-shrink-0 h-16 flex flex-col justify-center px-4 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400">PCR v2.3</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Documentation System</p>
+          <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-3">
+            {user && (
+              <div className="flex items-center gap-2.5 px-1 py-1.5">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-xs font-bold shrink-0">
+                  {getInitials(user.name)}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                    {user.name}
+                  </p>
+                  <span
+                    className={cn(
+                      'inline-flex text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded',
+                      isAdmin
+                        ? 'bg-burgundy-100 text-burgundy-700 dark:bg-burgundy-900/40 dark:text-burgundy-300'
+                        : 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300',
+                    )}
+                  >
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+            )}
+            <p className="mt-2 px-1 text-xs text-gray-400 dark:text-gray-500">
+              PCR v2.8 · 2026
+            </p>
           </div>
         </div>
       </div>

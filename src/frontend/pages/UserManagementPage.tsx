@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, UserCog, Shield, ShieldCheck, User as UserIcon, Users as UsersIcon, Edit, Trash2, KeyRound, CheckSquare, XSquare } from 'lucide-react'
+import { Plus, UserCog, Shield, ShieldCheck, User as UserIcon, Users as UsersIcon, Edit, KeyRound, CheckSquare, XSquare } from 'lucide-react'
 import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
-import { parseServerDate, getPasswordStrengthError } from '@/utils'
+import { parseServerDate, getPasswordStrengthError, cn } from '@/utils'
 import { NameListManager } from '@/components/composite'
 import type { User } from '@/types'
 
@@ -412,7 +412,7 @@ const UserManagementPage = () => {
                   Scroll horizontally to view all columns
                 </div>
               )}
-              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-xl">
               <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
@@ -492,7 +492,7 @@ const UserManagementPage = () => {
                             size="sm"
                             onClick={() => handleEditUser(user)}
                             leftIcon={<Edit className="w-4 h-4" />}
-                            className="w-28 justify-center"
+                            className="w-28 justify-center hover:text-primary-600 dark:hover:text-primary-400"
                           >
                             Edit
                           </Button>
@@ -507,7 +507,12 @@ const UserManagementPage = () => {
                                 <CheckSquare className="w-4 h-4" />
                               )
                             }
-                            className="w-28 justify-center"
+                            className={cn(
+                              'w-28 justify-center',
+                              user.isActive
+                                ? 'hover:text-burgundy-600 dark:hover:text-burgundy-400'
+                                : 'hover:text-emerald-600 dark:hover:text-emerald-400',
+                            )}
                             disabled={
                               user.id === currentUser?.id ||
                               (user.role === 'admin' && user.isActive && activeAdminCount <= 1)
@@ -712,8 +717,7 @@ const UserManagementPage = () => {
             {/* Left: Delete */}
             <Button
               variant="ghost"
-              leftIcon={<Trash2 className="w-4 h-4" />}
-              className="bg-red-600 text-white border border-red-600 hover:bg-red-700 hover:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-burgundy-600 text-white border border-burgundy-600 hover:bg-burgundy-700 hover:border-burgundy-700 focus:outline-none focus:ring-2 focus:ring-burgundy-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => editingUser && handleDeleteUser(editingUser.id)}
               disabled={updating || editingUser?.id === currentUser?.id}
             >

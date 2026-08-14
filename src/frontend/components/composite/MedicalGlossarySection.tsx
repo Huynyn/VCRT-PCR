@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Edit, Plus, Trash2 } from 'lucide-react'
+import { BookOpen, Edit, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
 import { Modal, Button } from '@/components/ui'
@@ -230,9 +230,14 @@ const MedicalGlossarySection: React.FC = () => {
       <div className="card">
         <div className="card-header">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-              Medical Glossary Terms
-            </h3>
+            <div className="flex items-center gap-3">
+              <span className="icon-chip icon-chip-primary w-9 h-9">
+                <BookOpen className="w-4 h-4" />
+              </span>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                Medical Glossary Terms
+              </h3>
+            </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:ml-auto">
               <input

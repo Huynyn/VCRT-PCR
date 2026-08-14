@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { CalendarDays } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
 import CallCalendar from './CallCalendar'
@@ -114,7 +115,12 @@ const UserCallStats: React.FC = () => {
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Call Tracker</h3>
+        <div className="flex items-center gap-3">
+          <span className="icon-chip icon-chip-primary w-9 h-9">
+            <CalendarDays className="w-4 h-4" />
+          </span>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Call Tracker</h3>
+        </div>
       </div>
       <div className="card-body">
         {loading ? (

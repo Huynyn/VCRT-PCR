@@ -154,7 +154,7 @@ const NameListManager: React.FC<NameListManagerProps> = ({
                     size="sm"
                     onClick={() => openEdit(item)}
                     leftIcon={<Edit className="w-4 h-4" />}
-                    className="w-28 justify-center"
+                    className="w-28 justify-center hover:text-primary-600 dark:hover:text-primary-400"
                   >
                     Edit
                   </Button>
@@ -163,7 +163,7 @@ const NameListManager: React.FC<NameListManagerProps> = ({
                     size="sm"
                     onClick={() => handleDelete(item)}
                     leftIcon={<Trash2 className="w-4 h-4" />}
-                    className="w-28 justify-center text-red-600 hover:text-red-700"
+                    className="w-28 justify-center hover:text-burgundy-600 dark:hover:text-burgundy-400"
                   >
                     Remove
                   </Button>

@@ -1,7 +1,7 @@
 import React from 'react'
 import { cn } from '@/utils'
 
-interface CardProps {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
   className?: string
 }
@@ -22,8 +22,12 @@ interface CardComponent extends React.FC<CardProps> {
   Footer: React.FC<CardFooterProps>
 }
 
-const Card = (({ children, className }) => {
-  return <div className={cn('card', className)}>{children}</div>
+const Card = (({ children, className, ...rest }) => {
+  return (
+    <div className={cn('card', className)} {...rest}>
+      {children}
+    </div>
+  )
 }) as CardComponent
 
 const CardHeader: React.FC<CardHeaderProps> = ({ 
