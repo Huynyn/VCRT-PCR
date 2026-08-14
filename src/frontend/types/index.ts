@@ -212,6 +212,8 @@ export interface ModalProps {
 export interface FormSectionProps {
   title: string;
   subtitle?: string;
+  /** Shown as a badge to the left of the title, for top-level numbered sections. */
+  number?: number;
   children: React.ReactNode;
   isCollapsible?: boolean;
   defaultOpen?: boolean;

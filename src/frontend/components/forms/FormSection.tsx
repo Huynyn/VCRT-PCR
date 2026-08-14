@@ -6,6 +6,7 @@ import type { FormSectionProps } from '@/types'
 const FormSection: React.FC<FormSectionProps> = ({
   title,
   subtitle,
+  number,
   children,
   isCollapsible = false,
   defaultOpen = true,
@@ -30,12 +31,19 @@ const FormSection: React.FC<FormSectionProps> = ({
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className={cn(
-              'text-xl font-semibold text-gray-900 dark:text-gray-100',
-              required && 'after:content-["*"] after:text-emergency-500 after:ml-1'
-            )}>
-              {title}
-            </h2>
+            <div className="flex items-center gap-2.5">
+              {number !== undefined && (
+                <span className="flex items-center justify-center min-w-[1.75rem] h-7 px-1.5 rounded-lg bg-primary-50 text-primary-700 text-sm font-semibold dark:bg-primary-900/40 dark:text-primary-300">
+                  {number}
+                </span>
+              )}
+              <h2 className={cn(
+                'text-xl font-semibold text-gray-900 dark:text-gray-100',
+                required && 'after:content-["*"] after:text-emergency-500 after:ml-1'
+              )}>
+                {title}
+              </h2>
+            </div>
             {subtitle && (
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {subtitle}

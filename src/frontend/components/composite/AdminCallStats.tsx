@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
   Siren,
-  MapPin,
+  Phone,
+  Footprints,
   Clock,
   User,
   ShieldCheck,
@@ -208,7 +209,7 @@ const AdminCallStats: React.FC = () => {
   useEffect(() => {
     setDigestLoading(true)
     setDigestError('')
-    apiRequest(`/pcr/stats/approved-range?start=${range.start}&end=${range.end}`)
+    apiRequest(`/pcr/stats/submitted-range?start=${range.start}&end=${range.end}`)
       .then(res => setRows(res.data || []))
       .catch(err => setDigestError(err instanceof Error ? err.message : 'Failed to load digest'))
       .finally(() => setDigestLoading(false))
@@ -294,7 +295,7 @@ const AdminCallStats: React.FC = () => {
                 label="Total Calls"
                 value={stats.totalCalls}
                 periodKey={periodKey}
-                icon={<Activity className="w-4 h-4" />}
+                icon={<Phone className="w-4 h-4" />}
               />
               <StatTile
                 label="Required Paramedics"
@@ -309,7 +310,7 @@ const AdminCallStats: React.FC = () => {
                 periodKey={periodKey}
                 decimals={1}
                 suffix=" min"
-                icon={<MapPin className="w-4 h-4" />}
+                icon={<Footprints className="w-4 h-4" />}
               />
               <StatTile
                 label="Avg Time on Scene"

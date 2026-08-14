@@ -336,6 +336,7 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
 
       <p className="text-xs text-gray-500 dark:text-gray-400">
         Select a marker number, then click Front or Back to place it. Click a placed marker to remove it.
+        (matching numbers/colors link to OPQRST sections above)
       </p>
 
       <div className="flex flex-col sm:flex-row items-start justify-center gap-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">

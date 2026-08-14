@@ -17,7 +17,7 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
   data,
   onChange,
   maxRows = 8,
-  title = 'Vital Signs',
+  title = '',
   className,
   columns: customColumns,
 }) => {
@@ -125,24 +125,11 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
 
   return (
     <div className={cn('space-y-3', className)}>
-      <div className="flex items-center justify-between">
+      {title && (
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
           {title}
         </h3>
-        <div className="flex space-x-2">
-          {data.length < maxRows && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addRow}
-              leftIcon={<Plus className="w-4 h-4" />}
-            >
-              Add Row
-            </Button>
-          )}
-        </div>
-      </div>
+      )}
 
       <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 rounded-xl">
         {/* No min-w-full: with table-fixed, an ancestor forcing the table
@@ -210,6 +197,20 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {data.length < maxRows && (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addRow}
+            leftIcon={<Plus className="w-4 h-4" />}
+          >
+            Add Row
+          </Button>
+        </div>
+      )}
 
       <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
         <p>Use 24-hour format for time entries (e.g., 14:30 for 2:30 PM).</p>

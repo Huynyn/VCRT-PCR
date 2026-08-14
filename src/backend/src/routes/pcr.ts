@@ -631,8 +631,8 @@ router.get('/stats/pending-approval-count', authenticateToken, requireRole(['adm
   }
 });
 
-// GET /api/pcr/stats/approved-range - De-identified approved-call data for a date range (admin only)
-router.get('/stats/approved-range', authenticateToken, requireRole(['admin']), (req: AuthenticatedRequest, res: Response) => {
+// GET /api/pcr/stats/submitted-range - De-identified submitted-but-not-yet-approved call data for a date range (admin only)
+router.get('/stats/submitted-range', authenticateToken, requireRole(['admin']), (req: AuthenticatedRequest, res: Response) => {
   try {
     const { start, end } = req.query;
     const dateRe = /^\d{4}-\d{2}-\d{2}$/;
@@ -661,19 +661,19 @@ router.get('/stats/approved-range', authenticateToken, requireRole(['admin']), (
           )
         ) AS responders
       FROM pcr_reports
-      WHERE status IN ('approved', 'completed') AND json_extract(form_data, '$.date') BETWEEN ? AND ?
+      WHERE status = 'submitted' AND json_extract(form_data, '$.date') BETWEEN ? AND ?
       UNION ALL
       SELECT id, date, report_number, chief_complaint, time_notified, on_scene, cleared_scene,
         patient_care_transferred, oxygen_given, supervisor,
         COALESCE(responders, json_array(responder1, responder2, responder3))
       FROM pcr_call_archive
-      WHERE status IN ('approved', 'completed') AND date BETWEEN ? AND ?
+      WHERE status = 'submitted' AND date BETWEEN ? AND ?
       ORDER BY date
     `).all(start, end, start, end);
 
     res.json({ success: true, data: rows });
   } catch (error) {
-    console.error('Get approved-range PCR stats error:', error);
+    console.error('Get submitted-range PCR stats error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

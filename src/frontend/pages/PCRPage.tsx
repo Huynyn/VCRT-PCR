@@ -523,6 +523,23 @@ const PCRPage: React.FC = () => {
 
   const opqrstEntries: OPQRSTEntry[] = data.opqrstEntries || []
 
+  // Numbers the top-level form sections in the order they're rendered below.
+  // "Injury Location" is a subsection of OPQRST Assessment, not its own
+  // numbered section, so it's left out of this list.
+  const sectionOrder = [
+    'basicInformation',
+    'patientInformation',
+    'patientMedicalHistory',
+    'treatmentPerformed',
+    'opqrstAssessment',
+    'vitalSigns',
+    'oxygenProtocol',
+    'additionalInformation',
+    'additionalAttachments',
+    'addSignatures',
+  ] as const
+  const sectionNumber = (key: (typeof sectionOrder)[number]) => sectionOrder.indexOf(key) + 1
+
   const addOpqrstEntry = () => {
     if (opqrstEntries.length >= 4) return
     updateField('opqrstEntries', [...opqrstEntries, { id: generateId() }])
@@ -838,6 +855,7 @@ const PCRPage: React.FC = () => {
         {/* Basic Information */}
         <FormSection
           title="Basic Information"
+          number={sectionNumber('basicInformation')}
           subtitle="Essential call details and response information"
           required
         >
@@ -1016,6 +1034,7 @@ const PCRPage: React.FC = () => {
         {/* Patient Information */}
         <FormSection
           title="Patient Information"
+          number={sectionNumber('patientInformation')}
           subtitle="Patient information and contact details (DNO or UTO if not obtained)"
           required
         >
@@ -1173,6 +1192,7 @@ const PCRPage: React.FC = () => {
         {/* Medical History */}
         <FormSection
           title="Patient Medical History"
+          number={sectionNumber('patientMedicalHistory')}
           subtitle="Medical background and assessment findings (DNO or UTO if not obtained)"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1248,6 +1268,7 @@ const PCRPage: React.FC = () => {
         {/* Treatment Performed */}
         <FormSection
           title="Treatment Performed"
+          number={sectionNumber('treatmentPerformed')}
           subtitle="Lifesaving interventions and care provided to the patient"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1445,7 +1466,7 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* OPQRST Assessment */}
-        <FormSection title="OPQRST Assessment" subtitle="Add a section for each reported pain/injury location; its number/color are shown on the body diagram below (DNO or UTO if not obtained)">
+        <FormSection title="OPQRST Assessment" number={sectionNumber('opqrstAssessment')} subtitle="Add a section for each reported pain/injury location (DNO or UTO if not obtained)">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {opqrstEntries.length === 0
@@ -1460,7 +1481,7 @@ const PCRPage: React.FC = () => {
                 onClick={addOpqrstEntry}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
-                Add OPQRST Section
+                Add OPQRST
               </Button>
             )}
           </div>
@@ -1554,26 +1575,26 @@ const PCRPage: React.FC = () => {
               </Card>
             )
           })}
+
+          {/* Injury Location - a subsection of OPQRST Assessment */}
+          {opqrstEntries.length > 0 && (
+            <FormSection title="Injury Location" subtitle="">
+              <InjuryLocationMap
+                value={data.injuryMarkers}
+                onChange={value => updateField('injuryMarkers', value)}
+                opqrstCount={opqrstEntries.length}
+              />
+            </FormSection>
+          )}
         </FormSection>
 
-        {/* Injury Location */}
-        {opqrstEntries.length > 0 && (
-          <FormSection title="Injury Location" subtitle="Mark injury locations on the front/back body diagram - matching numbers/colors link back to the OPQRST sections above">
-            <InjuryLocationMap
-              value={data.injuryMarkers}
-              onChange={value => updateField('injuryMarkers', value)}
-              opqrstCount={opqrstEntries.length}
-            />
-          </FormSection>
-        )}
-
         {/* Vital Signs Table 1 */}
-        <FormSection title="Vital Signs" subtitle="Patient vital signs measurements (DNO or UTO if not obtained)">
+        <FormSection title="Vital Signs" number={sectionNumber('vitalSigns')} subtitle="Patient vital signs measurements (DNO or UTO if not obtained)">
           <VitalSignsTable data={data.vitalSigns || []} onChange={handleVitalSignsChange} />
         </FormSection>
 
         {/* Oxygen Protocol */}
-        <FormSection title="Oxygen Protocol" subtitle="Oxygen therapy administration details">
+        <FormSection title="Oxygen Protocol" number={sectionNumber('oxygenProtocol')} subtitle="Oxygen therapy administration details">
           <OxygenProtocolForm
             data={data.oxygenProtocol || {}}
             onChange={oxygenProtocolData => updateField('oxygenProtocol', oxygenProtocolData)}
@@ -1584,6 +1605,7 @@ const PCRPage: React.FC = () => {
         {/* Additional Information */}
         <FormSection
           title="Additional Information"
+          number={sectionNumber('additionalInformation')}
           subtitle="Call details and patient transfer information"
           required
         >
@@ -1680,6 +1702,7 @@ const PCRPage: React.FC = () => {
 
         <FormSection
           title="Additional Attachments"
+          number={sectionNumber('additionalAttachments')}
           subtitle="Upload patient sign-off or other information (as a PDF) to append to the report"
         >
           <div
@@ -1737,6 +1760,7 @@ const PCRPage: React.FC = () => {
         {/* Add Signatures */}
         <FormSection
           title="Add Signatures"
+          number={sectionNumber('addSignatures')}
           subtitle="Supervisor first, then each responder present on this call; these are printed at the bottom of the PDF"
         >
           <div className="flex items-center gap-3">

@@ -82,7 +82,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
 
   const count = items.length
   const badgeText = count > 9 ? '9+' : String(count)
-  const panelTitle = isAdmin ? 'Reports awaiting approval' : 'Your reports needing attention'
+  const panelTitle = isAdmin ? 'Reports awaiting approval' : 'Reports needing attention'
 
   return (
     <div className="relative" ref={containerRef}>
