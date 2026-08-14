@@ -443,6 +443,10 @@ const PCRPage: React.FC = () => {
         window.location.hash = `${currentHash}?draftId=${responseData.data.id}`
       }
 
+      // Marks the form clean so leaving right after this save doesn't
+      // re-trigger the "save draft before leaving?" prompt.
+      loadData(data)
+
       showNotification('Draft saved successfully', 'success')
     } catch (error) {
       console.error('Save draft failed:', error)
