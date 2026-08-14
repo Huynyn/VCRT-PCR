@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
-import { Eye, Edit, Trash2, Ban, ThumbsUp, Archive, type LucideIcon } from 'lucide-react'
-import { Loading, Alert, Modal, Button, Tooltip } from '@/components/ui'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
+import { Eye, Edit, Trash2, Ban, ThumbsUp, Archive, MoreVertical, type LucideIcon } from 'lucide-react'
+import { Loading, Alert, Modal, Button } from '@/components/ui'
 import { Textarea } from '@/components/forms'
 import { pdfService } from '@/services/pdf.service'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
-import { parseServerDate } from '@/utils'
+import { parseServerDate, cn } from '@/utils'
 
 interface PCRReport {
   id: string
@@ -20,34 +21,134 @@ interface PCRReport {
   creator_username?: string | null
 }
 
-// Fixed action-button "slots" per row, so the Actions column never grows or
-// shrinks based on status - every row for a given role renders the same
-// number of same-width buttons, disabling (rather than hiding) ones that
-// don't apply to the report's current status.
-type ActionColor = 'blue' | 'amber' | 'emerald' | 'red' | 'purple'
-
+// A row's actions are collapsed into a single "..." menu, listing only the
+// actions actually available for the report's current status (nothing
+// rendered disabled - unavailable actions are just left out of the array).
 interface ActionSlot {
   label: string
   icon: LucideIcon
-  color: ActionColor
   onClick: () => void
+  /** Only ever true for the transient "View/Preview PDF is loading" state. */
   disabled?: boolean
 }
 
-// Colored only on hover/focus - at rest these look like any other neutral
-// icon button (see the shared border/bg/text classes where this is used).
-const actionColorClasses: Record<ActionColor, string> = {
-  blue: 'hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 focus-visible:bg-blue-50 focus-visible:text-blue-700 focus-visible:border-blue-200 dark:hover:bg-blue-900/20 dark:hover:text-blue-300 dark:hover:border-blue-800 dark:focus-visible:bg-blue-900/20 dark:focus-visible:text-blue-300 dark:focus-visible:border-blue-800',
-  amber:
-    'hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 focus-visible:bg-amber-50 focus-visible:text-amber-700 focus-visible:border-amber-200 dark:hover:bg-amber-900/20 dark:hover:text-amber-300 dark:hover:border-amber-800 dark:focus-visible:bg-amber-900/20 dark:focus-visible:text-amber-300 dark:focus-visible:border-amber-800',
-  emerald:
-    'hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 focus-visible:bg-emerald-50 focus-visible:text-emerald-700 focus-visible:border-emerald-200 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300 dark:hover:border-emerald-800 dark:focus-visible:bg-emerald-900/20 dark:focus-visible:text-emerald-300 dark:focus-visible:border-emerald-800',
-  red: 'hover:bg-burgundy-50 hover:text-burgundy-700 hover:border-burgundy-200 focus-visible:bg-burgundy-50 focus-visible:text-burgundy-700 focus-visible:border-burgundy-200 dark:hover:bg-burgundy-900/20 dark:hover:text-burgundy-300 dark:hover:border-burgundy-800 dark:focus-visible:bg-burgundy-900/20 dark:focus-visible:text-burgundy-300 dark:focus-visible:border-burgundy-800',
-  purple:
-    'hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 focus-visible:bg-purple-50 focus-visible:text-purple-700 focus-visible:border-purple-200 dark:hover:bg-purple-900/20 dark:hover:text-purple-300 dark:hover:border-purple-800 dark:focus-visible:bg-purple-900/20 dark:focus-visible:text-purple-300 dark:focus-visible:border-purple-800',
+interface RowActionsMenuProps {
+  actions: ActionSlot[]
 }
 
-const noop = () => undefined
+const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions }) => {
+  const [open, setOpen] = useState(false)
+  // Rendered in a portal at a `fixed` position computed from the trigger
+  // button, rather than `absolute` inside the table's scroll container -
+  // otherwise the menu's own box would count toward that container's
+  // scrollable content, occasionally growing a scrollbar / shifting the
+  // table the instant it opened.
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const openMenu = () => {
+    const rect = buttonRef.current?.getBoundingClientRect()
+    if (!rect) {
+      setOpen(true)
+      return
+    }
+
+    // Estimate the menu's height from its item count (each row ~36px, plus
+    // the list's own vertical padding) so we can flip it above the button
+    // when there isn't enough room below - measuring the real element would
+    // need an extra render pass, and this only has to be roughly right.
+    const estimatedHeight = actions.length * 36 + 8
+    const spaceBelow = window.innerHeight - rect.bottom
+    const openUpward = spaceBelow < estimatedHeight && rect.top > spaceBelow
+
+    setMenuPos({
+      top: openUpward ? undefined : rect.bottom + 4,
+      bottom: openUpward ? window.innerHeight - rect.top + 4 : undefined,
+      right: window.innerWidth - rect.right,
+    })
+    setOpen(true)
+  }
+
+  useEffect(() => {
+    if (!open) return
+
+    const close = () => setOpen(false)
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return
+      setOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    // Capture phase: 'scroll' doesn't bubble, so this is the only way to
+    // hear about scrolling inside the table's own overflow-x-auto wrapper.
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [open])
+
+  if (actions.length === 0) {
+    return <span className="text-gray-400 dark:text-gray-500">—</span>
+  }
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => (open ? setOpen(false) : openMenu())}
+        aria-label="Actions"
+        aria-haspopup="true"
+        aria-expanded={open}
+        className="flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 p-2 transition-colors"
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+
+      {open && menuPos && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right }}
+          className="z-50 w-56 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+        >
+          <ul className="py-1">
+            {actions.map((action, idx) => (
+              <li key={idx}>
+                <button
+                  type="button"
+                  disabled={action.disabled}
+                  onClick={
+                    action.disabled
+                      ? undefined
+                      : () => {
+                          setOpen(false)
+                          action.onClick()
+                        }
+                  }
+                  className={cn(
+                    'flex w-full items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors',
+                    action.disabled
+                      ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 cursor-pointer',
+                  )}
+                >
+                  <action.icon className="w-4 h-4 shrink-0" />
+                  {action.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>,
+        document.body,
+      )}
+    </>
+  )
+}
 
 const ReportsPage = () => {
   const { token, isAuthenticated, user: currentUser } = useAuth()
@@ -297,17 +398,14 @@ const ReportsPage = () => {
     }
   }
 
-  // Builds the fixed set of action-button slots for a row: 3 slots for
-  // regular users (View, Edit, Delete/Cancel), 4 for admins (View, Edit,
-  // context action, Cancel). A `null` entry renders an empty placeholder
-  // cell (used for admin rows on the user's own drafts, which have no
-  // 4th action) so column widths stay identical across every row.
-  const getActionSlots = (report: PCRReport): (ActionSlot | null)[] => {
+  // Builds the list of actions available for a row's current status - only
+  // ever the ones actually usable right now (nothing shown-but-disabled),
+  // so the menu is exactly as long as it needs to be.
+  const getActionSlots = (report: PCRReport): ActionSlot[] => {
     const isPreview = report.status === 'draft' || report.status === 'changes_requested'
     const viewSlot: ActionSlot = {
       label: previewLoadingId === report.id ? 'Loading...' : isPreview ? 'Preview PDF' : 'View PDF',
       icon: Eye,
-      color: 'blue',
       onClick: () => handleViewReport(report.id),
       disabled: previewLoadingId === report.id,
     }
@@ -317,74 +415,49 @@ const ReportsPage = () => {
         case 'draft':
           return [
             viewSlot,
-            { label: 'Edit & Submit', icon: Edit, color: 'amber', onClick: () => handleEditDraft(report.id) },
-            {
-              label: 'Delete',
-              icon: Trash2,
-              color: 'red',
-              onClick: () => handleDeleteReport(report.id, report.status),
-            },
+            { label: 'Edit & Submit', icon: Edit, onClick: () => handleEditDraft(report.id) },
+            { label: 'Delete', icon: Trash2, onClick: () => handleDeleteReport(report.id, report.status) },
           ]
         case 'changes_requested':
           return [
             viewSlot,
-            { label: 'Edit & Resubmit', icon: Edit, color: 'amber', onClick: () => handleEditReport(report.id) },
-            { label: 'Cancel', icon: Ban, color: 'red', onClick: noop, disabled: true },
+            { label: 'Edit & Resubmit', icon: Edit, onClick: () => handleEditReport(report.id) },
           ]
         default:
           // submitted, cancelled: locked down to view-only
-          return [
-            viewSlot,
-            { label: 'Edit & Resubmit', icon: Edit, color: 'amber', onClick: noop, disabled: true },
-            { label: 'Cancel', icon: Ban, color: 'red', onClick: noop, disabled: true },
-          ]
+          return [viewSlot]
       }
     }
 
     switch (report.status) {
       case 'draft':
-        // Admin's own draft - same as a regular user's draft, plus an empty
-        // 4th cell so the row still matches the admin's 4-column grid.
         return [
           viewSlot,
-          { label: 'Edit & Submit', icon: Edit, color: 'amber', onClick: () => handleEditDraft(report.id) },
-          {
-            label: 'Delete',
-            icon: Trash2,
-            color: 'red',
-            onClick: () => handleDeleteReport(report.id, report.status),
-          },
-          null,
+          { label: 'Edit & Submit', icon: Edit, onClick: () => handleEditDraft(report.id) },
+          { label: 'Delete', icon: Trash2, onClick: () => handleDeleteReport(report.id, report.status) },
         ]
       case 'submitted':
         return [
           viewSlot,
-          { label: 'Edit / Request Changes', icon: Edit, color: 'amber', onClick: () => setEditChoiceReport(report) },
-          { label: 'Approve', icon: ThumbsUp, color: 'emerald', onClick: () => handleOpenApprove(report.id) },
-          { label: 'Cancel', icon: Ban, color: 'red', onClick: () => handleOpenCancel(report.id) },
+          { label: 'Edit / Request Changes', icon: Edit, onClick: () => setEditChoiceReport(report) },
+          { label: 'Approve', icon: ThumbsUp, onClick: () => handleOpenApprove(report.id) },
+          { label: 'Cancel', icon: Ban, onClick: () => handleOpenCancel(report.id) },
         ]
       case 'approved':
         return [
           viewSlot,
-          { label: 'Edit & Resubmit', icon: Edit, color: 'amber', onClick: () => handleEditReport(report.id) },
-          { label: 'Complete', icon: Archive, color: 'purple', onClick: () => handleOpenComplete(report.id) },
-          { label: 'Cancel', icon: Ban, color: 'red', onClick: noop, disabled: true },
+          { label: 'Edit & Resubmit', icon: Edit, onClick: () => handleEditReport(report.id) },
+          { label: 'Complete', icon: Archive, onClick: () => handleOpenComplete(report.id) },
         ]
       case 'changes_requested':
         return [
           viewSlot,
-          { label: 'Edit / View Comments', icon: Edit, color: 'amber', onClick: () => setEditChoiceReport(report) },
-          { label: 'Approve', icon: ThumbsUp, color: 'emerald', onClick: () => handleOpenApprove(report.id) },
-          { label: 'Cancel', icon: Ban, color: 'red', onClick: noop, disabled: true },
+          { label: 'Edit / View Comments', icon: Edit, onClick: () => setEditChoiceReport(report) },
+          { label: 'Approve', icon: ThumbsUp, onClick: () => handleOpenApprove(report.id) },
         ]
       default:
         // completed, cancelled: fully locked, view-only
-        return [
-          viewSlot,
-          { label: 'Edit', icon: Edit, color: 'amber', onClick: noop, disabled: true },
-          { label: 'Complete', icon: Archive, color: 'purple', onClick: noop, disabled: true },
-          { label: 'Cancel', icon: Ban, color: 'red', onClick: noop, disabled: true },
-        ]
+        return [viewSlot]
     }
   }
 
@@ -468,12 +541,6 @@ const ReportsPage = () => {
             </div>
           ) : (
             <>
-              <div className="mb-4 text-sm text-gray-500 dark:text-gray-400 flex items-center">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Scroll horizontally to view all columns
-              </div>
               <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-xl">
               <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800">
@@ -495,8 +562,8 @@ const ReportsPage = () => {
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Last Updated
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Actions
+                    <th className="w-0 pl-2 pr-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <span className="sr-only">Actions</span>
                     </th>
                   </tr>
                 </thead>
@@ -544,34 +611,8 @@ const ReportsPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         {formatDate(report.updated_at)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div
-                          className={`grid gap-2 ${
-                            isAdmin ? 'grid-cols-[40px_40px_40px_40px]' : 'grid-cols-[40px_40px_40px]'
-                          }`}
-                        >
-                          {getActionSlots(report).map((slot, idx) =>
-                            slot ? (
-                              <Tooltip key={idx} content={slot.label} disabled={slot.disabled}>
-                                <span className="inline-block">
-                                  <button
-                                    type="button"
-                                    aria-label={slot.label}
-                                    onClick={slot.disabled ? undefined : slot.onClick}
-                                    disabled={slot.disabled}
-                                    className={`flex w-full items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-600 dark:bg-gray-700/60 dark:text-gray-400 p-2 transition-colors disabled:hover:bg-gray-50 disabled:hover:text-gray-500 disabled:hover:border-gray-200 dark:disabled:hover:bg-gray-700/60 dark:disabled:hover:text-gray-400 dark:disabled:hover:border-gray-600 ${
-                                      actionColorClasses[slot.color]
-                                    } ${slot.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
-                                  >
-                                    <slot.icon className="w-4 h-4" />
-                                  </button>
-                                </span>
-                              </Tooltip>
-                            ) : (
-                              <div key={idx} />
-                            ),
-                          )}
-                        </div>
+                      <td className="w-0 pl-2 pr-4 py-4 whitespace-nowrap text-sm font-medium text-right">
+                        <RowActionsMenu actions={getActionSlots(report)} />
                       </td>
                     </tr>
                   ))}

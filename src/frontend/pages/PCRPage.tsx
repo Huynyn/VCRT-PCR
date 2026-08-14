@@ -1833,6 +1833,7 @@ const PCRPage: React.FC = () => {
               loading={isSubmitting}
               disabled={isSubmitting}
               leftIcon={<Send className="w-4 h-4" />}
+              className="border-2 border-primary-700"
             >
               {isSubmitting ? 'Submitting...' : 'Submit PCR'}
             </Button>
