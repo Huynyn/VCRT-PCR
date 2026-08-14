@@ -11,6 +11,7 @@ interface FormState {
 
 type FormAction =
   | { type: 'UPDATE_FIELD'; payload: { field: keyof PCRFormData; value: any } }
+  | { type: 'UPDATE_FIELD_SILENT'; payload: { field: keyof PCRFormData; value: any } }
   | { type: 'UPDATE_NESTED_FIELD'; payload: { section: string; field: string; value: any } }
   | { type: 'SET_ERROR'; payload: { field: string; error: string } }
   | { type: 'CLEAR_ERROR'; payload: { field: string } }
@@ -102,6 +103,18 @@ const formReducer = (state: FormState, action: FormAction): FormState => {
         isDirty: true,
       }
       
+    case 'UPDATE_FIELD_SILENT':
+      // Same as UPDATE_FIELD but leaves isDirty untouched - for system-driven
+      // fills (e.g. auto-populating Call Number) that shouldn't make the form
+      // look edited or trigger the "save draft before leaving?" prompt.
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          [action.payload.field]: action.payload.value,
+        },
+      }
+
     case 'UPDATE_NESTED_FIELD':
       return {
         ...state,
@@ -193,6 +206,10 @@ export const FormProvider: React.FC<FormProviderProps> = ({ children }) => {
     }
   }, [state.errors])
 
+  const updateFieldSilently = useCallback((field: keyof PCRFormData, value: any) => {
+    dispatch({ type: 'UPDATE_FIELD_SILENT', payload: { field, value } })
+  }, [])
+
   const updateNestedField = useCallback((section: string, field: string, value: any) => {
     dispatch({ type: 'UPDATE_NESTED_FIELD', payload: { section, field, value } })
   }, [])
@@ -242,6 +259,7 @@ export const FormProvider: React.FC<FormProviderProps> = ({ children }) => {
   const contextValue: FormContextType = {
     data: state.data,
     updateField,
+    updateFieldSilently,
     updateNestedField,
     errors: state.errors,
     isDirty: state.isDirty,

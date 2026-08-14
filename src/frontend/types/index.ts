@@ -229,6 +229,7 @@ export interface NotificationContextType {
 export interface FormContextType {
   data: Partial<PCRFormData>;
   updateField: (field: keyof PCRFormData, value: any) => void;
+  updateFieldSilently: (field: keyof PCRFormData, value: any) => void;
   updateNestedField: (section: string, field: string, value: any) => void;
   errors: Record<string, string>;
   isDirty: boolean;

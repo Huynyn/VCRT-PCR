@@ -77,6 +77,7 @@ const PCRPage: React.FC = () => {
   const {
     data,
     updateField,
+    updateFieldSilently,
     errors,
     isDirty,
     isValid,
@@ -220,7 +221,7 @@ const PCRPage: React.FC = () => {
 
       if (!ignore && !data.date) {
         const todayISO = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-        updateField('date', todayISO)
+        updateFieldSilently('date', todayISO)
       }
     }
 
@@ -248,7 +249,7 @@ const PCRPage: React.FC = () => {
         if (ignore) return
         const next = res.data?.callNumber
         if (next) {
-          updateField('callNumber', next)
+          updateFieldSilently('callNumber', next)
           setAutoCallNumber(next)
         }
       })
