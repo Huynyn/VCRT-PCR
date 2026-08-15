@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/utils'
 import type { InputProps as BaseInputProps } from '@/types'
 
@@ -17,11 +18,12 @@ const Input = forwardRef<HTMLInputElement, OurInputProps>(({
   requireUnknown,
   ...props
 }, ref) => {
+  const { t } = useTranslation()
   const inputId = props.id || `input-${Math.random().toString(36).substr(2, 9)}`
 
   const handleInvalid: React.FormEventHandler<HTMLInputElement> = (e) => {
     if (requireUnknown) {
-      e.currentTarget.setCustomValidity('Please fill in (use DNO or UTO if unknown)')
+      e.currentTarget.setCustomValidity(t('common.fillRequiredDnoUto'))
     }
     // if you already passed an onInvalid via props, call it too
     if (props.onInvalid) props.onInvalid(e)

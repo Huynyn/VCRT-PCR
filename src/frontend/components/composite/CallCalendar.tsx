@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/utils'
 
@@ -8,13 +9,17 @@ interface CallCalendarProps {
   onSelectDate: (date: string) => void
 }
 
-const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const WEEKDAY_LABELS_EN = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const WEEKDAY_LABELS_FR = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
 
 function toDateKey(year: number, monthIndex: number, day: number): string {
   return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
 const CallCalendar: React.FC<CallCalendarProps> = ({ markedDates, selectedDate, onSelectDate }) => {
+  const { t, i18n } = useTranslation()
+  const isFrench = i18n.language === 'fr'
+  const weekdayLabels = isFrench ? WEEKDAY_LABELS_FR : WEEKDAY_LABELS_EN
   const initialView = useMemo(() => {
     if (markedDates.size > 0) {
       const latest = Array.from(markedDates).sort().pop() as string
@@ -40,7 +45,7 @@ const CallCalendar: React.FC<CallCalendarProps> = ({ markedDates, selectedDate, 
   for (let i = 0; i < firstWeekday; i++) cells.push(null)
   for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, key: toDateKey(year, month, d) })
 
-  const monthLabel = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const monthLabel = viewDate.toLocaleDateString(isFrench ? 'fr-CA' : 'en-US', { month: 'long', year: 'numeric' })
 
   return (
     <div>
@@ -49,7 +54,7 @@ const CallCalendar: React.FC<CallCalendarProps> = ({ markedDates, selectedDate, 
           type="button"
           onClick={() => setViewDate(new Date(year, month - 1, 1))}
           className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
-          aria-label="Previous month"
+          aria-label={t('callStats.previousMonth')}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -58,14 +63,14 @@ const CallCalendar: React.FC<CallCalendarProps> = ({ markedDates, selectedDate, 
           type="button"
           onClick={() => setViewDate(new Date(year, month + 1, 1))}
           className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
-          aria-label="Next month"
+          aria-label={t('callStats.nextMonth')}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
       <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 dark:text-gray-400 mb-1">
-        {WEEKDAY_LABELS.map((w, i) => (
+        {weekdayLabels.map((w, i) => (
           <div key={i}>{w}</div>
         ))}
       </div>
@@ -83,7 +88,7 @@ const CallCalendar: React.FC<CallCalendarProps> = ({ markedDates, selectedDate, 
               key={cell.key}
               onClick={() => hasCall && onSelectDate(cell.key)}
               disabled={!hasCall}
-              title={hasCall ? `${cell.key} — has call(s)` : undefined}
+              title={hasCall ? `${cell.key} — ${t('callStats.hasCalls')}` : undefined}
               className={cn(
                 'aspect-square rounded-full text-sm flex items-center justify-center',
                 hasCall

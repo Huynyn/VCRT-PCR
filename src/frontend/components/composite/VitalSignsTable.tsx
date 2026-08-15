@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Trash2, Clock } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
 import { cn } from '@/utils'
@@ -21,6 +22,7 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
   className,
   columns: customColumns,
 }) => {
+  const { t } = useTranslation()
   const [editingCell, setEditingCell] = useState<{ row: number; field: string } | null>(null)
 
   const handleCellChange = useCallback((rowIndex: number, field: string, value: string) => {
@@ -53,14 +55,14 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
   }, [data, onChange])
 
   const defaultColumns = [
-    { key: 'time', label: 'Time', width: 'w-32', hint: 'HH:MM' },
-    { key: 'pulse', label: 'HR', width: 'w-32', hint: 'rate, rhythm, quality' },
-    { key: 'resp', label: 'RR', width: 'w-32', hint: 'rate, rhythm, quality' },
-    { key: 'spo2', label: 'SpO2', width: 'w-32', hint: '0-100' },
-    { key: 'bp', label: 'B/P', width: 'w-28', hint: 'SYS/DIA or SYS/PALP' },
-    { key: 'loc', label: 'LOC, GCS', width: 'w-32', hint: 'AOx(1-3) or GCS 3-15' },
-    { key: 'skin', label: 'Skin', width: 'w-32', hint: 'XX°C, color, temp, moisture' },
-    { key: 'pupils', label: 'Pupils', width: 'w-28', hint: 'PERRLA?, N mm' },
+    { key: 'time', label: t('pcr.vitalSignsTable.time'), width: 'w-32', hint: t('pcr.vitalSignsTable.timeHint') },
+    { key: 'pulse', label: 'HR', width: 'w-32', hint: t('pcr.vitalSignsTable.rateRhythmQualityHint') },
+    { key: 'resp', label: 'RR', width: 'w-32', hint: t('pcr.vitalSignsTable.rateRhythmQualityHint') },
+    { key: 'spo2', label: 'SpO2', width: 'w-32', hint: t('pcr.vitalSignsTable.spo2Hint') },
+    { key: 'bp', label: 'B/P', width: 'w-28', hint: t('pcr.vitalSignsTable.bpHint') },
+    { key: 'loc', label: 'LOC, GCS', width: 'w-32', hint: t('pcr.vitalSignsTable.locHint') },
+    { key: 'skin', label: t('pcr.vitalSignsTable.skin'), width: 'w-32', hint: t('pcr.vitalSignsTable.skinHint') },
+    { key: 'pupils', label: t('pcr.vitalSignsTable.pupils'), width: 'w-28', hint: t('pcr.vitalSignsTable.pupilsHint') },
   ]
 
   const columns = customColumns || defaultColumns
@@ -118,7 +120,7 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
         {column.key !== 'time' && value && (
           <span className="whitespace-pre-wrap break-words">{value}</span>
         )}
-        {!value && <span className="text-gray-400 dark:text-gray-500 italic">Click to edit</span>}
+        {!value && <span className="text-gray-400 dark:text-gray-500 italic">{t('pcr.vitalSignsTable.clickToEdit')}</span>}
       </div>
     )
   }
@@ -177,11 +179,11 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
                   {/* Always rendered (just hidden below the minimum of 1 row)
                       so this column's width is never dependent on whether
                       any row happens to show the button. */}
-                  <Tooltip content="Remove row">
+                  <Tooltip content={t('pcr.vitalSignsTable.removeRow', { index: rowIndex + 1 })}>
                     <button
                       type="button"
                       onClick={() => removeRow(rowIndex)}
-                      aria-label={`Remove row ${rowIndex + 1}`}
+                      aria-label={t('pcr.vitalSignsTable.removeRow', { index: rowIndex + 1 })}
                       tabIndex={data.length > 1 ? 0 : -1}
                       className={cn(
                         'flex items-center justify-center h-9 w-9 rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:text-gray-500 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-burgundy-500 transition-colors',
@@ -207,15 +209,15 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
             onClick={addRow}
             leftIcon={<Plus className="w-4 h-4" />}
           >
-            Add Row
+            {t('pcr.vitalSignsTable.addRow')}
           </Button>
         </div>
       )}
 
       <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
-        <p>Use 24-hour format for time entries (e.g., 14:30 for 2:30 PM).</p>
-        <p>If value was not obtained, enter DNO or UTO based on case and explain in comments.</p>
-        <p>Click on any cell to edit. Press Enter to save changes.</p>
+        <p>{t('pcr.vitalSignsTable.help24h')}</p>
+        <p>{t('pcr.vitalSignsTable.helpDnoUto')}</p>
+        <p>{t('pcr.vitalSignsTable.helpClickEdit')}</p>
       </div>
     </div>
   )

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { Eye, Edit, Trash2, Ban, ThumbsUp, Archive, MoreVertical, ChevronRight, MessageSquare, type LucideIcon } from 'lucide-react'
 import { Loading, Alert, Modal, Button } from '@/components/ui'
@@ -50,6 +51,7 @@ interface RowActionsMenuProps {
 }
 
 const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions }) => {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   // Rendered in a portal at a `fixed` position computed from the trigger
   // button, rather than `absolute` inside the table's scroll container -
@@ -115,7 +117,7 @@ const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions }) => {
         ref={buttonRef}
         type="button"
         onClick={() => (open ? setOpen(false) : openMenu())}
-        aria-label="Actions"
+        aria-label={t('reports.actions')}
         aria-haspopup="true"
         aria-expanded={open}
         className="flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 p-2 transition-colors"
@@ -196,6 +198,7 @@ const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions }) => {
 }
 
 const ReportsPage = () => {
+  const { t, i18n } = useTranslation()
   const { token, isAuthenticated, user: currentUser } = useAuth()
   const isAdmin = currentUser?.role === 'admin'
   const [reports, setReports] = useState<PCRReport[]>([])
@@ -227,7 +230,7 @@ const ReportsPage = () => {
       setLoading(true)
 
       if (!isAuthenticated || !token) {
-        setError('Please log in to view reports')
+        setError(t('reports.loginToView'))
         setLoading(false)
         return
       }
@@ -235,7 +238,7 @@ const ReportsPage = () => {
       const data = await apiRequest('/pcr')
       setReports(data.data || [])
     } catch (err) {
-      setError('Failed to load PCR reports')
+      setError(t('reports.loadFailed'))
       console.error('Error fetching reports:', err)
     } finally {
       setLoading(false)
@@ -260,7 +263,7 @@ const ReportsPage = () => {
       setPreviewLoadingId(reportId)
 
       if (!token) {
-        setError('Authentication required')
+        setError(t('reports.authRequired'))
         return
       }
 
@@ -280,7 +283,7 @@ const ReportsPage = () => {
         { allowDownload: isAdmin },
       )
     } catch (err) {
-      setError('Failed to load report details')
+      setError(t('reports.reportDetailsLoadFailed'))
       console.error('Error loading report:', err)
     } finally {
       setPreviewLoadingId(null)
@@ -309,7 +312,7 @@ const ReportsPage = () => {
     setSubmittingApprove(true)
     try {
       if (!token) {
-        setError('Authentication required')
+        setError(t('reports.authRequired'))
         return
       }
 
@@ -321,7 +324,7 @@ const ReportsPage = () => {
       )
       setApproveReportId(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to approve report')
+      setError(err instanceof Error ? err.message : t('reports.approveFailed'))
       console.error('Error approving report:', err)
     } finally {
       setSubmittingApprove(false)
@@ -338,7 +341,7 @@ const ReportsPage = () => {
     setSubmittingComplete(true)
     try {
       if (!token) {
-        setError('Authentication required')
+        setError(t('reports.authRequired'))
         return
       }
 
@@ -349,7 +352,7 @@ const ReportsPage = () => {
       )
       setCompleteReportId(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete report')
+      setError(err instanceof Error ? err.message : t('reports.completeFailed'))
       console.error('Error completing report:', err)
     } finally {
       setSubmittingComplete(false)
@@ -366,7 +369,7 @@ const ReportsPage = () => {
     setSubmittingCancel(true)
     try {
       if (!token) {
-        setError('Authentication required')
+        setError(t('reports.authRequired'))
         return
       }
 
@@ -377,7 +380,7 @@ const ReportsPage = () => {
       )
       setCancelReportId(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel report')
+      setError(err instanceof Error ? err.message : t('reports.cancelFailed'))
       console.error('Error cancelling report:', err)
     } finally {
       setSubmittingCancel(false)
@@ -395,7 +398,7 @@ const ReportsPage = () => {
     setSubmittingRequestChanges(true)
     try {
       if (!token) {
-        setError('Authentication required')
+        setError(t('reports.authRequired'))
         return
       }
 
@@ -414,7 +417,7 @@ const ReportsPage = () => {
       setRequestChangesReportId(null)
       setRequestChangesComment('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to request changes')
+      setError(err instanceof Error ? err.message : t('reports.requestChangesFailed'))
       console.error('Error requesting changes:', err)
     } finally {
       setSubmittingRequestChanges(false)
@@ -422,13 +425,14 @@ const ReportsPage = () => {
   }
 
   const handleDeleteReport = async (reportId: string, status: string) => {
-    const what = status === 'draft' ? 'this draft' : 'this submission'
-    const ok = window.confirm(`Delete ${what}? This cannot be undone.`)
+    const ok = window.confirm(
+      status === 'draft' ? t('reports.deleteDraftConfirm') : t('reports.deleteSubmissionConfirm'),
+    )
     if (!ok) return
 
     try {
       if (!token) {
-        setError('Authentication required')
+        setError(t('reports.authRequired'))
         return
       }
 
@@ -437,7 +441,7 @@ const ReportsPage = () => {
       // Optimistic UI: remove from state
       setReports(prev => prev.filter(r => r.id !== reportId))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete report')
+      setError(err instanceof Error ? err.message : t('reports.deleteFailed'))
       console.error('Error deleting report:', err)
     }
   }
@@ -448,7 +452,9 @@ const ReportsPage = () => {
   const getActionSlots = (report: PCRReport): ActionSlot[] => {
     const isPreview = report.status === 'draft' || report.status === 'changes_requested'
     const viewSlot: ActionSlot = {
-      label: previewLoadingId === report.id ? 'Loading...' : isPreview ? 'Preview PDF' : 'View PDF',
+      label: previewLoadingId === report.id
+        ? t('reports.loadingPdf')
+        : isPreview ? t('reports.previewPdf') : t('reports.viewPdf'),
       icon: Eye,
       onClick: () => handleViewReport(report.id),
       disabled: previewLoadingId === report.id,
@@ -459,14 +465,14 @@ const ReportsPage = () => {
         case 'draft':
           return [
             viewSlot,
-            { label: 'Edit & Submit', icon: Edit, onClick: () => handleEditDraft(report.id) },
-            { label: 'Delete', icon: Trash2, onClick: () => handleDeleteReport(report.id, report.status) },
+            { label: t('reports.editSubmit'), icon: Edit, onClick: () => handleEditDraft(report.id) },
+            { label: t('reports.delete'), icon: Trash2, onClick: () => handleDeleteReport(report.id, report.status) },
           ]
         case 'changes_requested':
           return [
             viewSlot,
-            { label: 'Edit & Resubmit', icon: Edit, onClick: () => handleEditReport(report.id) },
-            { label: 'View Comments', icon: MessageSquare, onClick: () => setViewCommentsReport(report) },
+            { label: t('reports.editResubmit'), icon: Edit, onClick: () => handleEditReport(report.id) },
+            { label: t('reports.viewComments'), icon: MessageSquare, onClick: () => setViewCommentsReport(report) },
           ]
         default:
           // submitted, cancelled: locked down to view-only
@@ -478,45 +484,45 @@ const ReportsPage = () => {
       case 'draft':
         return [
           viewSlot,
-          { label: 'Edit & Submit', icon: Edit, onClick: () => handleEditDraft(report.id) },
-          { label: 'Delete', icon: Trash2, onClick: () => handleDeleteReport(report.id, report.status) },
+          { label: t('reports.editSubmit'), icon: Edit, onClick: () => handleEditDraft(report.id) },
+          { label: t('reports.delete'), icon: Trash2, onClick: () => handleDeleteReport(report.id, report.status) },
         ]
       case 'submitted':
         return [
           viewSlot,
           {
-            label: 'Review',
+            label: t('reports.review'),
             icon: Edit,
             subActions: [
-              { label: 'Edit', icon: Edit, onClick: () => handleEditReport(report.id) },
-              { label: 'Request Changes', icon: MessageSquare, onClick: () => handleOpenRequestChanges(report.id) },
+              { label: t('reports.edit'), icon: Edit, onClick: () => handleEditReport(report.id) },
+              { label: t('reports.requestChanges'), icon: MessageSquare, onClick: () => handleOpenRequestChanges(report.id) },
             ],
           },
-          { label: 'Approve', icon: ThumbsUp, onClick: () => handleOpenApprove(report.id) },
-          { label: 'Cancel', icon: Ban, onClick: () => handleOpenCancel(report.id) },
+          { label: t('reports.approve'), icon: ThumbsUp, onClick: () => handleOpenApprove(report.id) },
+          { label: t('reports.cancel'), icon: Ban, onClick: () => handleOpenCancel(report.id) },
         ]
       case 'approved':
         return [
           viewSlot,
-          { label: 'Edit & Resubmit', icon: Edit, onClick: () => handleEditReport(report.id) },
-          { label: 'Complete', icon: Archive, onClick: () => handleOpenComplete(report.id) },
+          { label: t('reports.editResubmit'), icon: Edit, onClick: () => handleEditReport(report.id) },
+          { label: t('reports.complete'), icon: Archive, onClick: () => handleOpenComplete(report.id) },
         ]
       case 'changes_requested':
         return [
           viewSlot,
           {
-            label: 'Review',
+            label: t('reports.review'),
             icon: Edit,
             subActions: [
-              { label: 'Edit', icon: Edit, onClick: () => handleEditReport(report.id) },
+              { label: t('reports.edit'), icon: Edit, onClick: () => handleEditReport(report.id) },
               {
-                label: 'View Comments',
+                label: t('reports.viewComments'),
                 icon: MessageSquare,
                 onClick: () => handleOpenRequestChanges(report.id, report.admin_comments || ''),
               },
             ],
           },
-          { label: 'Approve', icon: ThumbsUp, onClick: () => handleOpenApprove(report.id) },
+          { label: t('reports.approve'), icon: ThumbsUp, onClick: () => handleOpenApprove(report.id) },
         ]
       default:
         // completed, cancelled: fully locked, view-only
@@ -525,7 +531,7 @@ const ReportsPage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return parseServerDate(dateString).toLocaleDateString('en-CA', {
+    return parseServerDate(dateString).toLocaleDateString(i18n.language === 'fr' ? 'fr-CA' : 'en-CA', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -545,7 +551,7 @@ const ReportsPage = () => {
   }
 
   const displayReportId = (report: PCRReport) => {
-    const rn = (report.report_number ?? 'No Report ID').trim()
+    const rn = (report.report_number ?? t('reports.noReportId')).trim()
     return rn
   }
 
@@ -553,9 +559,9 @@ const ReportsPage = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">PCR Reports</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('reports.title')}</h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            View completed PCR submissions
+            {t('reports.subtitleLoading')}
           </p>
         </div>
         <Loading />
@@ -566,9 +572,9 @@ const ReportsPage = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">PCR Reports</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('reports.title')}</h1>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          View PCR submissions and drafts
+          {t('reports.subtitle')}
         </p>
       </div>
 
@@ -595,10 +601,10 @@ const ReportsPage = () => {
                   />
                 </svg>
                 <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-                  No PCR reports
+                  {t('reports.emptyTitle')}
                 </h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Create or submit a PCR form to see reports and drafts here.
+                  {t('reports.emptyBody')}
                 </p>
               </div>
             </div>
@@ -609,24 +615,24 @@ const ReportsPage = () => {
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[100px]">
-                      Report ID
+                      {t('reports.columnReportId')}
                     </th>
                     {isAdmin && (
                       <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Created By
+                        {t('reports.columnCreatedBy')}
                       </th>
                     )}
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Status
+                      {t('reports.columnStatus')}
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Created
+                      {t('reports.columnCreated')}
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Last Updated
+                      {t('reports.columnLastUpdated')}
                     </th>
                     <th className="w-0 pl-2 pr-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('reports.actions')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -643,7 +649,7 @@ const ReportsPage = () => {
                             ? `${report.creator_first_name} ${report.creator_last_name}`
                             : report.creator_username
                               ? `@${report.creator_username}`
-                              : '—'}
+                              : t('reports.noneDash')}
                         </td>
                       )}
 
@@ -665,7 +671,7 @@ const ReportsPage = () => {
                                         : 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500/60'
                           }`}
                         >
-                          {report.status === 'changes_requested' ? 'changes requested' : report.status}
+                          {t(`reports.status.${report.status}`, report.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
@@ -693,21 +699,20 @@ const ReportsPage = () => {
         onClose={() => (submittingRequestChanges ? undefined : setRequestChangesReportId(null))}
         title={
           reports.find(r => r.id === requestChangesReportId)?.status === 'changes_requested'
-            ? 'Update Comments'
-            : 'Request Changes'
+            ? t('reports.updateCommentsTitle')
+            : t('reports.requestChangesTitle')
         }
         size="md"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Describe what needs to change. The report will be sent back to the submitter, who can
-            edit and resubmit it.
+            {t('reports.requestChangesBody')}
           </p>
           <Textarea
-            label="Comments"
+            label={t('reports.commentsLabel')}
             value={requestChangesComment}
             onChange={e => setRequestChangesComment(e.target.value)}
-            placeholder="e.g. Missing vitals at 14:32, please confirm the transport destination..."
+            placeholder={t('reports.commentsPlaceholder')}
             required
             autoFocus
           />
@@ -718,14 +723,14 @@ const ReportsPage = () => {
               onClick={() => setRequestChangesReportId(null)}
               disabled={submittingRequestChanges}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="button"
               onClick={handleSubmitRequestChanges}
               disabled={submittingRequestChanges || !requestChangesComment.trim()}
             >
-              {submittingRequestChanges ? 'Saving...' : 'Send Back'}
+              {submittingRequestChanges ? t('reports.sendingBack') : t('reports.sendBack')}
             </Button>
           </div>
         </div>
@@ -735,20 +740,19 @@ const ReportsPage = () => {
       <Modal
         isOpen={viewCommentsReport !== null}
         onClose={() => setViewCommentsReport(null)}
-        title="Changes Requested"
+        title={t('reports.changesRequestedTitle')}
         size="md"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            The admin sent this report back with the following comments. Edit and resubmit it once
-            you've addressed them.
+            {t('reports.changesRequestedBody')}
           </p>
           <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-            {viewCommentsReport?.admin_comments || 'No comments provided.'}
+            {viewCommentsReport?.admin_comments || t('reports.noCommentsProvided')}
           </p>
           <div className="flex justify-end">
             <Button type="button" variant="outline" onClick={() => setViewCommentsReport(null)}>
-              Close
+              {t('common.close')}
             </Button>
           </div>
         </div>
@@ -758,13 +762,12 @@ const ReportsPage = () => {
       <Modal
         isOpen={approveReportId !== null}
         onClose={() => (submittingApprove ? undefined : setApproveReportId(null))}
-        title="Approve PCR"
+        title={t('reports.approveTitle')}
         size="sm"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-900 dark:text-gray-100">
-            Are you sure you want to approve this PCR? The submitter will no longer be able to
-            make changes to it.
+            {t('reports.approveBody')}
           </p>
           <div className="flex justify-end gap-2">
             <Button
@@ -773,10 +776,10 @@ const ReportsPage = () => {
               onClick={() => setApproveReportId(null)}
               disabled={submittingApprove}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={handleConfirmApprove} disabled={submittingApprove}>
-              {submittingApprove ? 'Approving...' : 'Approve'}
+              {submittingApprove ? t('reports.approving') : t('reports.approve')}
             </Button>
           </div>
         </div>
@@ -786,17 +789,15 @@ const ReportsPage = () => {
       <Modal
         isOpen={completeReportId !== null}
         onClose={() => (submittingComplete ? undefined : setCompleteReportId(null))}
-        title="Complete PCR"
+        title={t('reports.completeTitle')}
         size="sm"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-900 dark:text-gray-100">
-            Make sure this PCR was downloaded and uploaded onto Microsoft Teams before completing
-            it.
+            {t('reports.completeBody1')}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Once completed, this report will only be viewable as a PDF and will be permanently
-            deleted after 1 week.
+            {t('reports.completeBody2')}
           </p>
           <div className="flex justify-end gap-2">
             <Button
@@ -805,10 +806,10 @@ const ReportsPage = () => {
               onClick={() => setCompleteReportId(null)}
               disabled={submittingComplete}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={handleConfirmComplete} disabled={submittingComplete}>
-              {submittingComplete ? 'Completing...' : 'Complete'}
+              {submittingComplete ? t('reports.completing') : t('reports.complete')}
             </Button>
           </div>
         </div>
@@ -818,13 +819,12 @@ const ReportsPage = () => {
       <Modal
         isOpen={cancelReportId !== null}
         onClose={() => (submittingCancel ? undefined : setCancelReportId(null))}
-        title="Cancel PCR"
+        title={t('reports.cancelTitle')}
         size="md"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-900 dark:text-gray-100">
-            Are you sure this PCR is not needed? Cancelling it will lock it to view-only, and it
-            will be permanently deleted after 1 week.
+            {t('reports.cancelBody')}
           </p>
           <div className="flex justify-end gap-2">
             <Button
@@ -833,7 +833,7 @@ const ReportsPage = () => {
               onClick={() => setCancelReportId(null)}
               disabled={submittingCancel}
             >
-              Back
+              {t('common.back')}
             </Button>
             <Button
               type="button"
@@ -841,7 +841,7 @@ const ReportsPage = () => {
               onClick={handleConfirmCancel}
               disabled={submittingCancel}
             >
-              {submittingCancel ? 'Cancelling...' : 'Cancel PCR'}
+              {submittingCancel ? t('reports.cancelling') : t('reports.cancelTitle')}
             </Button>
           </div>
         </div>

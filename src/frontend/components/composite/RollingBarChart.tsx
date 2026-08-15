@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/utils'
 
 export interface BarDatum {
@@ -19,9 +20,11 @@ const RollingBarChart: React.FC<RollingBarChartProps> = ({
   totalLabel,
   totalCount,
   bars,
-  emptyMessage = 'Select a day on the calendar, or a season and year, to see stats.',
+  emptyMessage,
   className,
 }) => {
+  const { t } = useTranslation()
+  const resolvedEmptyMessage = emptyMessage ?? t('callStats.emptyMessage')
   const signature = useMemo(() => bars.map(b => `${b.label}:${b.value}`).join('|'), [bars])
   const maxValue = useMemo(() => Math.max(1, ...bars.map(b => b.value)), [bars])
   const [widths, setWidths] = useState<number[]>(() => bars.map(() => 0))
@@ -49,7 +52,7 @@ const RollingBarChart: React.FC<RollingBarChartProps> = ({
       </div>
 
       {bars.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{emptyMessage}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{resolvedEmptyMessage}</p>
       ) : (
         <div className="space-y-3">
           {bars.map((bar, i) => (

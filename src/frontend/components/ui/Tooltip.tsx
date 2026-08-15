@@ -128,6 +128,14 @@ const Tooltip: React.FC<TooltipProps> = ({
     </div>
   )
 
+  const handleClick = (e: React.MouseEvent) => {
+    // Clicking a button leaves it focused, which would otherwise keep the
+    // tooltip pinned open (via onFocus) until the user clicks elsewhere.
+    hideTooltip()
+    triggerRef.current?.blur()
+    children.props.onClick?.(e)
+  }
+
   return (
     <>
       {React.cloneElement(children, {
@@ -136,6 +144,7 @@ const Tooltip: React.FC<TooltipProps> = ({
         onMouseLeave: hideTooltip,
         onFocus: showTooltip,
         onBlur: hideTooltip,
+        onClick: handleClick,
         'aria-describedby': visible ? 'tooltip' : undefined,
       })}
       {createPortal(tooltip, document.body)}

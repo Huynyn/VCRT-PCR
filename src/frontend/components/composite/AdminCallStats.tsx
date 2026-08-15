@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Activity,
   Siren,
@@ -24,18 +25,6 @@ interface DigestRow {
   responders: string | null
 }
 
-const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'semesterly', label: 'Semesterly' },
-]
-
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-]
-
 function pad(n: number): string {
   return n.toString().padStart(2, '0')
 }
@@ -51,12 +40,17 @@ function startOfWeek(d: Date): Date {
   return start
 }
 
-function getPeriodRange(period: Period, now: Date): { start: string; end: string; label: string } {
+function getPeriodRange(
+  period: Period,
+  now: Date,
+  locale: string,
+  t: (key: string) => string,
+): { start: string; end: string; label: string } {
   if (period === 'daily') {
     return {
       start: formatDate(now),
       end: formatDate(now),
-      label: now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
+      label: now.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
     }
   }
 
@@ -67,7 +61,7 @@ function getPeriodRange(period: Period, now: Date): { start: string; end: string
     return {
       start: formatDate(start),
       end: formatDate(end),
-      label: `${start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`,
+      label: `${start.toLocaleDateString(locale, { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })}`,
     }
   }
 
@@ -77,7 +71,7 @@ function getPeriodRange(period: Period, now: Date): { start: string; end: string
     return {
       start: formatDate(start),
       end: formatDate(end),
-      label: `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`,
+      label: now.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
     }
   }
 
@@ -89,7 +83,7 @@ function getPeriodRange(period: Period, now: Date): { start: string; end: string
   return {
     start: formatDate(start),
     end: formatDate(end),
-    label: `${isWinter ? 'Winter' : 'Fall'} ${year}`,
+    label: `${isWinter ? t('callStats.winter') : t('callStats.fall')} ${year}`,
   }
 }
 
@@ -199,21 +193,31 @@ const StatTile: React.FC<{
 }
 
 const AdminCallStats: React.FC = () => {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language === 'fr' ? 'fr-CA' : 'en-CA'
+
+  const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
+    { value: 'daily', label: t('callDigest.daily') },
+    { value: 'weekly', label: t('callDigest.weekly') },
+    { value: 'monthly', label: t('callDigest.monthly') },
+    { value: 'semesterly', label: t('callDigest.semesterly') },
+  ]
+
   const [period, setPeriod] = useState<Period>('daily')
   const [rows, setRows] = useState<DigestRow[]>([])
   const [digestLoading, setDigestLoading] = useState(true)
   const [digestError, setDigestError] = useState('')
 
-  const range = useMemo(() => getPeriodRange(period, new Date()), [period])
+  const range = useMemo(() => getPeriodRange(period, new Date(), locale, t), [period, locale, t])
 
   useEffect(() => {
     setDigestLoading(true)
     setDigestError('')
     apiRequest(`/pcr/stats/submitted-range?start=${range.start}&end=${range.end}`)
       .then(res => setRows(res.data || []))
-      .catch(err => setDigestError(err instanceof Error ? err.message : 'Failed to load digest'))
+      .catch(err => setDigestError(err instanceof Error ? err.message : t('callDigest.loadFailed')))
       .finally(() => setDigestLoading(false))
-  }, [range.start, range.end])
+  }, [range.start, range.end, t])
 
   const stats = useMemo(() => {
     const totalCalls = rows.length
@@ -259,7 +263,7 @@ const AdminCallStats: React.FC = () => {
                 <Activity className="w-4 h-4" />
               </span>
               <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Call Digest</h3>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{t('callDigest.title')}</h3>
                 <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{range.label}</p>
               </div>
             </div>
@@ -288,51 +292,51 @@ const AdminCallStats: React.FC = () => {
             <p className="text-sm text-red-600 dark:text-red-400 mb-3">{digestError}</p>
           )}
           {digestLoading ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <StatTile
-                label="Total Calls"
+                label={t('callDigest.totalCalls')}
                 value={stats.totalCalls}
                 periodKey={periodKey}
                 icon={<Phone className="w-4 h-4" />}
               />
               <StatTile
-                label="Required Paramedics"
+                label={t('callDigest.requiredParamedics')}
                 value={stats.paramedicCalls}
                 periodKey={periodKey}
                 icon={<Siren className="w-4 h-4" />}
                 accent="burgundy"
               />
               <StatTile
-                label="Avg Time to Scene"
+                label={t('callDigest.avgTimeToScene')}
                 value={stats.avgTimeToScene}
                 periodKey={periodKey}
                 decimals={1}
-                suffix=" min"
+                suffix={t('callDigest.minSuffix')}
                 icon={<Footprints className="w-4 h-4" />}
               />
               <StatTile
-                label="Avg Time on Scene"
+                label={t('callDigest.avgTimeOnScene')}
                 value={stats.avgTimeOnScene}
                 periodKey={periodKey}
                 decimals={1}
-                suffix=" min"
+                suffix={t('callDigest.minSuffix')}
                 icon={<Clock className="w-4 h-4" />}
               />
               <StatTile
-                label="Top Responder"
+                label={t('callDigest.topResponder')}
                 value={stats.topResponder?.count ?? 0}
                 periodKey={periodKey}
-                sublabel={stats.topResponder?.names.join(', ') ?? 'No data'}
+                sublabel={stats.topResponder?.names.join(', ') ?? t('callDigest.noData')}
                 icon={<User className="w-4 h-4" />}
                 accent="burgundy"
               />
               <StatTile
-                label="Top Supervisor"
+                label={t('callDigest.topSupervisor')}
                 value={stats.topSupervisor?.count ?? 0}
                 periodKey={periodKey}
-                sublabel={stats.topSupervisor?.names.join(', ') ?? 'No data'}
+                sublabel={stats.topSupervisor?.names.join(', ') ?? t('callDigest.noData')}
                 icon={<ShieldCheck className="w-4 h-4" />}
                 accent="burgundy"
               />

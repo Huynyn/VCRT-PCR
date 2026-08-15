@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import QRCode from 'qrcode'
 import { Save, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui'
@@ -6,6 +7,7 @@ import { Input } from '@/components/forms'
 import { apiRequest } from '@/utils/api'
 
 const SupplyFormQrAdmin: React.FC = () => {
+  const { t } = useTranslation()
   const [savedUrl, setSavedUrl] = useState<string | null>(null)
   const [inputValue, setInputValue] = useState('')
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
@@ -21,7 +23,7 @@ const SupplyFormQrAdmin: React.FC = () => {
         setSavedUrl(url)
         setInputValue(url || '')
       })
-      .catch(() => setError('Failed to load current setting'))
+      .catch(() => setError(t('supplyForm.loadFailed')))
       .finally(() => setLoading(false))
   }, [])
 
@@ -48,7 +50,7 @@ const SupplyFormQrAdmin: React.FC = () => {
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save')
+      setError(err instanceof Error ? err.message : t('supplyForm.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -64,17 +66,17 @@ const SupplyFormQrAdmin: React.FC = () => {
             </span>
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Supply Usage Form QR Code
+                {t('supplyForm.adminTitle')}
               </h3>
               <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">
-                Set the Microsoft Form link responders use to report supplies used from the bags
+                {t('supplyForm.adminSubtitle')}
               </p>
             </div>
           </div>
         </div>
         <div className="card-body">
           {loading ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
           ) : (
             <div className="flex flex-col sm:flex-row items-start gap-6">
               <div className="flex-1 w-full space-y-3">
@@ -82,7 +84,7 @@ const SupplyFormQrAdmin: React.FC = () => {
                   <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
                 )}
                 <Input
-                  label="Microsoft Form URL"
+                  label={t('supplyForm.urlLabel')}
                   value={inputValue}
                   onChange={e => setInputValue(e.target.value)}
                   placeholder="https://forms.office.com/..."
@@ -93,13 +95,13 @@ const SupplyFormQrAdmin: React.FC = () => {
                   disabled={saving}
                   leftIcon={<Save className="w-4 h-4" />}
                 >
-                  {saved ? 'Saved!' : 'Save'}
+                  {saved ? t('supplyForm.saved') : saving ? t('common.saving') : t('common.save')}
                 </Button>
               </div>
 
               {qrDataUrl && (
                 <div className="shrink-0 p-3 bg-white rounded-xl border border-gray-200 dark:border-gray-600">
-                  <img src={qrDataUrl} alt="QR code preview" width={160} height={160} />
+                  <img src={qrDataUrl} alt={t('supplyForm.qrPreviewAlt')} width={160} height={160} />
                 </div>
               )}
             </div>

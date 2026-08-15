@@ -147,8 +147,9 @@
     @apply block text-sm font-medium text-gray-500 mb-1 dark:text-gray-400;
   }
 
+  /* VCRT's burgundy brand red, matching .btn-danger, rather than a generic red. */
   .form-error {
-    @apply text-sm text-danger-600 mt-1;
+    @apply text-sm text-burgundy-600 dark:text-burgundy-400 mt-1;
   }
 
   .form-help {

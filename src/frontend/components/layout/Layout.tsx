@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import { cn } from '@/utils'
@@ -17,18 +18,19 @@ interface LayoutProps {
   onToggleTheme?: () => void
 }
 
-const PAGE_TITLES: Array<[string, string]> = [
-  ['/dashboard', 'Dashboard'],
-  ['/pcr/new', 'New PCR'],
-  ['/reports', 'PCR Reports'],
-  ['/pcr', 'PCR Reports'],
-  ['/logs', 'Activity Logs'],
-  ['/admin/users', 'User Management'],
-  ['/profile', 'Profile'],
+const PAGE_TITLE_KEYS: Array<[string, string]> = [
+  ['/dashboard', 'nav.dashboard'],
+  ['/pcr/new', 'nav.newPcr'],
+  ['/reports', 'nav.pcrReports'],
+  ['/pcr', 'nav.pcrReports'],
+  ['/logs', 'nav.activityLogs'],
+  ['/admin/users', 'nav.userManagement'],
+  ['/profile', 'nav.profile'],
 ]
 
-function pageTitleFor(path: string): string {
-  return PAGE_TITLES.find(([prefix]) => path.startsWith(prefix))?.[1] || 'Patient Care Report'
+function pageTitleFor(path: string, t: (key: string) => string): string {
+  const key = PAGE_TITLE_KEYS.find(([prefix]) => path.startsWith(prefix))?.[1]
+  return key ? t(key) : t('header.patientCareReport')
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -40,6 +42,7 @@ const Layout: React.FC<LayoutProps> = ({
   darkMode = false,
   onToggleTheme,
 }) => {
+  const { t } = useTranslation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const toggleSidebar = () => {
@@ -67,7 +70,7 @@ const Layout: React.FC<LayoutProps> = ({
           {/* Header */}
           <Header
             user={user}
-            pageTitle={pageTitleFor(currentPath)}
+            pageTitle={pageTitleFor(currentPath, t)}
             onLogout={onLogout}
             onNavigate={onNavigate}
             onToggleTheme={onToggleTheme}

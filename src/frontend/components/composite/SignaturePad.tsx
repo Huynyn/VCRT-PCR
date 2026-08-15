@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Eraser } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { cn } from '@/utils'
@@ -30,6 +31,7 @@ const recolorInk = (canvas: HTMLCanvasElement, color: string) => {
 }
 
 const SignaturePad: React.FC<SignaturePadProps> = ({ value, onChange, className }) => {
+  const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawingRef = useRef(false)
   const lastPointRef = useRef<{ x: number; y: number } | null>(null)
@@ -153,7 +155,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ value, onChange, className 
       />
       <div className="flex items-center justify-between">
         <span className="text-xs text-gray-400 dark:text-gray-500">
-          {hasStrokes ? 'Signed' : 'Sign above'}
+          {hasStrokes ? t('pcr.signatures.signed') : t('pcr.signatures.signAbove')}
         </span>
         <Button
           type="button"
@@ -162,7 +164,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ value, onChange, className 
           onClick={handleClear}
           leftIcon={<Eraser className="w-3.5 h-3.5" />}
         >
-          Clear
+          {t('pcr.signatures.clear')}
         </Button>
       </div>
     </div>

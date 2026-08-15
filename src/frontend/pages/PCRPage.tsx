@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button, Card, Alert, Modal, Tooltip } from '@/components/ui'
 import {
@@ -58,27 +59,28 @@ function normalizeLegacyResponders(formData: PCRFormData): PCRFormData {
   }
 }
 
-const FIRST_AGENCY_ON_SCENE_OPTIONS = [
-  'Protection Services',
-  'VCRT',
-  'Fire Services',
-  'Paramedics',
-  'Lifeguards',
-]
-
-const PARAMEDICS_CALLED_BY_OPTIONS = [
-  'Protection Services',
-  'VCRT',
-  'Sports Services',
-  'Lifeguards',
-]
-
 const PCRPage: React.FC = () => {
+  const { t } = useTranslation()
+
+  const FIRST_AGENCY_ON_SCENE_OPTIONS = [
+    t('pcr.agencyOptions.protectionServices'),
+    t('pcr.agencyOptions.vcrt'),
+    t('pcr.agencyOptions.fireServices'),
+    t('pcr.agencyOptions.paramedics'),
+    t('pcr.agencyOptions.lifeguards'),
+  ]
+
+  const PARAMEDICS_CALLED_BY_OPTIONS = [
+    t('pcr.agencyOptions.protectionServices'),
+    t('pcr.agencyOptions.vcrt'),
+    t('pcr.agencyOptions.sportsServices'),
+    t('pcr.agencyOptions.lifeguards'),
+  ]
   const {
     data,
     updateField,
     updateFieldSilently,
-    errors,
+    errors: rawErrors,
     isDirty,
     isValid,
     reset,
@@ -86,6 +88,11 @@ const PCRPage: React.FC = () => {
     validateAll,
     loadData,
   } = useForm()
+  // validationSchema (FormContext.tsx) stores i18n keys, not literal text, so
+  // the same schema drives both languages - translate right before display.
+  const errors = Object.fromEntries(
+    Object.entries(rawErrors).map(([field, key]) => [field, t(key)])
+  ) as typeof rawErrors
   const { showNotification } = useNotification()
   const { token, isAuthenticated, user: currentUser } = useAuth()
   const isAdmin = currentUser?.role === 'admin'
@@ -175,14 +182,14 @@ const PCRPage: React.FC = () => {
               const file = base64ToFile(draftData.sign_off_attachment, draftData.sign_off_filename)
               setSignOffPdf(file)
             }
-            showNotification('Draft loaded successfully', 'success')
+            showNotification(t('pcr.notifications.draftLoaded'), 'success')
           } else {
-            showNotification('This report is not a draft and cannot be edited', 'error')
+            showNotification(t('pcr.notifications.notADraft'), 'error')
           }
         } catch (error) {
           if (ignore) return
           console.error('Failed to load draft:', error)
-          showNotification('Failed to load draft', 'error')
+          showNotification(t('pcr.notifications.draftLoadFailed'), 'error')
         } finally {
           if (!ignore) setIsLoadingDraft(false)
         }
@@ -206,14 +213,14 @@ const PCRPage: React.FC = () => {
               const file = base64ToFile(reportData.sign_off_attachment, reportData.sign_off_filename)
               setSignOffPdf(file)
             }
-            showNotification('Report loaded for editing', 'success')
+            showNotification(t('pcr.notifications.reportLoaded'), 'success')
           } else {
-            showNotification('This report cannot be edited', 'error')
+            showNotification(t('pcr.notifications.reportNotEditable'), 'error')
           }
         } catch (error) {
           if (ignore) return
           console.error('Failed to load report:', error)
-          showNotification('Failed to load report', 'error')
+          showNotification(t('pcr.notifications.reportLoadFailed'), 'error')
         } finally {
           if (!ignore) setIsLoadingDraft(false)
         }
@@ -271,13 +278,13 @@ const PCRPage: React.FC = () => {
       // Validate all form fields
       const formErrors = validateAll()
       if (Object.keys(formErrors).length > 0) {
-        const errorMessages = Object.values(formErrors).slice(0, 5)
+        const errorMessages = Object.values(formErrors).slice(0, 5).map(key => t(key))
         const remaining = Object.keys(formErrors).length - 5
         const message =
           remaining > 0
-            ? `${errorMessages.join(', ')} and ${remaining} more`
+            ? `${errorMessages.join(', ')} ${t('pcr.notifications.andMore', { count: remaining })}`
             : errorMessages.join(', ')
-        showNotification(`Please complete required fields: ${message}`, 'error')
+        showNotification(t('pcr.notifications.completeRequiredFields', { message }), 'error')
 
         // Scroll to the first invalid field after React re-renders the errors
         requestAnimationFrame(() => {
@@ -296,7 +303,7 @@ const PCRPage: React.FC = () => {
       const validation = pdfService.validateDataForPDF(data)
       if (!validation.isValid) {
         showNotification(
-          `Please complete required fields: ${validation.errors.join(', ')}`,
+          t('pcr.notifications.completeRequiredFields', { message: validation.errors.join(', ') }),
           'error',
         )
         setIsSubmitting(false)
@@ -351,10 +358,10 @@ const PCRPage: React.FC = () => {
               })
 
               const successMessage = currentReportId
-                ? 'Report updated successfully'
+                ? t('pcr.notifications.reportUpdated')
                 : currentDraftId
-                  ? 'Draft updated and submitted successfully'
-                  : 'PCR form submitted successfully'
+                  ? t('pcr.notifications.draftSubmitted')
+                  : t('pcr.notifications.formSubmitted')
               showNotification(successMessage, 'success')
               reset()
               setSignOffPdf(null)
@@ -366,11 +373,11 @@ const PCRPage: React.FC = () => {
               window.location.hash = '#/pcr/new'
             } catch (submitError) {
               console.error('Submission failed:', submitError)
-              showNotification('Failed to submit PCR form to server', 'error')
+              showNotification(t('pcr.notifications.submitFailed'), 'error')
             }
           } else {
             // User cancelled - don't submit to backend
-            showNotification('Form submission cancelled', 'info')
+            showNotification(t('pcr.notifications.submitCancelled'), 'info')
           }
           setIsSubmitting(false)
         },
@@ -380,8 +387,8 @@ const PCRPage: React.FC = () => {
       console.error('PDF generation failed:', error)
       showNotification(
         signOffPdf
-          ? 'Failed to generate PDF (could not append the sign-off PDF). Try a different PDF or remove it.'
-          : 'Failed to generate PDF report',
+          ? t('pcr.notifications.pdfGenerationFailedWithSignOff')
+          : t('pcr.notifications.pdfGenerationFailed'),
         'error',
       )
       setIsSubmitting(false)
@@ -393,7 +400,7 @@ const PCRPage: React.FC = () => {
       setShowUnsavedChangesModal(true)
     } else {
       reset()
-      showNotification('Form reset successfully', 'success')
+      showNotification(t('pcr.notifications.formReset'), 'success')
     }
   }
 
@@ -402,12 +409,12 @@ const PCRPage: React.FC = () => {
     setSignOffPdf(null)
     setSignOffPdfError('')
     setShowUnsavedChangesModal(false)
-    showNotification('Form reset successfully', 'success')
+    showNotification(t('pcr.notifications.formReset'), 'success')
   }
 
   const handleSaveDraft = async () => {
     if (!isAuthenticated || !token) {
-      showNotification('Please log in to save drafts', 'error')
+      showNotification(t('pcr.notifications.loginToSaveDrafts'), 'error')
       return
     }
 
@@ -448,10 +455,10 @@ const PCRPage: React.FC = () => {
       // re-trigger the "save draft before leaving?" prompt.
       loadData(data)
 
-      showNotification('Draft saved successfully', 'success')
+      showNotification(t('pcr.notifications.draftSaved'), 'success')
     } catch (error) {
       console.error('Save draft failed:', error)
-      showNotification('Failed to save draft', 'error')
+      showNotification(t('pcr.notifications.draftSaveFailed'), 'error')
     } finally {
       setIsSavingDraft(false)
     }
@@ -707,7 +714,7 @@ const PCRPage: React.FC = () => {
     Object.entries(sampleData).forEach(([key, value]) => {
       updateField(key as keyof PCRFormData, value as any)
     })
-    showNotification('Sample data filled for testing', 'info')
+    showNotification(t('pcr.notifications.sampleDataFilled'), 'info')
   }
 
   // Drop-box for sign-off
@@ -724,13 +731,13 @@ const PCRPage: React.FC = () => {
 
     if (!isPdf) {
       setSignOffPdf(null)
-      setSignOffPdfError('Please upload a PDF file.')
+      setSignOffPdfError(t('pcr.attachments.invalidFile'))
       return
     }
 
     if (file.size > maxBytes) {
       setSignOffPdf(null)
-      setSignOffPdfError(`PDF is too large (max ${maxMb} MB).`)
+      setSignOffPdfError(t('pcr.attachments.tooLarge', { maxMb }))
       return
     }
 
@@ -762,12 +769,12 @@ const PCRPage: React.FC = () => {
   // the list can be any length), while the supervisor keeps its own named slot.
   type SignerRef = { kind: 'supervisor' } | { kind: 'responder'; index: number }
   const signers: Array<{ ref: SignerRef; reactKey: string; label: string; name: string }> = [
-    { ref: { kind: 'supervisor' }, reactKey: 'supervisor', label: 'Supervisor', name: data.supervisor || '' },
+    { ref: { kind: 'supervisor' }, reactKey: 'supervisor', label: t('pcr.signatures.supervisor'), name: data.supervisor || '' },
     ...(data.responders || [])
       .map((name, index) => ({
         ref: { kind: 'responder' as const, index },
         reactKey: `responder-${index}`,
-        label: `Responder ${index + 1}`,
+        label: t('pcr.basicInfo.responder', { index: index + 1 }),
         name,
       }))
       .filter(s => s.name.trim()),
@@ -798,47 +805,47 @@ const PCRPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {currentReportId && loadedStatus === 'changes_requested' && !isAdmin
-              ? 'Edit & Resubmit Patient Care Report'
+              ? t('pcr.titleEditResubmit')
               : currentReportId &&
                   (loadedStatus === 'submitted' || loadedStatus === 'approved') &&
                   isAdmin
-                ? 'Edit Submitted Patient Care Report (Admin)'
+                ? t('pcr.titleEditSubmittedAdmin')
                 : currentDraftId
-                  ? 'Edit Patient Care Report Draft'
-                  : 'Patient Care Report'}
+                  ? t('pcr.titleEditDraft')
+                  : t('pcr.titleNew')}
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {isLoadingDraft
-              ? 'Loading...'
+              ? t('common.loading')
               : currentReportId && loadedStatus === 'changes_requested' && !isAdmin
-                ? 'The admin requested changes - address the comments below, then resubmit'
+                ? t('pcr.subtitleChangesRequested')
                 : currentReportId &&
                     (loadedStatus === 'submitted' || loadedStatus === 'approved') &&
                     isAdmin
-                  ? 'Editing submitted report as admin - changes will update the existing report'
+                  ? t('pcr.subtitleEditingSubmittedAdmin')
                   : currentDraftId
-                    ? 'Editing existing draft - complete and submit when ready'
-                    : 'Complete fields to submit the report'}
+                    ? t('pcr.subtitleEditingDraft')
+                    : t('pcr.subtitleNew')}
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
           {/* Test button for development */}
           <Button type="button" variant="outline" size="sm" onClick={fillSampleData}>
-            Fill Sample Data
+            {t('pcr.fillSampleData')}
           </Button>
 
           {!isDirty && isValid && (
             <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
               <CheckCircle className="w-4 h-4" />
-              <span className="text-sm">All changes saved</span>
+              <span className="text-sm">{t('pcr.allChangesSaved')}</span>
             </div>
           )}
         </div>
       </div>
 
       {adminComments && (
-        <Alert type="warning" title="Changes requested by admin" message={adminComments} />
+        <Alert type="warning" title={t('pcr.changesRequestedByAdmin')} message={adminComments} />
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8" noValidate>
@@ -847,21 +854,21 @@ const PCRPage: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="text-gray-900 dark:text-gray-100">Loading draft...</span>
+                <span className="text-gray-900 dark:text-gray-100">{t('pcr.loadingDraft')}</span>
               </div>
             </div>
           </div>
         )}
         {/* Basic Information */}
         <FormSection
-          title="Basic Information"
+          title={t('pcr.basicInfo.title')}
           number={sectionNumber('basicInformation')}
-          subtitle="Essential call details and response information"
+          subtitle={t('pcr.basicInfo.subtitle')}
           required
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <DatePicker
-              label="Date"
+              label={t('pcr.basicInfo.date')}
               value={data.date ?? ''} // don’t show fallback directly here
               onChange={(v: any) => {
                 const next = typeof v === 'string' ? v : (v?.target?.value ?? '')
@@ -872,44 +879,44 @@ const PCRPage: React.FC = () => {
             />
 
             <Input
-              label="Report Number"
+              label={t('pcr.basicInfo.reportNumber')}
               value={data.reportNumber || ''}
               onChange={e => updateField('reportNumber', e.target.value)}
               error={errors.reportNumber}
-              placeholder="Report #"
+              placeholder={t('pcr.basicInfo.reportNumberPlaceholder')}
               required
             />
 
             <Input
-              label="Call Number"
+              label={t('pcr.basicInfo.callNumber')}
               value={data.callNumber || ''}
               onChange={e => updateField('callNumber', e.target.value)}
               error={errors.callNumber}
-              placeholder="Call #"
+              placeholder={t('pcr.basicInfo.callNumberPlaceholder')}
               required
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Input
-              label="Location"
+              label={t('pcr.basicInfo.location')}
               value={data.location || ''}
               onChange={e => updateField('location', e.target.value)}
               error={errors.location}
-              placeholder="Incident location"
+              placeholder={t('pcr.basicInfo.locationPlaceholder')}
               required
             />
 
             <Input
-              label="Supervisor"
+              label={t('pcr.basicInfo.supervisor')}
               value={data.supervisor || ''}
               onChange={e => updateField('supervisor', e.target.value)}
               error={errors.supervisor}
-              placeholder="Select self or type..."
+              placeholder={t('pcr.basicInfo.supervisorPlaceholder')}
               required
               rightIcon={
                 currentUser && (
-                  <Tooltip content="Use my name">
+                  <Tooltip content={t('pcr.basicInfo.useMyName')}>
                     <button
                       type="button"
                       onClick={() =>
@@ -925,11 +932,11 @@ const PCRPage: React.FC = () => {
             />
 
             <SearchableSelect
-              label="Primary PSM"
+              label={t('pcr.basicInfo.primaryPsm')}
               value={data.primaryPSM || ''}
               onChange={value => updateField('primaryPSM', value)}
               options={psmOptions}
-              placeholder="Search or type..."
+              placeholder={t('pcr.searchOrType')}
             />
           </div>
 
@@ -938,17 +945,17 @@ const PCRPage: React.FC = () => {
             {responderList.map((name, index) => (
               <SearchableSelect
                 key={index}
-                label={`Responder ${index + 1}`}
+                label={t('pcr.basicInfo.responder', { index: index + 1 })}
                 value={name}
                 onChange={value => updateResponderAt(index, value)}
                 options={responderOptions}
-                placeholder="Search or type..."
+                placeholder={t('pcr.searchOrType')}
                 rightIcon={
                   <button
                     type="button"
                     onClick={() => removeResponderAt(index)}
                     className="p-1 rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-burgundy-500 transition-colors"
-                    aria-label={`Remove responder ${index + 1}`}
+                    aria-label={t('pcr.basicInfo.removeResponder', { index: index + 1 })}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -963,14 +970,14 @@ const PCRPage: React.FC = () => {
                 onClick={addResponder}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
-                Add Responder
+                {t('pcr.basicInfo.addResponder')}
               </Button>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <TimePicker
-              label="Time Notified"
+              label={t('pcr.basicInfo.timeNotified')}
               value={data.timeNotified || ''}
               onChange={e => updateField('timeNotified', e.target.value)}
               error={errors.timeNotified}
@@ -978,7 +985,7 @@ const PCRPage: React.FC = () => {
             />
 
             <TimePicker
-              label="On Scene"
+              label={t('pcr.basicInfo.onScene')}
               value={data.onScene || ''}
               onChange={e => updateField('onScene', e.target.value)}
               error={errors.onScene}
@@ -986,13 +993,13 @@ const PCRPage: React.FC = () => {
             />
 
             <TimePicker
-              label="Transport Arrived"
+              label={t('pcr.basicInfo.transportArrived')}
               value={data.transportArrived || ''}
               onChange={e => updateField('transportArrived', e.target.value)}
             />
 
             <TimePicker
-              label="Cleared Scene"
+              label={t('pcr.basicInfo.clearedScene')}
               value={data.clearedScene || ''}
               onChange={e => updateField('clearedScene', e.target.value)}
               error={errors.clearedScene}
@@ -1003,29 +1010,29 @@ const PCRPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <SearchableSelect
-                label="Paramedics Called by"
+                label={t('pcr.basicInfo.paramedicsCalledBy')}
                 value={data.paramedicsCalledBy || ''}
                 onChange={value => updateField('paramedicsCalledBy', value)}
                 options={PARAMEDICS_CALLED_BY_OPTIONS}
-                placeholder="Search or type..."
+                placeholder={t('pcr.searchOrType')}
               />
               <p className="form-help">
-                For Bystander, add their name if known
+                {t('pcr.basicInfo.paramedicsCalledByHelp')}
               </p>
             </div>
 
             <div>
               <SearchableSelect
-                label="First Agency on Scene"
+                label={t('pcr.basicInfo.firstAgencyOnScene')}
                 value={data.firstAgencyOnScene || ''}
                 onChange={value => updateField('firstAgencyOnScene', value)}
                 options={FIRST_AGENCY_ON_SCENE_OPTIONS}
                 error={errors.firstAgencyOnScene}
-                placeholder="Search or type..."
+                placeholder={t('pcr.searchOrType')}
                 required
               />
               <p className="form-help">
-                If Protection Services were on scene upon arrival, enter that
+                {t('pcr.basicInfo.firstAgencyOnSceneHelp')}
               </p>
             </div>
           </div>
@@ -1033,37 +1040,37 @@ const PCRPage: React.FC = () => {
 
         {/* Patient Information */}
         <FormSection
-          title="Patient Information"
+          title={t('pcr.patientInfo.title')}
           number={sectionNumber('patientInformation')}
-          subtitle="Patient information and contact details (DNO or UTO if not obtained)"
+          subtitle={t('pcr.patientInfo.subtitle')}
           required
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Input
-              label="Patient Name"
+              label={t('pcr.patientInfo.patientName')}
               value={data.patientName || ''}
               onChange={e => updateField('patientName', e.target.value)}
               error={errors.patientName}
-              placeholder="Full name"
+              placeholder={t('pcr.patientInfo.patientNamePlaceholder')}
               required
             />
 
             <DatePicker
-              label="Date of Birth"
+              label={t('pcr.patientInfo.dob')}
               value={data.dob || ''}
               onChange={e => handleDOBChange(e.target.value)}
             />
 
             <Input
-              label="Age"
+              label={t('pcr.patientInfo.age')}
               type="number"
               min="0"
               max="150"
               value={data.age || ''}
               onChange={e => handleAgeChange(e.target.value)}
               error={errors.age}
-              placeholder="Age in years"
-              helpText="Filled automatically if Date of Birth entered"
+              placeholder={t('pcr.patientInfo.agePlaceholder')}
+              helpText={t('pcr.patientInfo.ageHelp')}
               required
             />
           </div>
@@ -1075,13 +1082,13 @@ const PCRPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <RadioGroup
               name="sex"
-              label="Sex"
+              label={t('pcr.patientInfo.sex')}
               options={[
-                { value: 'Male', label: 'Male' },
-                { value: 'Female', label: 'Female' },
-                { value: 'Different from gender', label: 'Different from gender' },
-                { value: 'Does not want to disclose', label: 'Does not want to disclose' },
-                { value: 'Other', label: 'Other' },
+                { value: 'Male', label: t('pcr.patientInfo.sexMale') },
+                { value: 'Female', label: t('pcr.patientInfo.sexFemale') },
+                { value: 'Different from gender', label: t('pcr.patientInfo.sexDifferent') },
+                { value: 'Does not want to disclose', label: t('pcr.patientInfo.sexUndisclosed') },
+                { value: 'Other', label: t('pcr.patientInfo.sexOther') },
               ]}
               value={data.sex}
               onChange={value => updateField('sex', value)}
@@ -1089,10 +1096,10 @@ const PCRPage: React.FC = () => {
 
             {data.sex === 'Other' && (
               <Input
-                label="Other Sex (specify)"
+                label={t('pcr.patientInfo.otherSexSpecify')}
                 value={data.otherSex || ''}
                 onChange={e => updateField('otherSex', e.target.value)}
-                placeholder="Please specify"
+                placeholder={t('pcr.patientInfo.pleaseSpecify')}
               />
             )}
           </div>
@@ -1100,11 +1107,11 @@ const PCRPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <RadioGroup
               name="status"
-              label="Status"
+              label={t('pcr.patientInfo.status')}
               options={[
-                { value: 'Student', label: 'Student' },
-                { value: 'Employee', label: 'Employee' },
-                { value: 'Visitor/Other', label: 'Visitor/Other' },
+                { value: 'Student', label: t('pcr.patientInfo.statusStudent') },
+                { value: 'Employee', label: t('pcr.patientInfo.statusEmployee') },
+                { value: 'Visitor/Other', label: t('pcr.patientInfo.statusVisitorOther') },
               ]}
               value={data.status}
               onChange={value => updateField('status', value)}
@@ -1112,20 +1119,20 @@ const PCRPage: React.FC = () => {
 
             {data.status === 'Visitor/Other' && (
               <Input
-                label="Visitor/Other (specify)"
+                label={t('pcr.patientInfo.visitorOtherSpecify')}
                 value={data.visitorText || ''}
                 onChange={e => updateField('visitorText', e.target.value)}
-                placeholder="Please specify"
+                placeholder={t('pcr.patientInfo.pleaseSpecify')}
                 requireUnknown
               />
             )}
 
             {(data.status === 'Student' || data.status === 'Employee') && (
               <Input
-                label="Student/Employee Number"
+                label={t('pcr.patientInfo.studentEmployeeNumber')}
                 value={data.studentEmployeeNumber || ''}
                 onChange={e => updateField('studentEmployeeNumber', e.target.value)}
-                placeholder="ID number"
+                placeholder={t('pcr.patientInfo.idNumber')}
                 requireUnknown
               />
             )}
@@ -1134,10 +1141,10 @@ const PCRPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <RadioGroup
               name="workplaceInjury"
-              label="Workplace Injury?"
+              label={t('pcr.patientInfo.workplaceInjury')}
               options={[
-                { value: 'Yes', label: 'Yes' },
-                { value: 'No', label: 'No' },
+                { value: 'Yes', label: t('common.yes') },
+                { value: 'No', label: t('common.no') },
               ]}
               orientation="horizontal"
               value={data.workplaceInjury}
@@ -1147,15 +1154,15 @@ const PCRPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Emergency Contact Name (and Relationship)"
+              label={t('pcr.patientInfo.emergencyContactName')}
               value={data.emergencyContactName || ''}
               onChange={e => updateField('emergencyContactName', e.target.value)}
-              placeholder="Contact person name and relationship"
+              placeholder={t('pcr.patientInfo.emergencyContactNamePlaceholder')}
               requireUnknown
             />
 
             <Input
-              label="Emergency Contact Phone"
+              label={t('pcr.patientInfo.emergencyContactPhone')}
               type="tel"
               value={data.emergencyContactPhone || ''}
               onChange={e => updateField('emergencyContactPhone', e.target.value)}
@@ -1167,10 +1174,10 @@ const PCRPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <RadioGroup
               name="contacted"
-              label="Contacted?"
+              label={t('pcr.patientInfo.contacted')}
               options={[
-                { value: 'Yes', label: 'Yes' },
-                { value: 'No', label: 'No' },
+                { value: 'Yes', label: t('common.yes') },
+                { value: 'No', label: t('common.no') },
               ]}
               orientation="horizontal"
               value={data.contacted}
@@ -1179,10 +1186,10 @@ const PCRPage: React.FC = () => {
 
             {data.contacted === 'Yes' && (
               <Input
-                label="Contacted by"
+                label={t('pcr.patientInfo.contactedBy')}
                 value={data.contactedBy || ''}
                 onChange={e => updateField('contactedBy', e.target.value)}
-                placeholder="Who called?"
+                placeholder={t('pcr.patientInfo.contactedByPlaceholder')}
                 requireUnknown
               />
             )}
@@ -1191,25 +1198,25 @@ const PCRPage: React.FC = () => {
 
         {/* Medical History */}
         <FormSection
-          title="Patient Medical History"
+          title={t('pcr.medicalHistory.title')}
           number={sectionNumber('patientMedicalHistory')}
-          subtitle="Medical background and assessment findings (DNO or UTO if not obtained)"
+          subtitle={t('pcr.medicalHistory.subtitle')}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Textarea
-              label="Chief Complaint"
+              label={t('pcr.medicalHistory.chiefComplaint')}
               value={data.chiefComplaint || ''}
               onChange={e => updateField('chiefComplaint', e.target.value)}
-              placeholder="Primary reason for call as reported by dispatch"
+              placeholder={t('pcr.medicalHistory.chiefComplaintPlaceholder')}
               rows={3}
               requireUnknown
             />
 
             <Textarea
-              label="Signs and Symptoms"
+              label={t('pcr.medicalHistory.signsSymptoms')}
               value={data.signsSymptoms || ''}
               onChange={e => updateField('signsSymptoms', e.target.value)}
-              placeholder="Observable signs and reported symptoms..."
+              placeholder={t('pcr.medicalHistory.signsSymptomsPlaceholder')}
               rows={3}
               requireUnknown
             />
@@ -1217,19 +1224,19 @@ const PCRPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Textarea
-              label="Allergies"
+              label={t('pcr.medicalHistory.allergies')}
               value={data.allergies || ''}
               onChange={e => updateField('allergies', e.target.value)}
-              placeholder="Known allergies (food, medicine...), sensitivities, and reactions..."
+              placeholder={t('pcr.medicalHistory.allergiesPlaceholder')}
               rows={2}
               requireUnknown
             />
 
             <Textarea
-              label="Medications"
+              label={t('pcr.medicalHistory.medications')}
               value={data.medications || ''}
               onChange={e => updateField('medications', e.target.value)}
-              placeholder="Current medications (name, dose, reason, taken as prescribed)..."
+              placeholder={t('pcr.medicalHistory.medicationsPlaceholder')}
               rows={2}
               requireUnknown
             />
@@ -1237,29 +1244,29 @@ const PCRPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Textarea
-              label="Pertinent Medical History"
+              label={t('pcr.medicalHistory.medicalHistory')}
               value={data.medicalHistory || ''}
               onChange={e => updateField('medicalHistory', e.target.value)}
-              placeholder="Relevant medical history and conditions..."
+              placeholder={t('pcr.medicalHistory.medicalHistoryPlaceholder')}
               rows={2}
               requireUnknown
             />
 
             <Textarea
-              label="Last Oral Intake"
+              label={t('pcr.medicalHistory.lastMeal')}
               value={data.lastMeal || ''}
               onChange={e => updateField('lastMeal', e.target.value)}
-              placeholder="When and what was last consumed (food, drink...), and whether it sat well..."
+              placeholder={t('pcr.medicalHistory.lastMealPlaceholder')}
               rows={2}
               requireUnknown
             />
           </div>
 
           <Textarea
-            label="Rapid Body Survey Findings"
+            label={t('pcr.medicalHistory.bodySurvey')}
             value={data.bodySurvey || ''}
             onChange={e => updateField('bodySurvey', e.target.value)}
-            placeholder="Physical examination findings..."
+            placeholder={t('pcr.medicalHistory.bodySurveyPlaceholder')}
             rows={3}
             requireUnknown
           />
@@ -1267,21 +1274,21 @@ const PCRPage: React.FC = () => {
 
         {/* Treatment Performed */}
         <FormSection
-          title="Treatment Performed"
+          title={t('pcr.treatment.title')}
           number={sectionNumber('treatmentPerformed')}
-          subtitle="Lifesaving interventions and care provided to the patient"
+          subtitle={t('pcr.treatment.subtitle')}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <CheckboxGroup
                 name="airwayManagement"
-                label="Airway Management"
+                label={t('pcr.treatment.airwayManagement')}
                 options={[
-                  { value: 'Suctioning', label: 'Suctioning' },
-                  { value: 'Positioning', label: 'Positioning' },
-                  { value: 'OPA', label: 'OPA' },
-                  { value: 'BVM', label: 'BVM' },
-                  { value: 'Pocket Mask', label: 'Pocket Mask' },
+                  { value: 'Suctioning', label: t('pcr.treatment.suctioning') },
+                  { value: 'Positioning', label: t('pcr.treatment.positioning') },
+                  { value: 'OPA', label: t('pcr.treatment.opaOption') },
+                  { value: 'BVM', label: t('pcr.treatment.bvmOption') },
+                  { value: 'Pocket Mask', label: t('pcr.treatment.pocketMask') },
                 ]}
                 value={Array.isArray(data.airwayManagement) ? data.airwayManagement : []}
                 onChange={value => updateField('airwayManagement', value)}
@@ -1289,11 +1296,11 @@ const PCRPage: React.FC = () => {
 
               <CheckboxGroup
                 name="hemorrhageControl"
-                label="Hemorrhage Control"
+                label={t('pcr.treatment.hemorrhageControl')}
                 options={[
-                  { value: 'Direct Pressure', label: 'Direct Pressure' },
-                  { value: 'Dressing', label: 'Dressing' },
-                  { value: 'Tourniquet', label: 'Tourniquet' },
+                  { value: 'Direct Pressure', label: t('pcr.treatment.directPressure') },
+                  { value: 'Dressing', label: t('pcr.treatment.dressing') },
+                  { value: 'Tourniquet', label: t('pcr.treatment.tourniquet') },
                 ]}
                 value={Array.isArray(data.hemorrhageControl) ? data.hemorrhageControl : []}
                 onChange={value => {
@@ -1307,11 +1314,11 @@ const PCRPage: React.FC = () => {
 
               <CheckboxGroup
                 name="immobilization"
-                label="Immobilization"
+                label={t('pcr.treatment.immobilization')}
                 options={[
-                  { value: 'C-Collar', label: 'C-Collar' },
-                  { value: 'Splints', label: 'Splints' },
-                  { value: 'C-spine Manually Held', label: 'C-spine Manually Held' },
+                  { value: 'C-Collar', label: t('pcr.treatment.cCollar') },
+                  { value: 'Splints', label: t('pcr.treatment.splints') },
+                  { value: 'C-spine Manually Held', label: t('pcr.treatment.cSpineManuallyHeld') },
                 ]}
                 value={Array.isArray(data.immobilization) ? data.immobilization : []}
                 onChange={value => updateField('immobilization', value)}
@@ -1339,7 +1346,7 @@ const PCRPage: React.FC = () => {
                     htmlFor="cprAedPerformed"
                     className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
                   >
-                    CPR/AED
+                    {t('pcr.treatment.cprAed')}
                   </label>
                 </div>
 
@@ -1362,7 +1369,7 @@ const PCRPage: React.FC = () => {
                         htmlFor="cprPerformed"
                         className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                       >
-                        CPR
+                        {t('pcr.treatment.cpr')}
                       </label>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1382,7 +1389,7 @@ const PCRPage: React.FC = () => {
                         htmlFor="aedPerformed"
                         className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                       >
-                        AED
+                        {t('pcr.treatment.aed')}
                       </label>
                     </div>
                   </div>
@@ -1393,15 +1400,15 @@ const PCRPage: React.FC = () => {
             <div className="space-y-4">
               {data.cprPerformed && (
                 <div className="border rounded-lg p-4 space-y-3">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">CPR</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{t('pcr.treatment.cpr')}</h4>
                   <div className="grid grid-cols-2 gap-3">
                     <TimePicker
-                      label="Time Started"
+                      label={t('pcr.treatment.timeStarted')}
                       value={data.timeStarted || ''}
                       onChange={e => updateField('timeStarted', e.target.value)}
                     />
                     <Input
-                      label="Number of Cycles"
+                      label={t('pcr.treatment.numberOfCycles')}
                       type="number"
                       value={data.numberOfCycles || ''}
                       onChange={e => updateField('numberOfCycles', e.target.value)}
@@ -1413,17 +1420,17 @@ const PCRPage: React.FC = () => {
 
               {data.aedPerformed && (
                 <div className="border rounded-lg p-4 space-y-3">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">AED</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{t('pcr.treatment.aed')}</h4>
                   <div className="grid grid-cols-2 gap-3">
                     <Input
-                      label="Shocks (#)"
+                      label={t('pcr.treatment.shocksNumber')}
                       type="number"
                       value={data.numberOfShocks || ''}
                       onChange={e => updateField('numberOfShocks', e.target.value)}
                       placeholder="0"
                     />
                     <Input
-                      label="Shock Not Advised (#)"
+                      label={t('pcr.treatment.shockNotAdvisedNumber')}
                       type="number"
                       value={data.shockNotAdvised || ''}
                       onChange={e => updateField('shockNotAdvised', e.target.value)}
@@ -1435,15 +1442,15 @@ const PCRPage: React.FC = () => {
 
               {hasTourniquet && (
                 <div className="border rounded-lg p-4 space-y-3">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Tourniquet</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{t('pcr.treatment.tourniquet')}</h4>
                   <div className="grid grid-cols-2 gap-3">
                     <TimePicker
-                      label="Time Applied"
+                      label={t('pcr.treatment.timeApplied')}
                       value={data.timeApplied || ''}
                       onChange={e => updateField('timeApplied', e.target.value)}
                     />
                     <Input
-                      label="Number of Turns"
+                      label={t('pcr.treatment.numberOfTurns')}
                       type="number"
                       value={data.numberOfTurns || ''}
                       onChange={e => updateField('numberOfTurns', e.target.value)}
@@ -1456,22 +1463,22 @@ const PCRPage: React.FC = () => {
           </div>
 
           <Input
-            label="Position of Patient"
+            label={t('pcr.treatment.positionOfPatient')}
             value={data.positionOfPatient || ''}
             onChange={e => updateField('positionOfPatient', e.target.value)}
             error={errors.positionOfPatient}
-            placeholder="e.g. Seated, Supine, Prone, Semi-Prone..."
+            placeholder={t('pcr.treatment.positionOfPatientPlaceholder')}
             required
           />
         </FormSection>
 
         {/* OPQRST Assessment */}
-        <FormSection title="OPQRST Assessment" number={sectionNumber('opqrstAssessment')} subtitle="Add a section for each reported pain/injury location (DNO or UTO if not obtained)">
+        <FormSection title={t('pcr.opqrst.title')} number={sectionNumber('opqrstAssessment')} subtitle={t('pcr.opqrst.subtitle')}>
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {opqrstEntries.length === 0
-                ? 'No OPQRST sections added yet.'
-                : `${opqrstEntries.length} section${opqrstEntries.length === 1 ? '' : 's'} added.`}
+                ? t('pcr.opqrst.noneAdded')
+                : t('pcr.opqrst.sectionsAdded', { count: opqrstEntries.length })}
             </p>
             {opqrstEntries.length < 4 && (
               <Button
@@ -1481,7 +1488,7 @@ const PCRPage: React.FC = () => {
                 onClick={addOpqrstEntry}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
-                Add OPQRST
+                {t('pcr.opqrst.add')}
               </Button>
             )}
           </div>
@@ -1500,7 +1507,7 @@ const PCRPage: React.FC = () => {
                         {index + 1}
                       </span>
                       <h4 className="font-medium text-gray-700 dark:text-gray-300">
-                        OPQRST #{index + 1}
+                        {t('pcr.opqrst.entryTitle', { index: index + 1 })}
                       </h4>
                     </div>
                     <Button
@@ -1516,59 +1523,59 @@ const PCRPage: React.FC = () => {
                 </Card.Header>
                 <Card.Body>
                   <Input
-                    label="Area / Location"
+                    label={t('pcr.opqrst.area')}
                     value={entry.area || ''}
                     onChange={e => updateOpqrstEntry(entry.id, 'area', e.target.value)}
-                    placeholder="e.g. Left knee, Chest, Lower back"
+                    placeholder={t('pcr.opqrst.areaPlaceholder')}
                     className="mb-4"
                   />
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <Input
-                      label="Onset"
+                      label={t('pcr.opqrst.onset')}
                       value={entry.onset || ''}
                       onChange={e => updateOpqrstEntry(entry.id, 'onset', e.target.value)}
-                      placeholder="Acute/chronic"
+                      placeholder={t('pcr.opqrst.onsetPlaceholder')}
                     />
 
                     <Input
-                      label="Provocation"
+                      label={t('pcr.opqrst.provocation')}
                       value={entry.provocation || ''}
                       onChange={e => updateOpqrstEntry(entry.id, 'provocation', e.target.value)}
-                      placeholder="What makes it better/worse?"
+                      placeholder={t('pcr.opqrst.provocationPlaceholder')}
                     />
 
                     <Input
-                      label="Quality"
+                      label={t('pcr.opqrst.quality')}
                       value={entry.quality || ''}
                       onChange={e => updateOpqrstEntry(entry.id, 'quality', e.target.value)}
-                      placeholder="How does it feel?"
+                      placeholder={t('pcr.opqrst.qualityPlaceholder')}
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                     <Input
-                      label="Radiation"
+                      label={t('pcr.opqrst.radiation')}
                       value={entry.radiation || ''}
                       onChange={e => updateOpqrstEntry(entry.id, 'radiation', e.target.value)}
-                      placeholder="Where does it radiate?"
+                      placeholder={t('pcr.opqrst.radiationPlaceholder')}
                     />
 
                     <Input
-                      label="Scale (1-10)"
+                      label={t('pcr.opqrst.scale')}
                       type="number"
                       min="1"
                       max="10"
                       value={entry.scale || ''}
                       onChange={e => updateOpqrstEntry(entry.id, 'scale', e.target.value)}
-                      placeholder="Pain scale"
+                      placeholder={t('pcr.opqrst.scalePlaceholder')}
                     />
 
                     <Input
-                      label="Time"
+                      label={t('pcr.opqrst.time')}
                       value={entry.time || ''}
                       onChange={e => updateOpqrstEntry(entry.id, 'time', e.target.value)}
-                      placeholder="What time did it occur?"
+                      placeholder={t('pcr.opqrst.timePlaceholder')}
                     />
                   </div>
                 </Card.Body>
@@ -1578,7 +1585,7 @@ const PCRPage: React.FC = () => {
 
           {/* Injury Location - a subsection of OPQRST Assessment */}
           {opqrstEntries.length > 0 && (
-            <FormSection title="Injury Location" subtitle="">
+            <FormSection title={t('pcr.opqrst.injuryLocation')} subtitle="">
               <InjuryLocationMap
                 value={data.injuryMarkers}
                 onChange={value => updateField('injuryMarkers', value)}
@@ -1589,12 +1596,12 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         {/* Vital Signs Table 1 */}
-        <FormSection title="Vital Signs" number={sectionNumber('vitalSigns')} subtitle="Patient vital signs measurements (DNO or UTO if not obtained)">
+        <FormSection title={t('pcr.vitalSigns.title')} number={sectionNumber('vitalSigns')} subtitle={t('pcr.vitalSigns.subtitle')}>
           <VitalSignsTable data={data.vitalSigns || []} onChange={handleVitalSignsChange} />
         </FormSection>
 
         {/* Oxygen Protocol */}
-        <FormSection title="Oxygen Protocol" number={sectionNumber('oxygenProtocol')} subtitle="Oxygen therapy administration details">
+        <FormSection title={t('pcr.oxygenProtocol.title')} number={sectionNumber('oxygenProtocol')} subtitle={t('pcr.oxygenProtocol.subtitle')}>
           <OxygenProtocolForm
             data={data.oxygenProtocol || {}}
             onChange={oxygenProtocolData => updateField('oxygenProtocol', oxygenProtocolData)}
@@ -1604,30 +1611,30 @@ const PCRPage: React.FC = () => {
 
         {/* Additional Information */}
         <FormSection
-          title="Additional Information"
+          title={t('pcr.additionalInfo.title')}
           number={sectionNumber('additionalInformation')}
-          subtitle="Call details and patient transfer information"
+          subtitle={t('pcr.additionalInfo.subtitle')}
           required
         >
           <div className="space-y-4">
             <Textarea
-              label="Call Description"
+              label={t('pcr.additionalInfo.callDescription')}
               value={data.comments || ''}
               onChange={e => updateField('comments', e.target.value)}
               error={errors.comments}
-              placeholder="Detailed description of the call... (patient condition, interventions, any other relevant information)"
-              helpText="Refer to the Sample PCR and Medical Glossary sections on the Dashboard page"
+              placeholder={t('pcr.additionalInfo.callDescriptionPlaceholder')}
+              helpText={t('pcr.additionalInfo.callDescriptionHelp')}
               rows={4}
               required
             />
 
             <Textarea
-              label="Transfer of Care"
+              label={t('pcr.additionalInfo.transferOfCare')}
               value={data.transferComments || ''}
               onChange={e => updateField('transferComments', e.target.value)}
               error={errors.transferComments}
-              placeholder="Details about patient transfer... (advice given, who was care transfered to, patient's plans)"
-              helpText="Remember to include all responders' full names again"
+              placeholder={t('pcr.additionalInfo.transferOfCarePlaceholder')}
+              helpText={t('pcr.additionalInfo.transferOfCareHelp')}
               rows={3}
               required
             />
@@ -1637,13 +1644,13 @@ const PCRPage: React.FC = () => {
             <div className="space-y-4">
               <RadioGroup
                 name="patientCareTransferred"
-                label="Patient Care Transferred"
+                label={t('pcr.additionalInfo.patientCareTransferred')}
                 options={[
-                  { value: 'Paramedics', label: 'Paramedics' },
-                  { value: 'Police', label: 'Police' },
-                  { value: 'Self', label: 'Self' },
-                  { value: 'Family/Friend', label: 'Family/Friend' },
-                  { value: 'Clinic', label: 'Clinic' },
+                  { value: 'Paramedics', label: t('pcr.additionalInfo.paramedics') },
+                  { value: 'Police', label: t('pcr.additionalInfo.police') },
+                  { value: 'Self', label: t('pcr.additionalInfo.self') },
+                  { value: 'Family/Friend', label: t('pcr.additionalInfo.familyFriend') },
+                  { value: 'Clinic', label: t('pcr.additionalInfo.clinic') },
                 ]}
                 value={data.patientCareTransferred}
                 onChange={value => updateField('patientCareTransferred', value)}
@@ -1654,17 +1661,17 @@ const PCRPage: React.FC = () => {
               {data.patientCareTransferred === 'Paramedics' && (
                 <>
                   <Input
-                    label="Unit Number"
+                    label={t('pcr.additionalInfo.unitNumber')}
                     value={data.unitNumber || ''}
                     onChange={e => updateField('unitNumber', e.target.value)}
-                    placeholder="Paramedic unit number"
+                    placeholder={t('pcr.additionalInfo.unitNumberPlaceholder')}
                     requireUnknown
                   />
                   <Input
-                    label="Hospital Destination"
+                    label={t('pcr.additionalInfo.hospitalDestination')}
                     value={data.hospitalDestination || ''}
                     onChange={e => updateField('hospitalDestination', e.target.value)}
-                    placeholder="e.g., The Ottawa Hospital - Civic"
+                    placeholder={t('pcr.additionalInfo.hospitalDestinationPlaceholder')}
                     requireUnknown
                   />
                 </>
@@ -1672,27 +1679,27 @@ const PCRPage: React.FC = () => {
 
               {data.patientCareTransferred === 'Police' && (
                 <Input
-                  label="Badge Number"
+                  label={t('pcr.additionalInfo.badgeNumber')}
                   value={data.badgeNumber || ''}
                   onChange={e => updateField('badgeNumber', e.target.value)}
-                  placeholder="Police badge number"
+                  placeholder={t('pcr.additionalInfo.badgeNumberPlaceholder')}
                   requireUnknown
                 />
               )}
 
               {data.patientCareTransferred === 'Clinic' && (
                 <Input
-                  label="Clinic Name"
+                  label={t('pcr.additionalInfo.clinicName')}
                   value={data.clinicName || ''}
                   onChange={e => updateField('clinicName', e.target.value)}
-                  placeholder="Clinic name"
+                  placeholder={t('pcr.additionalInfo.clinicNamePlaceholder')}
                   requireUnknown
                 />
               )}
             </div>
 
             <TimePicker
-              label="Time Care Transferred"
+              label={t('pcr.additionalInfo.timeCareTransferred')}
               value={data.timeCareTransferred || ''}
               onChange={e => updateField('timeCareTransferred', e.target.value)}
               error={errors.timeCareTransferred}
@@ -1702,9 +1709,9 @@ const PCRPage: React.FC = () => {
         </FormSection>
 
         <FormSection
-          title="Additional Attachments"
+          title={t('pcr.attachments.title')}
           number={sectionNumber('additionalAttachments')}
-          subtitle="Upload patient sign-off or other information (as a PDF) to append to the report"
+          subtitle={t('pcr.attachments.subtitle')}
         >
           <div
             className={cn(
@@ -1722,7 +1729,7 @@ const PCRPage: React.FC = () => {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Drag & drop a PDF here, or browse.
+                  {t('pcr.attachments.dragDrop')}
                 </div>
               </div>
 
@@ -1734,7 +1741,7 @@ const PCRPage: React.FC = () => {
                   onChange={e => validateAndSetSignOff(e.target.files?.[0] ?? null)}
                 />
                 <span className="text-sm font-medium text-blue-600 hover:text-blue-800">
-                  Browse
+                  {t('pcr.attachments.browse')}
                 </span>
               </label>
             </div>
@@ -1749,7 +1756,7 @@ const PCRPage: React.FC = () => {
                   onClick={() => validateAndSetSignOff(null)}
                   className="text-sm text-red-600 hover:text-red-800 font-medium"
                 >
-                  Remove
+                  {t('pcr.attachments.remove')}
                 </button>
               </div>
             )}
@@ -1760,16 +1767,16 @@ const PCRPage: React.FC = () => {
 
         {/* Add Signatures */}
         <FormSection
-          title="Add Signatures"
+          title={t('pcr.signatures.title')}
           number={sectionNumber('addSignatures')}
-          subtitle="Supervisor first, then each responder present on this call; these are printed at the bottom of the PDF"
+          subtitle={t('pcr.signatures.subtitle')}
         >
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={goPrevSigner}
               disabled={activeSignerIndex === 0}
-              aria-label="Previous signer"
+              aria-label={t('pcr.signatures.previousSigner')}
               className="p-2 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -1796,7 +1803,7 @@ const PCRPage: React.FC = () => {
               type="button"
               onClick={goNextSigner}
               disabled={activeSignerIndex === signers.length - 1}
-              aria-label="Next signer"
+              aria-label={t('pcr.signatures.nextSigner')}
               className="p-2 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors shrink-0"
             >
               <ChevronRight className="w-5 h-5" />
@@ -1813,7 +1820,7 @@ const PCRPage: React.FC = () => {
               onClick={handleReset}
               leftIcon={<RotateCcw className="w-4 h-4" />}
             >
-              Reset Form
+              {t('pcr.actions.resetForm')}
             </Button>
           </div>
 
@@ -1826,7 +1833,7 @@ const PCRPage: React.FC = () => {
               disabled={isSavingDraft}
               leftIcon={<Save className="w-4 h-4" />}
             >
-              {isSavingDraft ? 'Saving...' : 'Save Draft'}
+              {isSavingDraft ? t('common.saving') : t('common.save')}
             </Button>
 
             <Button
@@ -1836,7 +1843,7 @@ const PCRPage: React.FC = () => {
               leftIcon={<Send className="w-4 h-4" />}
               className="border-2 border-primary-700"
             >
-              {isSubmitting ? 'Submitting...' : 'Submit PCR'}
+              {isSubmitting ? t('pcr.actions.submitting') : t('pcr.actions.submit')}
             </Button>
           </div>
         </div>
@@ -1846,27 +1853,27 @@ const PCRPage: React.FC = () => {
       <Modal
         isOpen={showUnsavedChangesModal}
         onClose={() => setShowUnsavedChangesModal(false)}
-        title="Unsaved Changes"
+        title={t('pcr.modals.unsavedChangesTitle')}
       >
         <div className="space-y-4">
           <div className="flex items-start space-x-3">
             <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-gray-900 dark:text-gray-100">
-                You have unsaved changes that will be lost if you reset the form.
+                {t('pcr.modals.unsavedChangesBody')}
               </p>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                Are you sure you want to continue?
+                {t('pcr.modals.unsavedChangesConfirm')}
               </p>
             </div>
           </div>
 
           <div className="flex space-x-3 pt-4">
             <Button variant="outline" onClick={() => setShowUnsavedChangesModal(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button variant="danger" onClick={confirmReset}>
-              Reset Form
+              {t('pcr.actions.resetForm')}
             </Button>
           </div>
         </div>
@@ -1876,7 +1883,7 @@ const PCRPage: React.FC = () => {
       <Modal
         isOpen={showCloseSaveModal}
         onClose={() => resolveCloseSaveModal(false)}
-        title={closeReason === 'app-close' ? 'Save Draft Before Closing?' : 'Save Draft Before Leaving?'}
+        title={closeReason === 'app-close' ? t('pcr.modals.closeTitle') : t('pcr.modals.leaveTitle')}
       >
         <div className="space-y-4">
           <div className="flex items-start space-x-3">
@@ -1884,21 +1891,21 @@ const PCRPage: React.FC = () => {
             <div>
               <p className="text-gray-900 dark:text-gray-100">
                 {closeReason === 'app-close'
-                  ? 'You have unsaved changes on this PCR. Closing the app will also log you out.'
-                  : 'You have unsaved changes on this PCR.'}
+                  ? t('pcr.modals.closeBodyAppClose')
+                  : t('pcr.modals.closeBodyNavigate')}
               </p>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                Save this as a draft first so you can pick up where you left off?
+                {t('pcr.modals.closeBodyPrompt')}
               </p>
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-4">
             <Button variant="danger" onClick={() => resolveCloseSaveModal(true)} disabled={isSavingDraft}>
-              {closeReason === 'app-close' ? 'Discard & Close' : 'Discard & Leave'}
+              {closeReason === 'app-close' ? t('pcr.modals.discardAndClose') : t('pcr.modals.discardAndLeave')}
             </Button>
             <Button onClick={handleSaveDraftAndClose} loading={isSavingDraft} disabled={isSavingDraft}>
-              {closeReason === 'app-close' ? 'Save Draft & Close' : 'Save Draft & Leave'}
+              {closeReason === 'app-close' ? t('pcr.modals.saveDraftAndClose') : t('pcr.modals.saveDraftAndLeave')}
             </Button>
           </div>
         </div>

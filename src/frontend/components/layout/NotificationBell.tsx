@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bell, FileEdit, AlertTriangle, ClipboardCheck } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
 import { apiRequest } from '@/utils/api'
@@ -17,16 +18,17 @@ interface PCRNotification {
   report_number?: string | null
 }
 
-const STATUS_META: Record<string, { label: string; icon: typeof FileEdit }> = {
-  draft: { label: 'Draft in progress', icon: FileEdit },
-  changes_requested: { label: 'Changes requested', icon: AlertTriangle },
-  submitted: { label: 'Awaiting approval', icon: ClipboardCheck },
+const STATUS_ICONS: Record<string, typeof FileEdit> = {
+  draft: FileEdit,
+  changes_requested: AlertTriangle,
+  submitted: ClipboardCheck,
 }
 
 // Refetch on an interval so the badge doesn't go stale during a long session.
 const REFRESH_INTERVAL_MS = 60 * 1000
 
 const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate }) => {
+  const { t, i18n } = useTranslation()
   const isAdmin = user?.role === 'admin'
   const [items, setItems] = useState<PCRNotification[]>([])
   const [open, setOpen] = useState(false)
@@ -47,8 +49,11 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
         const relevant = isAdmin
           ? reports
           : reports.filter((r) => r.status === 'draft' || r.status === 'changes_requested')
+        const sorted = [...relevant].sort(
+          (a, b) => parseServerDate(b.updated_at).getTime() - parseServerDate(a.updated_at).getTime()
+        )
 
-        setItems(relevant)
+        setItems(sorted)
       } catch {
         // Notifications are a convenience, not critical - fail silently and
         // just leave the previous (or empty) list in place.
@@ -82,17 +87,18 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
 
   const count = items.length
   const badgeText = count > 9 ? '9+' : String(count)
-  const panelTitle = isAdmin ? 'Reports awaiting approval' : 'Reports needing attention'
+  const panelTitle = isAdmin ? t('notificationBell.panelTitleAdmin') : t('notificationBell.panelTitleUser')
+  const visibleItems = items.slice(0, 3)
 
   return (
     <div className="relative" ref={containerRef}>
-      <Tooltip content="Notifications">
+      <Tooltip content={t('notificationBell.notifications')}>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setOpen((v) => !v)}
           className="relative text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
-          aria-label={`Notifications${count > 0 ? ` (${count} unread)` : ''}`}
+          aria-label={`${t('notificationBell.notifications')}${count > 0 ? ` (${t('notificationBell.unreadCount', { count })})` : ''}`}
         >
           <Bell className="w-4 h-4" />
           {count > 0 && (
@@ -111,14 +117,14 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
 
           {items.length === 0 ? (
             <p className="px-4 py-6 text-sm text-center text-gray-500 dark:text-gray-400">
-              You're all caught up.
+              {t('notificationBell.allCaughtUp')}
             </p>
           ) : (
             <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-              {items.map((item) => {
-                const meta = STATUS_META[item.status] ?? { label: item.status, icon: Bell }
-                const Icon = meta.icon
-                const title = item.report_number || 'No Report ID'
+              {visibleItems.map((item) => {
+                const Icon = STATUS_ICONS[item.status] ?? Bell
+                const statusLabel = t(`notificationBell.status.${item.status}`, item.status)
+                const title = item.report_number || t('notificationBell.noReportId')
 
                 return (
                   <li key={item.id}>
@@ -136,7 +142,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
                           {title}
                         </span>
                         <span className="block text-xs text-gray-500 dark:text-gray-400">
-                          {meta.label} · {parseServerDate(item.updated_at).toLocaleDateString()}
+                          {statusLabel} · {parseServerDate(item.updated_at).toLocaleDateString(i18n.language === 'fr' ? 'fr-CA' : 'en-CA')}
                         </span>
                       </span>
                     </button>
@@ -152,7 +158,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
               onClick={handleItemClick}
               className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
             >
-              View all reports
+              {t('notificationBell.viewAllReports')}
             </button>
           </div>
         </div>

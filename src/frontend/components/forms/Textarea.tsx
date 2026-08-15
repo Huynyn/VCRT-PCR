@@ -1,4 +1,5 @@
 import React, { forwardRef, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Minimize2 } from 'lucide-react'
 import { cn } from '@/utils'
 
@@ -24,6 +25,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
   onInput,
   ...props
 }, ref) => {
+  const { t } = useTranslation()
   const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`
   const innerRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -51,7 +53,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
 
   const handleInvalid: React.FormEventHandler<HTMLTextAreaElement> = (e) => {
     if (requireUnknown) {
-      e.currentTarget.setCustomValidity('Please fill in (use DNO or UTO if unknown)')
+      e.currentTarget.setCustomValidity(t('common.fillRequiredDnoUto'))
     }
     if (onInvalid) onInvalid(e)
   }
@@ -97,8 +99,8 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
           <button
             type="button"
             onClick={handleResetSize}
-            title="Reset size"
-            aria-label="Reset size"
+            title={t('common.resetSize')}
+            aria-label={t('common.resetSize')}
             tabIndex={-1}
             className="absolute top-1.5 right-1.5 p-1 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:text-gray-500 dark:hover:text-primary-400 dark:hover:bg-primary-900/30 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
           >

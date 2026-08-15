@@ -1,8 +1,10 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { LogOut, Moon, Sun, Menu } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
 import { cn } from '@/utils'
 import NotificationBell from './NotificationBell'
+import LanguageToggle from './LanguageToggle'
 
 interface HeaderProps {
   user?: {
@@ -29,6 +31,8 @@ const Header: React.FC<HeaderProps> = ({
   darkMode = false,
   sidebarOpen = true,
 }) => {
+  const { t } = useTranslation()
+
   return (
     <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4">
       <div className="h-full flex items-center justify-between">
@@ -51,20 +55,22 @@ const Header: React.FC<HeaderProps> = ({
           />
 
           <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {pageTitle || 'Patient Care Report'}
+            {pageTitle || t('header.patientCareReport')}
           </h1>
         </div>
 
         {/* Right side */}
         <div className="flex items-center gap-3">
+          <LanguageToggle />
+
           {/* Theme toggle */}
-          <Tooltip content={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+          <Tooltip content={darkMode ? t('header.switchToLight') : t('header.switchToDark')}>
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggleTheme}
               className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
-              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={darkMode ? t('header.switchToLight') : t('header.switchToDark')}
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
@@ -75,13 +81,13 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Logout */}
           {user && (
-            <Tooltip content="Logout">
+            <Tooltip content={t('header.logout')}>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onLogout}
                 className="text-gray-500 hover:text-burgundy-600 dark:text-gray-400 dark:hover:text-burgundy-400"
-                aria-label="Logout"
+                aria-label={t('header.logout')}
               >
                 <LogOut className="w-4 h-4" />
               </Button>

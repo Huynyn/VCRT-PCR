@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { FileText, Users, History, Settings, Home, Printer, Plus, Search } from 'lucide-react'
 import { cn } from '@/utils'
 
@@ -71,12 +72,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   user,
 }) => {
+  const { t } = useTranslation()
   const isAdmin = user?.role === 'admin'
 
   const navigationItems: SidebarItem[] = [
     {
       id: 'dashboard',
-      label: 'Dashboard',
+      label: t('nav.dashboard'),
       icon: <Home className="w-5 h-5" />,
       href: '/dashboard',
       isActive: currentPath === '/dashboard',
@@ -88,7 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       : [
           {
             id: 'new-pcr',
-            label: 'New PCR',
+            label: t('nav.newPcr'),
             icon: <Plus className="w-5 h-5" />,
             href: '/pcr/new',
             isActive: currentPath === '/pcr/new',
@@ -96,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         ]),
     {
       id: 'pcr-list',
-      label: 'PCR Reports',
+      label: t('nav.pcrReports'),
       icon: <FileText className="w-5 h-5" />,
       href: '/reports',
       isActive: currentPath === '/reports',
@@ -106,14 +108,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   const adminItems: SidebarItem[] = [
     {
       id: 'logs',
-      label: 'Activity Logs',
+      label: t('nav.activityLogs'),
       icon: <History className="w-5 h-5" />,
       href: '/logs',
       isActive: currentPath === '/logs',
     },
     {
       id: 'users',
-      label: 'User Management',
+      label: t('nav.userManagement'),
       icon: <Users className="w-5 h-5" />,
       href: '/admin/users',
       isActive: currentPath === '/admin/users',
@@ -143,7 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
+          'fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
@@ -152,21 +154,21 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-700">
             <img
               src="./images/vcrt_logo.png"
-              alt="PCR logo"
+              alt={t('common.logoAlt')}
               className="h-8 md:h-9 w-auto object-contain rounded-md"
             />
             <div className="ml-3 leading-tight">
               <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
                 VCRT <span className="font-medium">|</span> ÉBIC
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Patient Care Report</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('header.patientCareReport')}</p>
             </div>
           </div>
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-5 overflow-y-auto">
             <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-wider uppercase text-gray-400 dark:text-gray-500">
-              Workflow
+              {t('nav.workflow')}
             </p>
             <div className="space-y-0.5">
               {navigationItems.map(item => (
@@ -176,7 +178,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {isAdmin && (
               <>
                 <p className="mt-5 mb-1.5 px-3 text-[11px] font-semibold tracking-wider uppercase text-gray-400 dark:text-gray-500">
-                  Admin
+                  {t('nav.admin')}
                 </p>
                 <div className="space-y-0.5">
                   {adminItems.map(item => (
@@ -206,13 +208,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                         : 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300',
                     )}
                   >
-                    {user.role}
+                    {t(`common.role.${user.role}`, user.role)}
                   </span>
                 </div>
               </div>
             )}
             <p className="mt-2 px-1 text-xs text-gray-400 dark:text-gray-500">
-              PCR v2.11 · 2026
+              {t('login.brandAcronym')} v2.11 · 2026
             </p>
           </div>
         </div>

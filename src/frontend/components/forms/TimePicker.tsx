@@ -1,4 +1,5 @@
 import React, { forwardRef, useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Clock } from 'lucide-react'
 import { cn, formatTime, validateTime } from '@/utils'
 
@@ -20,6 +21,7 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
   value,
   ...props
 }, ref) => {
+  const { t } = useTranslation()
   const [displayValue, setDisplayValue] = useState(value || '')
   const [inputError, setInputError] = useState('')
   const inputId = props.id || `time-${Math.random().toString(36).substr(2, 9)}`
@@ -36,7 +38,7 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
     setInputError('')
 
     if (newValue && !validateTime(newValue)) {
-      setInputError('Please enter a valid time (HH:MM)')
+      setInputError(t('common.invalidTime'))
       return
     }
 
@@ -121,7 +123,7 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
           type="button"
           onClick={setCurrentTime}
           tabIndex={-1}
-          aria-label="Set current time"
+          aria-label={t('common.setCurrentTime')}
           className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50 focus:text-primary-600 dark:hover:text-primary-400 dark:hover:bg-primary-900/30 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
         >
           <Clock className="w-4 h-4" />

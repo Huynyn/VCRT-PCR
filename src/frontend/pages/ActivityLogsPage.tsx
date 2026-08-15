@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { History, Filter, User, Activity, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Select, DatePicker } from '@/components/forms'
@@ -18,6 +19,7 @@ interface LogFilters {
 }
 
 const ActivityLogsPage = () => {
+  const { t, i18n } = useTranslation()
   const { token, isAuthenticated, user: currentUser } = useAuth()
   const { showNotification } = useNotification()
   const [logs, setLogs] = useState<ActivityLog[]>([])
@@ -36,16 +38,17 @@ const ActivityLogsPage = () => {
   const [showCleanModal, setShowCleanModal] = useState(false)
   const [cleaning, setCleaning] = useState(false)
   const [usernameOptions, setUsernameOptions] = useState<{ value: string; label: string }[]>([
-    { value: '', label: 'All Users' },
+    { value: '', label: t('activityLogs.allUsers') },
   ])
 
   useEffect(() => {
     if (currentUser?.role !== 'admin') {
-      setError('Access denied. Admin privileges required.')
+      setError(t('activityLogs.accessDeniedMessage'))
       setLoading(false)
       return
     }
     fetchLogs()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, filters])
 
   useEffect(() => {
@@ -64,14 +67,14 @@ const ActivityLogsPage = () => {
           .sort((a: any, b: any) => a.label.localeCompare(b.label))
 
         setUsernameOptions([
-          { value: '', label: 'All Users' },
+          { value: '', label: t('activityLogs.allUsers') },
           ...options,
         ])
       } catch {
         // Fallback: build from whatever logs are currently loaded
         const unique = Array.from(new Set((logs ?? []).map((l) => l.username).filter(Boolean))).sort()
         setUsernameOptions([
-          { value: '', label: 'All Users' },
+          { value: '', label: t('activityLogs.allUsers') },
           ...unique.map((u) => ({ value: u, label: `@${u}` })),
         ])
       }
@@ -86,7 +89,7 @@ const ActivityLogsPage = () => {
       setLoading(true)
 
       if (!isAuthenticated || !token) {
-        setError('Please log in to view activity logs')
+        setError(t('activityLogs.loginToView'))
         setLoading(false)
         return
       }
@@ -105,7 +108,7 @@ const ActivityLogsPage = () => {
       setTotalPages(data.totalPages || 1)
       setTotalCount(data.totalCount || 0)
     } catch (err) {
-      setError('Failed to load activity logs')
+      setError(t('activityLogs.loadFailed'))
       console.error('Error fetching logs:', err)
     } finally {
       setLoading(false)
@@ -119,14 +122,14 @@ const ActivityLogsPage = () => {
       const deletedCount = res.data?.deletedCount ?? 0
       showNotification(
         deletedCount > 0
-          ? `Deleted ${deletedCount} log${deletedCount === 1 ? '' : 's'} older than 1 week`
-          : 'No logs older than 1 week to delete',
+          ? t('activityLogs.deletedLogs', { count: deletedCount })
+          : t('activityLogs.noLogsToDelete'),
         'success'
       )
       setShowCleanModal(false)
       fetchLogs()
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : 'Failed to clean up logs', 'error')
+      showNotification(err instanceof Error ? err.message : t('activityLogs.cleanupFailed'), 'error')
     } finally {
       setCleaning(false)
     }
@@ -152,7 +155,7 @@ const ActivityLogsPage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return parseServerDate(dateString).toLocaleDateString('en-CA', {
+    return parseServerDate(dateString).toLocaleDateString(i18n.language === 'fr' ? 'fr-CA' : 'en-CA', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -191,7 +194,8 @@ const ActivityLogsPage = () => {
 
   const formatAction = (action: string) => {
     const titled = action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-    return titled.replace(/\bPcr\b/g, 'PCR').replace(/\bPsm\b/g, 'PSM')
+    const fallback = titled.replace(/\bPcr\b/g, 'PCR').replace(/\bPsm\b/g, 'PSM')
+    return t(`activityLogs.actions.${action}`, fallback)
   }
 
   const formatUserName = (log: ActivityLog) => {
@@ -201,7 +205,7 @@ const ActivityLogsPage = () => {
     if (log.username) {
       return `@${log.username}`
     }
-    return 'Unknown User'
+    return t('activityLogs.unknownUser')
   }
 
   const parseDetails = (details: string | undefined) => {
@@ -218,9 +222,9 @@ const ActivityLogsPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center py-16">
           <History className="mx-auto h-12 w-12 text-gray-400" />
-          <h2 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">Access Denied</h2>
+          <h2 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">{t('activityLogs.accessDenied')}</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            You need admin privileges to access activity logs.
+            {t('activityLogs.accessDeniedBody')}
           </p>
         </div>
       </div>
@@ -231,9 +235,9 @@ const ActivityLogsPage = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Activity Logs</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('activityLogs.title')}</h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Monitor system activity and user actions
+            {t('activityLogs.subtitle')}
           </p>
         </div>
         <Loading />
@@ -246,13 +250,13 @@ const ActivityLogsPage = () => {
       <div className="mb-8">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Activity Logs</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('activityLogs.title')}</h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Monitor system activity and user actions across the platform
+              {t('activityLogs.subtitleFull')}
             </p>
             {totalCount > 0 && (
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Showing {logs.length} of {totalCount} activities
+                {t('activityLogs.showingCount', { shown: logs.length, total: totalCount })}
               </p>
             )}
           </div>
@@ -262,7 +266,7 @@ const ActivityLogsPage = () => {
               onClick={() => setShowCleanModal(true)}
               variant="secondary"
             >
-              Clean
+              {t('activityLogs.clean')}
             </Button>
           </div>
         </div>
@@ -277,55 +281,55 @@ const ActivityLogsPage = () => {
         <div className="card-body">
           <div className="flex items-center gap-2 mb-4">
             <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Filters</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('activityLogs.filters')}</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.1fr_1.1fr_0.6fr] gap-4">
             <Select
-              label="Action"
+              label={t('activityLogs.actionLabel')}
               value={filters.action}
               onChange={(e) => handleFilterChange('action', e.target.value)}
               options={[
-                { value: '', label: 'All Actions' },
-                { value: 'login', label: 'Login' },
-                { value: 'logout', label: 'Logout' },
-                { value: 'create_user', label: 'Create User' },
-                { value: 'update_user', label: 'Update User' },
-                { value: 'delete_user', label: 'Delete User' },
-                { value: 'change_password', label: 'Change Password' },
-                { value: 'create_responder', label: 'Create Responder' },
-                { value: 'update_responder', label: 'Update Responder' },
-                { value: 'delete_responder', label: 'Delete Responder' },
-                { value: 'create_psm_member', label: 'Create PSM Member' },
-                { value: 'update_psm_member', label: 'Update PSM Member' },
-                { value: 'delete_psm_member', label: 'Delete PSM Member' },
-                { value: 'create_pcr', label: 'Create PCR' },
-                { value: 'update_pcr', label: 'Update PCR' },
-                { value: 'submit_pcr', label: 'Submit PCR' },
-                { value: 'delete_pcr', label: 'Delete PCR' },
-                { value: 'approve_pcr', label: 'Approve PCR' },
-                { value: 'update_setting', label: 'Update Setting' },
-                { value: 'manual_cleanup', label: 'Manual Cleanup' },
-                { value: 'cleanup_pcr_reports', label: 'Automatic Cleanup' },
-                { value: 'cleanup_activity_logs', label: 'Clean Activity Logs' },
+                { value: '', label: t('activityLogs.allActions') },
+                { value: 'login', label: t('activityLogs.actions.login') },
+                { value: 'logout', label: t('activityLogs.actions.logout') },
+                { value: 'create_user', label: t('activityLogs.actions.create_user') },
+                { value: 'update_user', label: t('activityLogs.actions.update_user') },
+                { value: 'delete_user', label: t('activityLogs.actions.delete_user') },
+                { value: 'change_password', label: t('activityLogs.actions.change_password') },
+                { value: 'create_responder', label: t('activityLogs.actions.create_responder') },
+                { value: 'update_responder', label: t('activityLogs.actions.update_responder') },
+                { value: 'delete_responder', label: t('activityLogs.actions.delete_responder') },
+                { value: 'create_psm_member', label: t('activityLogs.actions.create_psm_member') },
+                { value: 'update_psm_member', label: t('activityLogs.actions.update_psm_member') },
+                { value: 'delete_psm_member', label: t('activityLogs.actions.delete_psm_member') },
+                { value: 'create_pcr', label: t('activityLogs.actions.create_pcr') },
+                { value: 'update_pcr', label: t('activityLogs.actions.update_pcr') },
+                { value: 'submit_pcr', label: t('activityLogs.actions.submit_pcr') },
+                { value: 'delete_pcr', label: t('activityLogs.actions.delete_pcr') },
+                { value: 'approve_pcr', label: t('activityLogs.actions.approve_pcr') },
+                { value: 'update_setting', label: t('activityLogs.actions.update_setting') },
+                { value: 'manual_cleanup', label: t('activityLogs.actions.manual_cleanup') },
+                { value: 'cleanup_pcr_reports', label: t('activityLogs.actions.cleanup_pcr_reports') },
+                { value: 'cleanup_activity_logs', label: t('activityLogs.actions.cleanup_activity_logs') },
               ]}
             />
 
             <Select
-              label="Username"
+              label={t('activityLogs.usernameLabel')}
               value={filters.username}
               onChange={(e) => handleFilterChange('username', e.target.value)}
               options={usernameOptions}
             />
 
             <DatePicker
-              label="Date From"
+              label={t('activityLogs.dateFrom')}
               value={filters.dateFrom}
               onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
             />
 
             <DatePicker
-              label="Date To"
+              label={t('activityLogs.dateTo')}
               value={filters.dateTo}
               onChange={(e) => handleFilterChange('dateTo', e.target.value)}
             />
@@ -337,7 +341,7 @@ const ActivityLogsPage = () => {
                 onClick={clearFilters}
                 className="w-full"
               >
-                Clear
+                {t('activityLogs.clear')}
               </Button>
             </div>
           </div>
@@ -350,11 +354,11 @@ const ActivityLogsPage = () => {
           {logs.length === 0 ? (
             <div className="text-center py-8">
               <Activity className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No activity logs found</h3>
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{t('activityLogs.noLogsFound')}</h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {Object.values(filters).some(v => v) ?
-                  'Try adjusting your filters to see more results.' :
-                  'System activity will appear here as users interact with the platform.'
+                  t('activityLogs.tryAdjustingFilters') :
+                  t('activityLogs.activityWillAppear')
                 }
               </p>
             </div>
@@ -365,13 +369,13 @@ const ActivityLogsPage = () => {
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[180px]">
-                        Timestamp
+                        {t('activityLogs.columnTimestamp')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[200px]">
-                        User
+                        {t('activityLogs.columnUser')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[140px]">
-                        Action
+                        {t('activityLogs.columnAction')}
                       </th>
                     </tr>
                   </thead>
@@ -394,7 +398,7 @@ const ActivityLogsPage = () => {
                                 {formatUserName(log)}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {log.username ? `@${log.username}` : `ID: ${log.user_id}`}
+                                {log.username ? `@${log.username}` : t('activityLogs.idPrefix', { id: log.user_id })}
                               </div>
                             </div>
                           </div>
@@ -415,7 +419,7 @@ const ActivityLogsPage = () => {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 mt-4">
                   <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Page <span className="font-medium">{filters.page}</span> of{' '}
+                    {t('activityLogs.page')} <span className="font-medium">{filters.page}</span> {t('activityLogs.of')}{' '}
                     <span className="font-medium">{totalPages}</span>
                   </p>
                   <div className="flex items-center gap-1">
@@ -423,7 +427,7 @@ const ActivityLogsPage = () => {
                       type="button"
                       onClick={() => handlePageChange(filters.page - 1)}
                       disabled={filters.page <= 1}
-                      aria-label="Previous page"
+                      aria-label={t('activityLogs.previousPage')}
                       className="p-1.5 rounded-md text-primary-600 hover:bg-primary-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/30"
                     >
                       <ChevronLeft className="w-5 h-5" />
@@ -432,7 +436,7 @@ const ActivityLogsPage = () => {
                       type="button"
                       onClick={() => handlePageChange(filters.page + 1)}
                       disabled={filters.page >= totalPages}
-                      aria-label="Next page"
+                      aria-label={t('activityLogs.nextPage')}
                       className="p-1.5 rounded-md text-primary-600 hover:bg-primary-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-primary-400 dark:hover:bg-primary-900/30"
                     >
                       <ChevronRight className="w-5 h-5" />
@@ -448,20 +452,19 @@ const ActivityLogsPage = () => {
       <Modal
         isOpen={showCleanModal}
         onClose={() => setShowCleanModal(false)}
-        title="Clean Up Activity Logs"
+        title={t('activityLogs.cleanupModalTitle')}
         size="sm"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-700 dark:text-gray-300">
-            This will permanently delete all activity logs older than 1 week. This cannot be undone.
-            Are you sure you want to continue?
+            {t('activityLogs.cleanupModalBody')}
           </p>
           <div className="flex justify-end space-x-3 pt-4 border-t">
             <Button variant="secondary" onClick={() => setShowCleanModal(false)} disabled={cleaning}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button variant="danger" onClick={handleCleanLogs} loading={cleaning} disabled={cleaning}>
-              Delete Old Logs
+              {t('activityLogs.deleteOldLogs')}
             </Button>
           </div>
         </div>

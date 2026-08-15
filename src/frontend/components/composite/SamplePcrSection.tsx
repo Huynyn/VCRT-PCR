@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Edit, FileText } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
@@ -8,6 +9,7 @@ import { Textarea } from '@/components/forms'
 const DEFAULT_SAMPLE_PCR = `VCRT (all responders full names) recieved a call at [24:00 time] for a patient (PT) [chief complaint protection told you over the phone] at [reported location]. VCRT arrived on scene [specify location if different from reported location] at [24:00 time] to find PT (full name) [PT position] [scene description; ex. with/without Protection and/or sports services on scene). VCRT approached PT and obtained consent to begin treatment. [any info reported by bystanders/Protection]. VCRT (responder name) conducted primary assessment and RBS [any findings requiring intervention or not; ex. RBS found ..., SMR was ruled out + reason]. VCRT (responder name) began taking 1st set of vitals while VCRT (responder name) obtained SAMPLE [and OPQRST if pain reported]. First set of vitals [normal/out of range, obtained/not obtained + reason or any interventions]. PT reported [events prior/background & situation details/complaints]. VCRT (responder name) [describe any treatment done and PT's response to any treatment] [describe any additional info or details PT reports and any advice given to PT]. VCRT (responder name) obtained second set of vitals [in/out, etc.] [any further care / details, any UTOs / DNOs reasoning...].`
 
 const SamplePcrSection: React.FC = () => {
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
@@ -57,7 +59,7 @@ const SamplePcrSection: React.FC = () => {
       setText(draft)
       setShowEditModal(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save')
+      setError(err instanceof Error ? err.message : t('samplePcr.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -73,7 +75,7 @@ const SamplePcrSection: React.FC = () => {
                 <FileText className="w-4 h-4" />
               </span>
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Sample PCR
+                {t('samplePcr.title')}
               </h3>
             </div>
             <div className="flex items-center gap-2">
@@ -82,7 +84,7 @@ const SamplePcrSection: React.FC = () => {
                 onClick={handleCopy}
                 className="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300"
               >
-                {copied ? 'Copied' : 'Copy'}
+                {copied ? t('common.copied') : t('common.copy')}
               </button>
               {isAdmin && (
                 <button
@@ -91,7 +93,7 @@ const SamplePcrSection: React.FC = () => {
                   className="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300 inline-flex items-center gap-1"
                 >
                   <Edit className="w-3 h-3" />
-                  Edit
+                  {t('common.edit')}
                 </button>
               )}
             </div>
@@ -100,19 +102,27 @@ const SamplePcrSection: React.FC = () => {
 
         <div className="card-body">
           {loading ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
           ) : (
             <pre className="font-mono text-sm leading-relaxed whitespace-pre-wrap text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900/40 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
               {text}
             </pre>
           )}
         </div>
+
+        {i18n.language === 'fr' && (
+          <div className="card-footer">
+            <p className="text-xs italic text-gray-400 dark:text-gray-500">
+              {t('common.contentNotTranslatedNote')}
+            </p>
+          </div>
+        )}
       </div>
 
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        title="Edit Sample PCR"
+        title={t('samplePcr.editTitle')}
         size="lg"
       >
         <div className="space-y-4">
@@ -122,10 +132,10 @@ const SamplePcrSection: React.FC = () => {
           <Textarea value={draft} onChange={e => setDraft(e.target.value)} rows={14} />
           <div className="flex justify-end space-x-3 pt-4 border-t">
             <Button variant="secondary" onClick={() => setShowEditModal(false)} disabled={saving}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleSave} loading={saving} disabled={saving}>
-              Save
+              {saving ? t('common.saving') : t('common.save')}
             </Button>
           </div>
         </div>

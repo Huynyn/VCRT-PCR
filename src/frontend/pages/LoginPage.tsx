@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Lock, Moon, Sun, X, XCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, Tooltip } from '@/components/ui'
 import { Input } from '@/components/forms'
 import { useAuth } from '@/context'
 import { cn } from '@/utils'
+import LanguageToggle from '@/components/layout/LanguageToggle'
 
 const LoginPage: React.FC = () => {
+  const { t } = useTranslation()
   const { login, isLoading, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
@@ -49,7 +52,7 @@ const LoginPage: React.FC = () => {
     setLockoutMessage('')
 
     if (!formData.username || !formData.password) {
-      setError('Please enter both username and password')
+      setError(t('login.enterBoth'))
       return
     }
 
@@ -64,11 +67,11 @@ const LoginPage: React.FC = () => {
       if (status === 429) {
         // Account temporarily locked - the backend's message already
         // includes how long, so surface it as-is rather than our own copy.
-        setLockoutMessage(err instanceof Error ? err.message : 'Too many failed attempts.')
+        setLockoutMessage(err instanceof Error ? err.message : t('login.tooManyAttempts'))
       } else {
         // Wrong username/password (or any other failure): a generic message
         // so a mistyped username can't be distinguished from a wrong password.
-        setError('Incorrect username or password.')
+        setError(t('login.incorrectCredentials'))
       }
 
       setFormData({ username: '', password: '' })
@@ -87,44 +90,45 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-primary-50 via-white to-burgundy-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4 overflow-hidden">
-      {/* Theme toggle */}
-      <div className="absolute top-4 right-4">
-        <Tooltip content={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+      {/* Language + theme toggle */}
+      <div className="absolute top-4 right-4 flex items-center gap-3">
+        <LanguageToggle />
+        <Tooltip content={darkMode ? t('header.switchToLight') : t('header.switchToDark')}>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={toggleTheme}
-            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+            aria-label={darkMode ? t('header.switchToLight') : t('header.switchToDark')}
           >
             {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
         </Tooltip>
       </div>
 
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+      <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 items-center">
         {/* Left side - Branding and features */}
-        <div className="hidden lg:grid grid-cols-[200px,1fr] gap-8 items-center">
+        <div className="hidden lg:grid grid-cols-[200px,1fr] gap-6 items-center">
           {/* Logo column (far left) */}
           <div className="flex justify-start">
             <img
               src="./images/vcrt_logo.png"
-              alt="Patient Care Report"
+              alt={t('header.patientCareReport')}
               className="h-48 xl:h-56 w-auto object-contain drop-shadow-sm"
             />
           </div>
 
           {/* Text column (aligned with the logo) */}
-          <div className="flex flex-col justify-center space-y-3">
+          <div className="flex flex-col justify-center space-y-2">
             <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight">
-              PCR
+              {t('login.brandAcronym')}
             </h1>
             <p className="text-2xl lg:text-3xl font-semibold text-gray-800 dark:text-gray-200">
-              Patient Care Report
+              {t('header.patientCareReport')}
             </p>
             <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
-              Comprehensive documentation system designed for the Volunteer Crisis
-              Response Team (VCRT) at the University of Ottawa.
+              {t('login.tagline')}
             </p>
           </div>
         </div>
@@ -145,7 +149,7 @@ const LoginPage: React.FC = () => {
                     </span>
                     <div>
                       <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-                        Account temporarily locked
+                        {t('login.accountLocked')}
                       </p>
                       <p className="mt-0.5 text-sm text-amber-700 dark:text-amber-300">
                         {lockoutMessage}
@@ -160,7 +164,7 @@ const LoginPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setError('')}
-                        aria-label="Dismiss"
+                        aria-label={t('login.dismiss')}
                         className="shrink-0 p-1 rounded text-burgundy-500 hover:text-burgundy-700 hover:bg-burgundy-100 dark:text-burgundy-400 dark:hover:text-burgundy-200 dark:hover:bg-burgundy-900/40"
                       >
                         <X className="w-4 h-4" />
@@ -170,23 +174,23 @@ const LoginPage: React.FC = () => {
                 )}
 
                 <Input
-                  label="Username"
+                  label={t('login.username')}
                   name="username"
                   type="text"
                   value={formData.username}
                   onChange={handleChange}
-                  placeholder="Enter your username"
+                  placeholder={t('login.usernamePlaceholder')}
                   required
                   disabled={isLoading}
                 />
 
                 <Input
-                  label="Password"
+                  label={t('login.password')}
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Enter your password"
+                  placeholder={t('login.passwordPlaceholder')}
                   required
                   disabled={isLoading}
                   rightIcon={
@@ -206,7 +210,7 @@ const LoginPage: React.FC = () => {
                   loading={isLoading}
                   disabled={!formData.username || !formData.password}
                 >
-                  {isLoading ? 'Signing In...' : 'Sign In'}
+                  {isLoading ? t('login.signingIn') : t('login.signIn')}
                 </Button>
               </form>
             </Card.Body>
@@ -214,7 +218,7 @@ const LoginPage: React.FC = () => {
             <Card.Footer>
               <div className="space-y-4">
                 <div className="text-center text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                  <p>© 2026 Patient Care Report</p>
+                  <p>{t('login.copyright')}</p>
                 </div>
               </div>
             </Card.Footer>

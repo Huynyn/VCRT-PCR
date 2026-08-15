@@ -40,45 +40,48 @@ const initialState: FormState = {
 // Validation rules for PCR form
 const HHMM = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
 
+// Rule messages are stored as i18n keys (translated at the point of display,
+// see PCRPage's `errors` memo) rather than literal English text, so the same
+// schema drives both languages.
 const validationSchema: Record<string, [(value: any) => boolean, string][]> = {
   // Required
-  date: [[(v: string) => validationRules.required(v), 'Date is required']],
-  location: [[(v: string) => validationRules.required(v), 'Location is required']],
-  callNumber: [[(v: string) => validationRules.required(v), 'Call number is required']],
-  reportNumber: [[(v: string) => validationRules.required(v), 'Report number is required']],
-  supervisor: [[(v: string) => validationRules.required(v), 'Supervisor is required']],
-  firstAgencyOnScene: [[(v: string) => validationRules.required(v), 'First agency on scene is required']],
-  patientName: [[(v: string) => validationRules.required(v), 'Patient name is required']],
-  positionOfPatient: [[(v: string) => validationRules.required(v), 'Position of patient is required']],
-  comments: [[(v: string) => validationRules.required(v), 'Call description is required']],
-  transferComments: [[(v: string) => validationRules.required(v), 'Transfer of care is required']],
-  patientCareTransferred: [[(v: string) => validationRules.required(v), 'Patient care transferred is required']],
+  date: [[(v: string) => validationRules.required(v), 'pcr.validation.dateRequired']],
+  location: [[(v: string) => validationRules.required(v), 'pcr.validation.locationRequired']],
+  callNumber: [[(v: string) => validationRules.required(v), 'pcr.validation.callNumberRequired']],
+  reportNumber: [[(v: string) => validationRules.required(v), 'pcr.validation.reportNumberRequired']],
+  supervisor: [[(v: string) => validationRules.required(v), 'pcr.validation.supervisorRequired']],
+  firstAgencyOnScene: [[(v: string) => validationRules.required(v), 'pcr.validation.firstAgencyOnSceneRequired']],
+  patientName: [[(v: string) => validationRules.required(v), 'pcr.validation.patientNameRequired']],
+  positionOfPatient: [[(v: string) => validationRules.required(v), 'pcr.validation.positionOfPatientRequired']],
+  comments: [[(v: string) => validationRules.required(v), 'pcr.validation.callDescriptionRequired']],
+  transferComments: [[(v: string) => validationRules.required(v), 'pcr.validation.transferOfCareRequired']],
+  patientCareTransferred: [[(v: string) => validationRules.required(v), 'pcr.validation.patientCareTransferredRequired']],
 
   // Time fields (required + format) — NO duplicate keys
   timeNotified: [
-    [(v: string) => validationRules.required(v), 'Time notified is required'],
-    [(v: string) => HHMM.test(v), 'Please use HH:MM format'],
+    [(v: string) => validationRules.required(v), 'pcr.validation.timeNotifiedRequired'],
+    [(v: string) => HHMM.test(v), 'pcr.validation.timeFormat'],
   ],
   onScene: [
-    [(v: string) => validationRules.required(v), 'On scene time is required'],
-    [(v: string) => HHMM.test(v), 'Please use HH:MM format'],
+    [(v: string) => validationRules.required(v), 'pcr.validation.onSceneTimeRequired'],
+    [(v: string) => HHMM.test(v), 'pcr.validation.timeFormat'],
   ],
   clearedScene: [
-    [(v: string) => validationRules.required(v), 'Cleared scene time is required'],
-    [(v: string) => HHMM.test(v), 'Please use HH:MM format'],
+    [(v: string) => validationRules.required(v), 'pcr.validation.clearedSceneTimeRequired'],
+    [(v: string) => HHMM.test(v), 'pcr.validation.timeFormat'],
   ],
   timeCareTransferred: [
-    [(v: string) => validationRules.required(v), 'Time care transferred is required'],
-    [(v: string) => HHMM.test(v), 'Please use HH:MM format'],
+    [(v: string) => validationRules.required(v), 'pcr.validation.timeCareTransferredRequired'],
+    [(v: string) => HHMM.test(v), 'pcr.validation.timeFormat'],
   ],
 
   // Email (optional, but must be valid if present)
   emergencyContactEmail: [
-    [(v: string) => !v || /\S+@\S+\.\S+/.test(v), 'Please enter a valid email'],
+    [(v: string) => !v || /\S+@\S+\.\S+/.test(v), 'pcr.validation.validEmail'],
   ],
 
   // Numbers
-  age: [[(v: any) => v === '' || v === undefined || (+v >= 0 && +v <= 150), 'Please enter a valid age']],
+  age: [[(v: any) => v === '' || v === undefined || (+v >= 0 && +v <= 150), 'pcr.validation.validAge']],
 
   // Composite: either age or dob must exist
   ageOrDob: [[
@@ -87,7 +90,7 @@ const validationSchema: Record<string, [(value: any) => boolean, string][]> = {
       const dob = form.dob?.toString() ?? ''
       return age.trim() !== '' || dob.trim() !== ''
     },
-    'Either age or date of birth must be provided',
+    'pcr.validation.ageOrDobRequired',
   ]],
 }
 

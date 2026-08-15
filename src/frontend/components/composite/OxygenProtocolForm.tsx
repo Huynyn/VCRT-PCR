@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { Input, Select, RadioGroup, Checkbox, TimePicker, Textarea } from '@/components/forms'
 import { FormSection } from '@/components/forms'
 import { Card, Button } from '@/components/ui'
@@ -16,6 +17,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
   onChange,
   errors = {},
 }) => {
+  const { t } = useTranslation()
   const handleFieldChange = (field: keyof OxygenProtocol, value: any) => {
     onChange({ ...data, [field]: value })
   }
@@ -51,55 +53,55 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
   }
 
   const saturationOptions = [
-    { value: 'COPD (88-92%)', label: 'COPD (88-92%)' },
-    { value: 'Other (95-100%)', label: 'Other (95-100%)' },
+    { value: 'COPD (88-92%)', label: t('pcr.oxygenProtocol.copd') },
+    { value: 'Other (95-100%)', label: t('pcr.oxygenProtocol.otherRange') },
   ]
 
   const deliveryDeviceOptions = [
-    { value: 'Nasal Cannula (NC)', label: 'Nasal Cannula (NC)' },
-    { value: 'Non-Rebreather Mask (NRB)', label: 'Non-Rebreather Mask (NRB)' },
-    { value: 'Bag Valve Mask (BVM)', label: 'Bag Valve Mask (BVM)' },
+    { value: 'Nasal Cannula (NC)', label: t('pcr.oxygenProtocol.nasalCannula') },
+    { value: 'Non-Rebreather Mask (NRB)', label: t('pcr.oxygenProtocol.nonRebreatherMask') },
+    { value: 'Bag Valve Mask (BVM)', label: t('pcr.oxygenProtocol.bagValveMask') },
   ]
 
   const whoStartedOptions = [
-    { value: 'Protection Services', label: 'Protection Services' },
+    { value: 'Protection Services', label: t('pcr.oxygenProtocol.protectionServices') },
     { value: 'VCRT', label: 'VCRT' },
-    { value: 'Lifeguard', label: 'Lifeguard' },
-    { value: 'Sports Services', label: 'Sports Services' },
-    { value: 'Other', label: 'Other' },
+    { value: 'Lifeguard', label: t('pcr.oxygenProtocol.lifeguard') },
+    { value: 'Sports Services', label: t('pcr.oxygenProtocol.sportsServices') },
+    { value: 'Other', label: t('pcr.oxygenProtocol.other') },
   ]
 
   return (
     <div className="space-y-6">
-      <FormSection title="Oxygen Saturation Assessment">
+      <FormSection title={t('pcr.oxygenProtocol.saturationAssessment')}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <RadioGroup
             name="saturation_range"
-            label="Saturation Target Range"
+            label={t('pcr.oxygenProtocol.saturationTargetRange')}
             options={saturationOptions}
             value={data.saturation_range}
             onChange={(value) => handleFieldChange('saturation_range', value as 'copd' | 'other')}
             error={errors.saturation_range}
           />
-          
+
           <Input
-            label="Initial SpO₂ %"
+            label={t('pcr.oxygenProtocol.initialSpo2')}
             type="number"
             min="0"
             max="100"
             value={data.spo2 || ''}
             onChange={(e) => handleFieldChange('spo2', e.target.value)}
             error={errors.spo2}
-            placeholder="Enter value (0-100)"
+            placeholder={t('pcr.oxygenProtocol.initialSpo2Placeholder')}
           />
         </div>
-        
+
         <RadioGroup
           name="spo2_acceptable"
-          label="Initial SpO₂ Acceptable?"
+          label={t('pcr.oxygenProtocol.initialSpo2Acceptable')}
           options={[
-            { value: 'Yes', label: 'Yes' },
-            { value: 'No', label: 'No' },
+            { value: 'Yes', label: t('common.yes') },
+            { value: 'No', label: t('common.no') },
           ]}
           orientation="horizontal"
           value={data.spo2_acceptable}
@@ -108,28 +110,28 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
         />
       </FormSection>
 
-      <FormSection title="Oxygen Therapy Decision">
+      <FormSection title={t('pcr.oxygenProtocol.therapyDecision')}>
         <RadioGroup
           name="oxygen_given"
-          label="Oxygen Therapy Given?"
+          label={t('pcr.oxygenProtocol.oxygenGiven')}
           options={[
-            { value: 'yes', label: 'Yes' },
-            { value: 'no', label: 'No' },
+            { value: 'yes', label: t('common.yes') },
+            { value: 'no', label: t('common.no') },
           ]}
           orientation="horizontal"
           value={data.oxygen_given}
           onChange={(value) => handleFieldChange('oxygen_given', value as 'yes' | 'no')}
           error={errors.oxygen_given}
         />
-        
+
         {data.oxygen_given === 'yes' && (
-          <FormSection title="Reason for Oxygen Therapy">
+          <FormSection title={t('pcr.oxygenProtocol.reasonForTherapy')}>
             <Input
-              label="Reason for O2 Therapy"
+              label={t('pcr.oxygenProtocol.reasonForO2Therapy')}
               value={data.reasonForO2Therapy || []}
               onChange={(e) => handleFieldChange('reasonForO2Therapy', e.target.value)}
               error={errors.reasonForO2Therapy}
-              placeholder="e.g., hypoxaemia, shock, anaphylaxis, drowning, ventilation during CPR..."
+              placeholder={t('pcr.oxygenProtocol.reasonForO2TherapyPlaceholder')}
             />
           </FormSection>
         )}
@@ -139,12 +141,12 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
             <Card.Body>
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-500 dark:text-gray-500">
-                  Therapy Details
+                  {t('pcr.oxygenProtocol.therapyDetails')}
                 </h4>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <TimePicker
-                    label="Time Therapy Started"
+                    label={t('pcr.oxygenProtocol.timeTherapyStarted')}
                     value={data.timeTherapyStarted || ''}
                     onChange={(e) => handleFieldChange('timeTherapyStarted', e.target.value)}
                     error={errors.timeTherapyStarted}
@@ -152,7 +154,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                   />
 
                   <TimePicker
-                    label="Time Therapy Ended"
+                    label={t('pcr.oxygenProtocol.timeTherapyEnded')}
                     value={data.timeTherapyEnded || ''}
                     onChange={(e) => handleFieldChange('timeTherapyEnded', e.target.value)}
                     error={errors.timeTherapyEnded}
@@ -161,7 +163,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    label="Initial Flow Rate (L/min)"
+                    label={t('pcr.oxygenProtocol.initialFlowRate')}
                     type="number"
                     min="0"
                     max="15"
@@ -169,12 +171,12 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                     value={data.flowRate || ''}
                     onChange={(e) => handleFieldChange('flowRate', e.target.value)}
                     error={errors.flowRate}
-                    placeholder="Enter value"
+                    placeholder={t('pcr.oxygenProtocol.enterValue')}
                   />
 
                   <RadioGroup
                     name="deliveryDevice"
-                    label="Delivery Device"
+                    label={t('pcr.oxygenProtocol.deliveryDevice')}
                     options={deliveryDeviceOptions}
                     value={data.deliveryDevice}
                     onChange={(value) => handleFieldChange('deliveryDevice', value as 'NC' | 'NRB' | 'BVM')}
@@ -189,11 +191,11 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
 
       {data.oxygen_given === 'yes' && (
         <>
-          <FormSection title="Flow Rate Alterations">
+          <FormSection title={t('pcr.oxygenProtocol.flowRateAlterations')}>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Record any changes to the oxygen flow rate during therapy
+                  {t('pcr.oxygenProtocol.recordChanges')}
                 </p>
                 <Button
                   type="button"
@@ -202,7 +204,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                   onClick={addFlowRateRow}
                   leftIcon={<Plus className="w-4 h-4" />}
                 >
-                  Add Change
+                  {t('pcr.oxygenProtocol.addChange')}
                 </Button>
               </div>
 
@@ -212,15 +214,15 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                     <div className="flex items-end space-x-4">
                       <div className="flex-1">
                         <TimePicker
-                          label="Time of Change"
+                          label={t('pcr.oxygenProtocol.timeOfChange')}
                           value={alteration.time || ''}
                           onChange={(e) => handleFlowRateChange(index, 'time', e.target.value)}
                         />
                       </div>
-                      
+
                       <div className="flex-1">
                         <Input
-                          label="New Flow Rate (L/min)"
+                          label={t('pcr.oxygenProtocol.newFlowRate')}
                           type="number"
                           min="0"
                           max="15"
@@ -229,7 +231,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                           onChange={(e) => handleFlowRateChange(index, 'flowRate', e.target.value)}
                         />
                       </div>
-                      
+
                       <div>
                         {/* Invisible label so the button's own height matches
                             the label+input columns beside it, and centering
@@ -239,7 +241,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                         <button
                           type="button"
                           onClick={() => removeFlowRateRow(index)}
-                          aria-label="Remove flow rate change"
+                          aria-label={t('pcr.oxygenProtocol.removeFlowRateChange')}
                           className="h-10 w-10 flex items-center justify-center rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:text-gray-500 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-burgundy-500 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -252,21 +254,21 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
             </div>
           </FormSection>
 
-          <FormSection title="End of Therapy">
+          <FormSection title={t('pcr.oxygenProtocol.endOfTherapy')}>
             <div className="space-y-4">
               <Textarea
-                label="Reason for Ending Therapy"
+                label={t('pcr.oxygenProtocol.reasonForEndingTherapy')}
                 value={data.reasonForEndingTherapy || ''}
                 onChange={(e) => handleFieldChange('reasonForEndingTherapy', e.target.value)}
                 error={errors.reasonForEndingTherapy}
-                placeholder="Describe why oxygen therapy was discontinued..."
+                placeholder={t('pcr.oxygenProtocol.reasonForEndingTherapyPlaceholder')}
                 rows={3}
               />
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <RadioGroup
                   name="whoStartedTherapy"
-                  label="Who Started Therapy"
+                  label={t('pcr.oxygenProtocol.whoStartedTherapy')}
                   options={whoStartedOptions}
                   value={data.whoStartedTherapy}
                   onChange={(value) => handleFieldChange('whoStartedTherapy', value as 'Protection Services' | 'VCRT' | 'Lifeguard' | 'Sports Services' | 'Other')}
@@ -275,10 +277,10 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
 
                 {data.whoStartedTherapy === 'Other' && (
                   <Input
-                    label="Other (specify)"
+                    label={t('pcr.oxygenProtocol.otherSpecify')}
                     value={data.whoStartedTherapyOther || ''}
                     onChange={(e) => handleFieldChange('whoStartedTherapyOther', e.target.value)}
-                    placeholder="Please specify"
+                    placeholder={t('pcr.patientInfo.pleaseSpecify')}
                   />
                 )}
               </div>

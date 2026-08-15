@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Trash2 } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
 import { cn, generateId, MARKER_COLORS } from '@/utils'
@@ -217,6 +218,14 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
   opqrstCount = 0,
   className,
 }) => {
+  const { t } = useTranslation()
+  const colorLabelKeys: Record<string, string> = {
+    Red: 'pcr.opqrst.colorRed',
+    Blue: 'pcr.opqrst.colorBlue',
+    Yellow: 'pcr.opqrst.colorYellow',
+    Green: 'pcr.opqrst.colorGreen',
+  }
+  const colorLabel = (name: string) => (colorLabelKeys[name] ? t(colorLabelKeys[name]) : name)
   const [markers, setMarkers] = useState<InjuryMarker[]>(() => parseMarkers(value))
   const [activeView, setActiveView] = useState<BodyView>('front')
   const [activeNumber, setActiveNumber] = useState(1)
@@ -284,14 +293,14 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <div className="flex items-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Marker:</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('pcr.opqrst.marker')}</span>
             <div className="flex gap-2">
               {availableColors.map(c => (
-                <Tooltip key={c.number} content={`OPQRST #${c.number} - ${c.name}`}>
+                <Tooltip key={c.number} content={t('pcr.opqrst.markerTooltip', { number: c.number, name: colorLabel(c.name) })}>
                   <button
                     type="button"
                     onClick={() => setActiveNumber(c.number)}
-                    aria-label={`Select marker ${c.number} (${c.name})`}
+                    aria-label={t('pcr.opqrst.selectMarker', { number: c.number, name: colorLabel(c.name) })}
                     className={cn(
                       'w-9 h-9 rounded-full border-2 flex items-center justify-center text-sm font-bold',
                       'bg-white dark:bg-gray-900 transition-transform',
@@ -311,7 +320,7 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Size:</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('pcr.opqrst.size')}</span>
             <input
               type="range"
               min={MIN_MARKER_SIZE}
@@ -330,19 +339,18 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
           onClick={handleClear}
           leftIcon={<Trash2 className="w-4 h-4" />}
         >
-          Clear
+          {t('pcr.opqrst.clear')}
         </Button>
       </div>
 
       <p className="text-xs text-gray-500 dark:text-gray-400">
-        Select a marker number, then click Front or Back to place it. Click a placed marker to remove it.
-        (matching numbers/colors link to OPQRST sections above)
+        {t('pcr.opqrst.instructions')}
       </p>
 
       <div className="flex flex-col sm:flex-row items-start justify-center gap-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
         <BodyPanel
           view="front"
-          label="Front"
+          label={t('pcr.opqrst.front')}
           isActive={activeView === 'front'}
           markers={markers}
           onSelect={() => setActiveView('front')}
@@ -351,7 +359,7 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
         />
         <BodyPanel
           view="back"
-          label="Back"
+          label={t('pcr.opqrst.back')}
           isActive={activeView === 'back'}
           markers={markers}
           onSelect={() => setActiveView('back')}

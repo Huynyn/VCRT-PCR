@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Edit, Trash2, LucideIcon } from 'lucide-react'
 import { Button, Modal } from '@/components/ui'
 import { Input } from '@/components/forms'
@@ -35,6 +36,7 @@ const NameListManager: React.FC<NameListManagerProps> = ({
   namePlaceholder,
   nameHelpText,
 }) => {
+  const { t } = useTranslation()
   const [items, setItems] = useState<NamedItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -51,7 +53,7 @@ const NameListManager: React.FC<NameListManagerProps> = ({
       const res = await apiRequest(apiPath)
       setItems(res.data || [])
     } catch (err) {
-      setError(`Failed to load ${itemLabelLower}s`)
+      setError(t('nameListManager.loadFailed', { item: itemLabelLower }))
       console.error(`Error fetching ${itemLabelLower}s:`, err)
     } finally {
       setLoading(false)
@@ -79,7 +81,7 @@ const NameListManager: React.FC<NameListManagerProps> = ({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setNameError('Name is required')
+      setNameError(t('nameListManager.nameRequired'))
       return
     }
 
@@ -99,21 +101,21 @@ const NameListManager: React.FC<NameListManagerProps> = ({
       await fetchItems()
       setShowModal(false)
     } catch (err) {
-      setNameError(err instanceof Error ? err.message : `Failed to save ${itemLabelLower}`)
+      setNameError(err instanceof Error ? err.message : t('nameListManager.saveFailed', { item: itemLabelLower }))
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async (item: NamedItem) => {
-    const sure = window.confirm(`Remove "${item.name}" from the ${itemLabelLower} list?`)
+    const sure = window.confirm(t('nameListManager.deleteConfirm', { name: item.name, item: itemLabelLower }))
     if (!sure) return
 
     try {
       await apiRequest(`${apiPath}/${item.id}`, { method: 'DELETE' })
       await fetchItems()
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to delete ${itemLabelLower}`)
+      setError(err instanceof Error ? err.message : t('nameListManager.deleteFailed', { item: itemLabelLower }))
     }
   }
 
@@ -126,7 +128,7 @@ const NameListManager: React.FC<NameListManagerProps> = ({
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{description}</p>
           </div>
           <Button leftIcon={<Plus className="w-4 h-4" />} onClick={openAdd}>
-            Add {itemLabel}
+            {t('nameListManager.add', { item: itemLabel })}
           </Button>
         </div>
       </div>
@@ -137,7 +139,7 @@ const NameListManager: React.FC<NameListManagerProps> = ({
         )}
 
         {loading ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
         ) : items.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <EmptyIcon className="mx-auto h-10 w-10 text-gray-400" />
@@ -156,7 +158,7 @@ const NameListManager: React.FC<NameListManagerProps> = ({
                     leftIcon={<Edit className="w-4 h-4" />}
                     className="w-28 justify-center hover:text-primary-600 dark:hover:text-primary-400"
                   >
-                    Edit
+                    {t('common.edit')}
                   </Button>
                   <Button
                     variant="ghost"
@@ -165,7 +167,7 @@ const NameListManager: React.FC<NameListManagerProps> = ({
                     leftIcon={<Trash2 className="w-4 h-4" />}
                     className="w-28 justify-center hover:text-burgundy-600 dark:hover:text-burgundy-400"
                   >
-                    Remove
+                    {t('nameListManager.remove')}
                   </Button>
                 </div>
               </li>
@@ -177,12 +179,12 @@ const NameListManager: React.FC<NameListManagerProps> = ({
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={editing ? `Rename ${itemLabel}` : `Add ${itemLabel}`}
+        title={editing ? t('nameListManager.rename', { item: itemLabel }) : t('nameListManager.add', { item: itemLabel })}
         size="sm"
       >
         <div className="space-y-4">
           <Input
-            label="Name"
+            label={t('nameListManager.name')}
             value={name}
             onChange={e => setName(e.target.value)}
             error={nameError}
@@ -193,10 +195,10 @@ const NameListManager: React.FC<NameListManagerProps> = ({
           />
           <div className="flex justify-end space-x-3 pt-4 border-t">
             <Button variant="secondary" onClick={() => setShowModal(false)} disabled={saving}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleSave} loading={saving} disabled={saving}>
-              Save
+              {t('common.save')}
             </Button>
           </div>
         </div>

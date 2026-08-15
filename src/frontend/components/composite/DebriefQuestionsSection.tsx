@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Edit, HelpCircle, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
@@ -41,6 +42,7 @@ const CATEGORY_OPTIONS: DebriefCategory[] = [
 const VISIBLE_QUESTIONS = 3
 
 const DebriefQuestionsSection: React.FC = () => {
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
@@ -120,7 +122,7 @@ const DebriefQuestionsSection: React.FC = () => {
       .filter(d => d.question)
 
     if (cleaned.length === 0) {
-      setError('Add at least one question')
+      setError(t('debrief.addAtLeastOne'))
       return
     }
 
@@ -133,7 +135,7 @@ const DebriefQuestionsSection: React.FC = () => {
       setQuestions(cleaned)
       setShowEditModal(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save')
+      setError(err instanceof Error ? err.message : t('debrief.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -149,7 +151,7 @@ const DebriefQuestionsSection: React.FC = () => {
                 <HelpCircle className="w-4 h-4" />
               </span>
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Debrief Questions
+                {t('debrief.title')}
               </h3>
             </div>
             {isAdmin && (
@@ -159,7 +161,7 @@ const DebriefQuestionsSection: React.FC = () => {
                 className="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300 inline-flex items-center gap-1"
               >
                 <Edit className="w-3 h-3" />
-                Edit
+                {t('common.edit')}
               </button>
             )}
           </div>
@@ -167,14 +169,14 @@ const DebriefQuestionsSection: React.FC = () => {
 
         <div className="card-body">
           {loading ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
           ) : (
             <div
               className="flex items-stretch gap-2 outline-none"
               tabIndex={0}
               onKeyDown={handleKeyDown}
               role="listbox"
-              aria-label="Debrief questions"
+              aria-label={t('debrief.ariaLabel')}
             >
               <div className="flex flex-col gap-3 flex-1 min-w-0">
                 {questions.slice(startIndex, startIndex + VISIBLE_QUESTIONS).map((item, i) => (
@@ -194,7 +196,7 @@ const DebriefQuestionsSection: React.FC = () => {
                   type="button"
                   onClick={scrollUp}
                   disabled={!canScrollUp}
-                  aria-label="Show previous question"
+                  aria-label={t('debrief.showPrevious')}
                   className="p-1.5 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronUp className="w-5 h-5" />
@@ -206,7 +208,7 @@ const DebriefQuestionsSection: React.FC = () => {
                   type="button"
                   onClick={scrollDown}
                   disabled={!canScrollDown}
-                  aria-label="Show next question"
+                  aria-label={t('debrief.showNext')}
                   className="p-1.5 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronDown className="w-5 h-5" />
@@ -215,12 +217,20 @@ const DebriefQuestionsSection: React.FC = () => {
             </div>
           )}
         </div>
+
+        {i18n.language === 'fr' && (
+          <div className="card-footer">
+            <p className="text-xs italic text-gray-400 dark:text-gray-500">
+              {t('common.contentNotTranslatedNote')}
+            </p>
+          </div>
+        )}
       </div>
 
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        title="Edit Debrief Questions"
+        title={t('debrief.editTitle')}
         size="xl"
       >
         <div className="space-y-4">
@@ -235,7 +245,7 @@ const DebriefQuestionsSection: React.FC = () => {
                   <Input
                     value={item.question}
                     onChange={e => updateDraftItem(i, 'question', e.target.value)}
-                    placeholder="Question text"
+                    placeholder={t('debrief.questionPlaceholder')}
                   />
                 </div>
                 <div className="w-48">
@@ -258,15 +268,15 @@ const DebriefQuestionsSection: React.FC = () => {
           </div>
 
           <Button variant="outline" size="sm" onClick={addDraftItem} leftIcon={<Plus className="w-4 h-4" />}>
-            Add Question
+            {t('debrief.addQuestion')}
           </Button>
 
           <div className="flex justify-end space-x-3 pt-4 border-t">
             <Button variant="secondary" onClick={() => setShowEditModal(false)} disabled={saving}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleSave} loading={saving} disabled={saving}>
-              Save
+              {saving ? t('common.saving') : t('common.save')}
             </Button>
           </div>
         </div>

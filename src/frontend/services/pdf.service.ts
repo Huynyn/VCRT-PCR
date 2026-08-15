@@ -6,6 +6,7 @@ import type { PCRFormData, VitalSign } from '@/types'
 import { OxygenProtocol } from '../types'
 import { PDFDocument } from 'pdf-lib'
 import { MARKER_COLORS } from '@/utils'
+import i18n from '../i18n'
 
 interface PDFOptions {
   includeImages?: boolean
@@ -299,11 +300,11 @@ export class PDFService {
     modal.innerHTML = `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 h-[90vh] flex flex-col">
         <div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">${allowDownload ? 'Download Preview' : 'Submission Preview'}</h3>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">${allowDownload ? i18n.t('pdfConfirm.downloadPreviewTitle') : i18n.t('pdfConfirm.submissionPreviewTitle')}</h3>
           <div class="flex space-x-2">
             ${allowDownload ? `
               <button id="download-btn" class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700">
-                Download
+                ${i18n.t('pdfConfirm.download')}
               </button>
             ` : ''}
             <button id="close-btn" class="px-2 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400">
@@ -315,7 +316,7 @@ export class PDFService {
           <iframe
             src="${result.url}#toolbar=0&navpanes=0&scrollbar=0"
             class="w-full h-full border rounded flex-1"
-            title="PDF Preview"
+            title="${i18n.t('pdfConfirm.pdfPreviewTitle')}"
           ></iframe>
         </div>
       </div>
@@ -376,7 +377,7 @@ export class PDFService {
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            ${allowDownload ? 'Download Confirmation' : 'Submission Confirmation'}
+            ${allowDownload ? i18n.t('pdfConfirm.downloadConfirmationTitle') : i18n.t('pdfConfirm.submissionConfirmationTitle')}
           </h3>
 
           <div class="mb-6">
@@ -385,7 +386,7 @@ export class PDFService {
                 id="preview-download-btn"
                 class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
               >
-                Preview
+                ${i18n.t('pdfConfirm.preview')}
               </button>
 
               ${
@@ -395,7 +396,7 @@ export class PDFService {
                       id="direct-download-btn"
                       class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
                     >
-                      Download
+                      ${i18n.t('pdfConfirm.download')}
                     </button>
                   `
                   : ''
@@ -405,8 +406,8 @@ export class PDFService {
             <p class="text-sm text-gray-600 dark:text-gray-400">
               ${
                 allowDownload
-                  ? 'Please download the PCR report and confirm below when completed.'
-                  : 'Please preview the PCR report and confirm below when completed.'
+                  ? i18n.t('pdfConfirm.downloadBody')
+                  : i18n.t('pdfConfirm.previewBody')
               }
             </p>
           </div>
@@ -417,13 +418,13 @@ export class PDFService {
               class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
               disabled
             >
-              Submit
+              ${i18n.t('pdfConfirm.submit')}
             </button>
             <button
               id="cancel-btn"
               class="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
-              Cancel
+              ${i18n.t('common.cancel')}
             </button>
           </div>
         </div>
@@ -441,7 +442,7 @@ export class PDFService {
       if (previewBtn.disabled) return
       previewBtn.disabled = true
       const previousLabel = previewBtn.textContent
-      previewBtn.textContent = 'Loading...'
+      previewBtn.textContent = i18n.t('pdfConfirm.loading')
       try {
         const r = await ensureResult()
         await this.showDownloadPreview(data, options, { allowDownload }, r)
@@ -457,7 +458,7 @@ export class PDFService {
       if (directBtn.disabled) return
       directBtn.disabled = true
       const previousLabel = directBtn.textContent
-      directBtn.textContent = 'Loading...'
+      directBtn.textContent = i18n.t('pdfConfirm.loading')
       try {
         const r = await ensureResult()
         this.downloadPDF(r)
@@ -1650,11 +1651,11 @@ private addPageWithHeader(
    */
   validateDataForPDF(data: PCRFormData): { isValid: boolean; errors: string[] } {
     const errors: string[] = []
-    
-    if (!data.date) errors.push('Date is required')
-    if (!data.patientName) errors.push('Patient name is required')
-    if (!data.callNumber) errors.push('Call number is required')
-    if (!data.reportNumber) errors.push('Report number is required')
+
+    if (!data.date) errors.push(i18n.t('pcr.validation.dateRequired'))
+    if (!data.patientName) errors.push(i18n.t('pcr.validation.patientNameRequired'))
+    if (!data.callNumber) errors.push(i18n.t('pcr.validation.callNumberRequired'))
+    if (!data.reportNumber) errors.push(i18n.t('pcr.validation.reportNumberRequired'))
     
     return {
       isValid: errors.length === 0,

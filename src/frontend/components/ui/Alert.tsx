@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { AlertCircle, CheckCircle, Info, XCircle, X } from 'lucide-react'
 import { cn } from '@/utils'
 import Button from './Button'
@@ -22,6 +23,7 @@ const Alert: React.FC<AlertProps> = ({
   className,
   children,
 }) => {
+  const { t } = useTranslation()
   const icons = {
     success: <CheckCircle className="w-5 h-5" />,
     error: <XCircle className="w-5 h-5" />,
@@ -76,7 +78,7 @@ const Alert: React.FC<AlertProps> = ({
                   'p-1.5 hover:bg-white/20',
                   iconColorClasses[type]
                 )}
-                aria-label="Dismiss"
+                aria-label={t('common.dismiss')}
               >
                 <X className="w-4 h-4" />
               </Button>

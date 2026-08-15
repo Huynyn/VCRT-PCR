@@ -1,31 +1,33 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense, lazy } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Layout } from '@/components/layout'
 import { Loading } from '@/components/ui'
-import { LoginPage, PCRPage, ActivityLogsPage, DashboardPage } from '@/pages'
+import LoginPage from './pages/LoginPage'
 import { AuthProvider, NotificationProvider, FormProvider, useAuth } from '@/context'
 import { useTimeout } from '@/hooks'
 import { runPcrNavigationGuard } from '@/utils/navigationGuard'
-import ReportsPage from './pages/ReportsPage'
-import UserManagementPage from './pages/UserManagementPage'
+
+// Code-split by route: each page becomes its own chunk instead of all being
+// eagerly bundled into main.js (which was pushing 1.3MB+), so the browser
+// only has to parse/compile the page the user is actually on.
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const PCRPage = lazy(() => import('./pages/PCRPage'))
+const ReportsPage = lazy(() => import('./pages/ReportsPage'))
+const ActivityLogsPage = lazy(() => import('./pages/ActivityLogsPage'))
+const UserManagementPage = lazy(() => import('./pages/UserManagementPage'))
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading, user } = useAuth()
-
-  console.log('ProtectedRoute - Auth state:', { isAuthenticated, isLoading, user })
+  const { isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
-    console.log('ProtectedRoute - Still loading')
     return <Loading text="Loading..." overlay />
   }
 
   if (!isAuthenticated) {
-    console.log('ProtectedRoute - Not authenticated, redirecting to login')
     return <Navigate to="/login" replace />
   }
 
-  console.log('ProtectedRoute - Authenticated, rendering children')
   return <>{children}</>
 }
 
@@ -109,64 +111,66 @@ const AppContent: React.FC = () => {
       darkMode={darkMode}
       onToggleTheme={toggleTheme}
     >
-      <Routes>
-        {/* Dashboard */}
-        <Route 
-          path="/dashboard"
-          element={<DashboardPage />} 
-        />
+      <Suspense fallback={<Loading text="Loading..." overlay />}>
+        <Routes>
+          {/* Dashboard */}
+          <Route
+            path="/dashboard"
+            element={<DashboardPage />}
+          />
 
-        {/* New PCR Form */}
-        <Route
-          path="/pcr/new"
-          element={
-            <FormProvider>
-              <PCRPage />
-            </FormProvider>
-          }
-        />
+          {/* New PCR Form */}
+          <Route
+            path="/pcr/new"
+            element={
+              <FormProvider>
+                <PCRPage />
+              </FormProvider>
+            }
+          />
 
-        {/* PCR Reports */}
-        <Route
-          path="/pcr"
-          element={<ReportsPage />}
-        />
+          {/* PCR Reports */}
+          <Route
+            path="/pcr"
+            element={<ReportsPage />}
+          />
 
-        {/* Reports Route (alias for /pcr) */}
-        <Route
-          path="/reports"
-          element={<ReportsPage />}
-        />
+          {/* Reports Route (alias for /pcr) */}
+          <Route
+            path="/reports"
+            element={<ReportsPage />}
+          />
 
-        {/* Activity Logs */}
-        <Route
-          path="/logs"
-          element={<ActivityLogsPage />}
-        />
+          {/* Activity Logs */}
+          <Route
+            path="/logs"
+            element={<ActivityLogsPage />}
+          />
 
-        {/* Admin Routes */}
-        <Route
-          path="/admin/users"
-          element={<UserManagementPage />}
-        />
+          {/* Admin Routes */}
+          <Route
+            path="/admin/users"
+            element={<UserManagementPage />}
+          />
 
-        {/* Default redirect */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        {/* 404 Page */}
-        <Route
-          path="*"
-          element={
-            <div className="text-center space-y-4">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">404</h1>
-              <p className="text-gray-600 dark:text-gray-400">Page not found</p>
-              <button onClick={() => handleNavigate('/dashboard')} className="btn btn-primary">
-                Go to Dashboard
-              </button>
-            </div>
-          }
-        />
-      </Routes>
+          {/* 404 Page */}
+          <Route
+            path="*"
+            element={
+              <div className="text-center space-y-4">
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">404</h1>
+                <p className="text-gray-600 dark:text-gray-400">Page not found</p>
+                <button onClick={() => handleNavigate('/dashboard')} className="btn btn-primary">
+                  Go to Dashboard
+                </button>
+              </div>
+            }
+          />
+        </Routes>
+      </Suspense>
     </Layout>
   )
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { cn } from '@/utils'
 
@@ -19,11 +20,13 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   value,
   onChange,
   options,
-  placeholder = 'Search or type a name...',
+  placeholder,
   error,
   required,
   rightIcon,
 }) => {
+  const { t } = useTranslation()
+  const resolvedPlaceholder = placeholder ?? t('pcr.searchableSelect.defaultPlaceholder')
   const [query, setQuery] = useState(value)
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -93,7 +96,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
               setQuery(value)
             }
           }}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           className={cn('form-input', rightIcon ? 'pr-16' : 'pr-8', error && 'form-input-error')}
           autoComplete="off"
         />
@@ -108,7 +111,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 setOpen(true)
               }}
               className="p-1 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              title="Clear"
+              title={t('pcr.searchableSelect.clear')}
             >
               <X className="w-4 h-4" />
             </button>
@@ -120,7 +123,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
           <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-56 overflow-y-auto">
             {filtered.length === 0 && (
               <div className="px-3 py-2 text-sm text-gray-400">
-                {options.length === 0 ? 'No responders on file yet' : 'No matches'}
+                {options.length === 0 ? t('pcr.searchableSelect.noneOnFile') : t('pcr.searchableSelect.noMatches')}
               </div>
             )}
             {filtered.map(name => (
@@ -142,7 +145,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 onClick={handleUseTyped}
                 className="block w-full text-left px-3 py-2 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700"
               >
-                Use &quot;{query.trim()}&quot; (not on list)
+                {t('pcr.searchableSelect.useTyped', { query: query.trim() })}
               </button>
             )}
           </div>

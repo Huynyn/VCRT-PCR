@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, UserCog, Shield, ShieldCheck, User as UserIcon, Users as UsersIcon, Edit, KeyRound, CheckSquare, XSquare } from 'lucide-react'
 import { Button, Loading, Alert, Modal } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
@@ -29,6 +30,7 @@ interface PasswordForm {
 }
 
 const UserManagementPage = () => {
+  const { t, i18n } = useTranslation()
   const { token, isAuthenticated, user: currentUser } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,7 +88,7 @@ const UserManagementPage = () => {
 
   useEffect(() => {
     if (currentUser?.role !== 'admin') {
-      setError('Access denied. Admin privileges required.')
+      setError(t('userManagement.accessDeniedMessage'))
       setLoading(false)
       return
     }
@@ -98,7 +100,7 @@ const UserManagementPage = () => {
       setLoading(true)
 
       if (!isAuthenticated || !token) {
-        setError('Please log in to view users')
+        setError(t('userManagement.loginToView'))
         setLoading(false)
         return
       }
@@ -106,7 +108,7 @@ const UserManagementPage = () => {
       const data = await apiRequest('/users')
       setUsers(data.data || [])
     } catch (err) {
-      setError('Failed to load users')
+      setError(t('userManagement.loadFailed'))
       console.error('Error fetching users:', err)
     } finally {
       setLoading(false)
@@ -117,30 +119,30 @@ const UserManagementPage = () => {
     const errors: Partial<CreateUserForm> = {}
 
     if (!createForm.username.trim()) {
-      errors.username = 'Username is required'
+      errors.username = t('userManagement.usernameRequired')
     } else if (createForm.username.length < 3) {
-      errors.username = 'Username must be at least 3 characters'
+      errors.username = t('userManagement.usernameMinLength')
     }
 
     if (!createForm.password.trim()) {
-      errors.password = 'Password is required'
+      errors.password = t('userManagement.passwordRequired')
     } else {
-      const passwordError = getPasswordStrengthError(createForm.password)
+      const passwordError = getPasswordStrengthError(createForm.password, t)
       if (passwordError) errors.password = passwordError
     }
 
     if (!createForm.confirmPassword.trim()) {
-      errors.confirmPassword = 'Confirm password is required'
+      errors.confirmPassword = t('userManagement.confirmPasswordRequired')
     } else if (createForm.password !== createForm.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match'
+      errors.confirmPassword = t('userManagement.passwordsDontMatch')
     }
 
     if (!createForm.firstName.trim()) {
-      errors.firstName = 'First name is required'
+      errors.firstName = t('userManagement.firstNameRequired')
     }
 
     if (!createForm.lastName.trim()) {
-      errors.lastName = 'Last name is required'
+      errors.lastName = t('userManagement.lastNameRequired')
     }
 
     setFormErrors(errors)
@@ -172,7 +174,7 @@ const UserManagementPage = () => {
       })
       setFormErrors({})
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create user')
+      setError(err instanceof Error ? err.message : t('userManagement.createUserFailed'))
       console.error('Error creating user:', err)
     } finally {
       setCreating(false)
@@ -190,7 +192,7 @@ const UserManagementPage = () => {
 
       await fetchUsers()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user status')
+      setError(err instanceof Error ? err.message : t('userManagement.updateStatusFailed'))
       console.error('Error updating user status:', err)
     }
   }
@@ -208,11 +210,11 @@ const UserManagementPage = () => {
 
   const handleDeleteUser = async (userId: string) => {
     if (userId === currentUser?.id) {
-      setError("You can't delete your own account while logged in.")
+      setError(t('userManagement.cantDeleteOwnAccount'))
       return
     }
 
-    const sure = window.confirm('Delete this user? This cannot be undone.')
+    const sure = window.confirm(t('userManagement.deleteUserConfirm'))
     if (!sure) return
 
     try {
@@ -224,7 +226,7 @@ const UserManagementPage = () => {
       setEditingUser(null)
       await fetchUsers()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete user')
+      setError(err instanceof Error ? err.message : t('userManagement.deleteUserFailed'))
       console.error('Error deleting user:', err)
     }
   }
@@ -233,11 +235,11 @@ const UserManagementPage = () => {
     const errors: Partial<EditUserForm> = {}
 
     if (!editForm.firstName.trim()) {
-      errors.firstName = 'First name is required'
+      errors.firstName = t('userManagement.firstNameRequired')
     }
 
     if (!editForm.lastName.trim()) {
-      errors.lastName = 'Last name is required'
+      errors.lastName = t('userManagement.lastNameRequired')
     }
 
     setEditFormErrors(errors)
@@ -265,7 +267,7 @@ const UserManagementPage = () => {
       })
       setEditFormErrors({})
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user')
+      setError(err instanceof Error ? err.message : t('userManagement.updateUserFailed'))
       console.error('Error updating user:', err)
     } finally {
       setUpdating(false)
@@ -284,14 +286,14 @@ const UserManagementPage = () => {
     const errors: Partial<PasswordForm> = {}
 
     if (!passwordForm.newPassword.trim()) {
-      errors.newPassword = 'New password is required'
+      errors.newPassword = t('userManagement.newPasswordRequired')
     } else {
-      const passwordError = getPasswordStrengthError(passwordForm.newPassword)
+      const passwordError = getPasswordStrengthError(passwordForm.newPassword, t)
       if (passwordError) errors.newPassword = passwordError
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match'
+      errors.confirmPassword = t('userManagement.passwordsDontMatch')
     }
 
     setPasswordFormErrors(errors)
@@ -314,7 +316,7 @@ const UserManagementPage = () => {
       setPasswordForm({ newPassword: '', confirmPassword: '' })
       setPasswordFormErrors({})
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reset password')
+      setError(err instanceof Error ? err.message : t('userManagement.resetPasswordFailed'))
       console.error('Error resetting password:', err)
     } finally {
       setResettingPassword(false)
@@ -322,7 +324,7 @@ const UserManagementPage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return parseServerDate(dateString).toLocaleDateString('en-CA', {
+    return parseServerDate(dateString).toLocaleDateString(i18n.language === 'fr' ? 'fr-CA' : 'en-CA', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -344,9 +346,9 @@ const UserManagementPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center py-16">
           <Shield className="mx-auto h-12 w-12 text-gray-400" />
-          <h2 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">Access Denied</h2>
+          <h2 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">{t('userManagement.accessDenied')}</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            You need admin privileges to access user management.
+            {t('userManagement.accessDeniedBody')}
           </p>
         </div>
       </div>
@@ -357,9 +359,9 @@ const UserManagementPage = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">User Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('userManagement.title')}</h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Manage system users and their permissions
+            {t('userManagement.subtitle')}
           </p>
         </div>
         <Loading />
@@ -372,16 +374,16 @@ const UserManagementPage = () => {
       <div className="mb-8">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">User Management</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('userManagement.title')}</h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Manage system users and their permissions
+              {t('userManagement.subtitle')}
             </p>
           </div>
           <Button
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={() => setShowCreateModal(true)}
           >
-            Create User
+            {t('userManagement.createUser')}
           </Button>
         </div>
       </div>
@@ -396,9 +398,9 @@ const UserManagementPage = () => {
             <div className="text-center py-8">
               <div className="text-gray-500 dark:text-gray-400">
                 <UserCog className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No users found</h3>
+                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{t('userManagement.noUsersFound')}</h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Get started by creating your first user.
+                  {t('userManagement.getStarted')}
                 </p>
               </div>
             </div>
@@ -409,7 +411,7 @@ const UserManagementPage = () => {
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Scroll horizontally to view all columns
+                  {t('common.scrollHorizontally')}
                 </div>
               )}
               <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-xl">
@@ -417,22 +419,22 @@ const UserManagementPage = () => {
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[200px]">
-                      User
+                      {t('userManagement.columnUser')}
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[120px]">
-                      Role
+                      {t('userManagement.columnRole')}
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[100px]">
-                      Status
+                      {t('userManagement.columnStatus')}
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[160px]">
-                      Created
+                      {t('userManagement.columnCreated')}
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[160px]">
-                      Last Login
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[160px] whitespace-nowrap">
+                      {t('userManagement.columnLastLogin')}
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[180px]">
-                      Actions
+                      {t('userManagement.columnActions')}
                     </th>
                   </tr>
                 </thead>
@@ -464,7 +466,7 @@ const UserManagementPage = () => {
                               ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-700/60'
                               : 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500/60'
                           }`}>
-                            {user.role}
+                            {t(`common.role.${user.role}`, user.role)}
                           </span>
                         </div>
                       </td>
@@ -476,14 +478,14 @@ const UserManagementPage = () => {
                               : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-200 dark:border-red-700/60'
                           }`}
                         >
-                          {user.isActive ? 'Active' : 'Inactive'}
+                          {user.isActive ? t('userManagement.active') : t('userManagement.inactive')}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         {formatDate(user.createdAt)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {user.lastLogin ? formatDate(user.lastLogin) : 'Never'}
+                        {user.lastLogin ? formatDate(user.lastLogin) : t('userManagement.never')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
@@ -494,7 +496,7 @@ const UserManagementPage = () => {
                             leftIcon={<Edit className="w-4 h-4" />}
                             className="w-28 justify-center hover:text-primary-600 dark:hover:text-primary-400"
                           >
-                            Edit
+                            {t('userManagement.edit')}
                           </Button>
                           <Button
                             variant="ghost"
@@ -519,11 +521,11 @@ const UserManagementPage = () => {
                             }
                             title={
                               user.role === 'admin' && user.isActive && activeAdminCount <= 1
-                                ? 'At least one admin must stay active'
+                                ? t('userManagement.atLeastOneAdmin')
                                 : undefined
                             }
                           >
-                            {user.isActive ? 'Deactivate' : 'Activate'}
+                            {user.isActive ? t('userManagement.deactivate') : t('userManagement.activate')}
                           </Button>
                         </div>
                       </td>
@@ -540,26 +542,26 @@ const UserManagementPage = () => {
       <div className="mt-8">
         <NameListManager
           apiPath="/responders"
-          title="Responders"
-          description="Manage the names available in the PCR responder dropdown"
-          emptyStateText="No responders yet. Add one to populate the PCR dropdown."
+          title={t('userManagement.respondersTitle')}
+          description={t('userManagement.respondersDescription')}
+          emptyStateText={t('userManagement.respondersEmptyText')}
           emptyStateIcon={UsersIcon}
-          itemLabel="Responder"
-          itemLabelLower="responder"
+          itemLabel={t('userManagement.responderItemLabel')}
+          itemLabelLower={t('userManagement.responderItemLabelLower')}
         />
       </div>
 
       <div className="mt-8">
         <NameListManager
           apiPath="/psm-members"
-          title="Primary PSM"
-          description="Manage the names available in the PCR Primary PSM dropdown"
-          emptyStateText="No PSM members yet. Add one to populate the PCR dropdown."
+          title={t('userManagement.psmTitle')}
+          description={t('userManagement.psmDescription')}
+          emptyStateText={t('userManagement.psmEmptyText')}
           emptyStateIcon={ShieldCheck}
-          itemLabel="PSM Member"
-          itemLabelLower="PSM member"
-          namePlaceholder="e.g. J. Tremblay"
-          nameHelpText="Use initial + last name, e.g. J. Tremblay"
+          itemLabel={t('userManagement.psmItemLabel')}
+          itemLabelLower={t('userManagement.psmItemLabelLower')}
+          namePlaceholder={t('userManagement.psmNamePlaceholder')}
+          nameHelpText={t('userManagement.psmNameHelpText')}
         />
       </div>
 
@@ -570,20 +572,20 @@ const UserManagementPage = () => {
           setShowCreateModal(false)
           setFormErrors({})
         }}
-        title="Create New User"
+        title={t('userManagement.createUserTitle')}
         size="md"
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="First Name"
+              label={t('userManagement.firstName')}
               value={createForm.firstName}
               onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
               error={formErrors.firstName}
               required
             />
             <Input
-              label="Last Name"
+              label={t('userManagement.lastName')}
               value={createForm.lastName}
               onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
               error={formErrors.lastName}
@@ -592,26 +594,26 @@ const UserManagementPage = () => {
           </div>
 
           <Input
-            label="Username"
+            label={t('userManagement.username')}
             value={createForm.username}
             onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
             error={formErrors.username}
             required
-            helpText="Must be at least 3 characters long"
+            helpText={t('userManagement.usernameHelp')}
           />
 
           <Input
-            label="Password"
+            label={t('userManagement.password')}
             type="password"
             value={createForm.password}
             onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
             error={formErrors.password}
             required
-            helpText="At least 8 characters, with a lowercase letter, an uppercase letter, and a number"
+            helpText={t('userManagement.passwordHelp')}
           />
 
           <Input
-            label="Confirm Password"
+            label={t('userManagement.confirmPassword')}
             type="password"
             value={createForm.confirmPassword}
             onChange={(e) => setCreateForm({ ...createForm, confirmPassword: e.target.value })}
@@ -620,12 +622,12 @@ const UserManagementPage = () => {
           />
 
           <Select
-            label="Role"
+            label={t('userManagement.role')}
             value={createForm.role}
             onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as 'user' | 'admin' })}
             options={[
-              { value: 'user', label: 'User' },
-              { value: 'admin', label: 'Administrator' },
+              { value: 'user', label: t('userManagement.roleUser') },
+              { value: 'admin', label: t('userManagement.roleAdmin') },
             ]}
             required
           />
@@ -639,14 +641,14 @@ const UserManagementPage = () => {
               }}
               disabled={creating}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleCreateUser}
               loading={creating}
               disabled={creating}
             >
-              Create User
+              {t('userManagement.createUser')}
             </Button>
           </div>
         </div>
@@ -660,20 +662,20 @@ const UserManagementPage = () => {
           setEditingUser(null)
           setEditFormErrors({})
         }}
-        title={`Edit User: ${editingUser?.username}`}
+        title={t('userManagement.editUserTitle', { username: editingUser?.username })}
         size="md"
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="First Name"
+              label={t('userManagement.firstName')}
               value={editForm.firstName}
               onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
               error={editFormErrors.firstName}
               required
             />
             <Input
-              label="Last Name"
+              label={t('userManagement.lastName')}
               value={editForm.lastName}
               onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
               error={editFormErrors.lastName}
@@ -685,16 +687,16 @@ const UserManagementPage = () => {
             {editingUser?.id === currentUser?.id ? (
               // Can't deactivate the account you're currently signed in as.
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                Status: <span className="font-medium">Active</span> (can't deactivate your own account)
+                {t('userManagement.statusActiveOwnAccount', { status: t('userManagement.active') })}
               </div>
             ) : (
               <Select
-                label="Status"
+                label={t('userManagement.columnStatus')}
                 value={editForm.isActive ? 'active' : 'inactive'}
                 onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'active' })}
                 options={[
-                  { value: 'active', label: 'Active' },
-                  { value: 'inactive', label: 'Inactive' },
+                  { value: 'active', label: t('userManagement.active') },
+                  { value: 'inactive', label: t('userManagement.inactive') },
                 ]}
                 required
               />
@@ -709,7 +711,7 @@ const UserManagementPage = () => {
               onClick={() => editingUser && handleOpenResetPassword(editingUser)}
               className="text-gray-600 hover:text-gray-900 dark:text-gray-300"
             >
-              Reset Password
+              {t('userManagement.resetPassword')}
             </Button>
           </div>
 
@@ -721,7 +723,7 @@ const UserManagementPage = () => {
               onClick={() => editingUser && handleDeleteUser(editingUser.id)}
               disabled={updating || editingUser?.id === currentUser?.id}
             >
-              Delete User
+              {t('userManagement.deleteUser')}
             </Button>
 
             {/* Right: Cancel / Update */}
@@ -735,14 +737,14 @@ const UserManagementPage = () => {
                 }}
                 disabled={updating}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 onClick={handleUpdateUser}
                 loading={updating}
                 disabled={updating}
               >
-                Update User
+                {t('userManagement.updateUser')}
               </Button>
             </div>
           </div>
@@ -757,26 +759,26 @@ const UserManagementPage = () => {
           setPasswordTarget(null)
           setPasswordFormErrors({})
         }}
-        title={`Reset Password: ${passwordTarget?.username}`}
+        title={t('userManagement.resetPasswordTitle', { username: passwordTarget?.username })}
         size="md"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Set a new password for this user. They will need to use it the next time they log in.
+            {t('userManagement.resetPasswordBody')}
           </p>
 
           <Input
-            label="New Password"
+            label={t('userManagement.newPassword')}
             type="password"
             value={passwordForm.newPassword}
             onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
             error={passwordFormErrors.newPassword}
             required
-            helpText="At least 8 characters, with a lowercase letter, an uppercase letter, and a number"
+            helpText={t('userManagement.passwordHelp')}
           />
 
           <Input
-            label="Confirm New Password"
+            label={t('userManagement.confirmNewPassword')}
             type="password"
             value={passwordForm.confirmPassword}
             onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
@@ -794,14 +796,14 @@ const UserManagementPage = () => {
               }}
               disabled={resettingPassword}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleResetPassword}
               loading={resettingPassword}
               disabled={resettingPassword}
             >
-              Reset Password
+              {t('userManagement.resetPassword')}
             </Button>
           </div>
         </div>

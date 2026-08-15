@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BookOpen, Edit, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
@@ -113,6 +114,7 @@ const EDIT_CATEGORY_OPTIONS: AcronymCategory[] = [
 ]
 
 const MedicalGlossarySection: React.FC = () => {
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
@@ -206,7 +208,7 @@ const MedicalGlossarySection: React.FC = () => {
       .filter(d => d.acronym && d.meaning)
 
     if (cleaned.length === 0) {
-      setError('Add at least one term')
+      setError(t('glossary.addAtLeastOne'))
       return
     }
 
@@ -219,7 +221,7 @@ const MedicalGlossarySection: React.FC = () => {
       setAcronyms(cleaned)
       setShowEditModal(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save')
+      setError(err instanceof Error ? err.message : t('glossary.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -235,7 +237,7 @@ const MedicalGlossarySection: React.FC = () => {
                 <BookOpen className="w-4 h-4" />
               </span>
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                Medical Glossary Terms
+                {t('glossary.title')}
               </h3>
             </div>
 
@@ -243,8 +245,8 @@ const MedicalGlossarySection: React.FC = () => {
               <input
                 value={acronymQuery}
                 onChange={e => setAcronymQuery(e.target.value)}
-                placeholder="Search term..."
-                className="w-full sm:w-40 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder:text-gray-400"
+                placeholder={t('glossary.searchPlaceholder')}
+                className="w-full sm:w-48 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder:text-gray-400"
               />
               <select
                 value={acronymCategory}
@@ -253,7 +255,7 @@ const MedicalGlossarySection: React.FC = () => {
               >
                 {FILTER_CATEGORY_OPTIONS.map(cat => (
                   <option key={cat} value={cat}>
-                    {cat}
+                    {cat === 'All' ? t('common.all') : cat}
                   </option>
                 ))}
               </select>
@@ -264,7 +266,7 @@ const MedicalGlossarySection: React.FC = () => {
                   className="text-xs px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300 inline-flex items-center justify-center gap-1 shrink-0"
                 >
                   <Edit className="w-3 h-3" />
-                  Edit
+                  {t('common.edit')}
                 </button>
               )}
             </div>
@@ -273,10 +275,10 @@ const MedicalGlossarySection: React.FC = () => {
 
         <div className="card-body">
           {loading ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
           ) : filteredAcronyms.length === 0 ? (
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              No acronyms found for this filter.
+              {t('glossary.noResults')}
             </div>
           ) : (
             <>
@@ -306,7 +308,7 @@ const MedicalGlossarySection: React.FC = () => {
                         onClick={() => handleCopyAcronym(item)}
                         className="shrink-0 text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300"
                       >
-                        {copiedKey === item.acronym ? 'Copied' : 'Copy'}
+                        {copiedKey === item.acronym ? t('common.copied') : t('common.copy')}
                       </button>
                     </div>
                   </div>
@@ -320,19 +322,29 @@ const MedicalGlossarySection: React.FC = () => {
                     onClick={() => setShowAllAcronyms(prev => !prev)}
                     className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
                   >
-                    {showAllAcronyms ? 'Show less' : `Show all (${filteredAcronyms.length})`}
+                    {showAllAcronyms
+                      ? t('common.showLess')
+                      : t('common.showAll', { count: filteredAcronyms.length })}
                   </button>
                 </div>
               )}
             </>
           )}
         </div>
+
+        {i18n.language === 'fr' && (
+          <div className="card-footer">
+            <p className="text-xs italic text-gray-400 dark:text-gray-500">
+              {t('common.contentNotTranslatedNote')}
+            </p>
+          </div>
+        )}
       </div>
 
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        title="Edit Medical Glossary Terms"
+        title={t('glossary.editTitle')}
         size="xl"
       >
         <div className="space-y-4">
@@ -347,14 +359,14 @@ const MedicalGlossarySection: React.FC = () => {
                   <Input
                     value={item.acronym}
                     onChange={e => updateDraftItem(i, 'acronym', e.target.value)}
-                    placeholder="Acronym"
+                    placeholder={t('glossary.acronymPlaceholder')}
                   />
                 </div>
                 <div className="flex-1">
                   <Input
                     value={item.meaning}
                     onChange={e => updateDraftItem(i, 'meaning', e.target.value)}
-                    placeholder="Meaning"
+                    placeholder={t('glossary.meaningPlaceholder')}
                   />
                 </div>
                 <div className="w-40">
@@ -377,15 +389,15 @@ const MedicalGlossarySection: React.FC = () => {
           </div>
 
           <Button variant="outline" size="sm" onClick={addDraftItem} leftIcon={<Plus className="w-4 h-4" />}>
-            Add Term
+            {t('glossary.addTerm')}
           </Button>
 
           <div className="flex justify-end space-x-3 pt-4 border-t">
             <Button variant="secondary" onClick={() => setShowEditModal(false)} disabled={saving}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleSave} loading={saving} disabled={saving}>
-              Save
+              {saving ? t('common.saving') : t('common.save')}
             </Button>
           </div>
         </div>

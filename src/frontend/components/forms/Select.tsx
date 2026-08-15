@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/utils'
 import type { SelectProps as BaseSelectProps } from '@/types'
@@ -23,12 +24,13 @@ const Select = forwardRef<HTMLSelectElement, OurSelectProps>(({
   onChange,
   ...props
 }, ref) => {
+  const { t } = useTranslation()
   const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`
 
   const handleInvalid: React.FormEventHandler<HTMLSelectElement> = (e) => {
     if (requireUnknown) {
       // Message matches your DOB pattern (“DNO/UTO if unknown”), tweak as needed per field
-      e.currentTarget.setCustomValidity('Please select a value (use DNO or UTO if unknown)')
+      e.currentTarget.setCustomValidity(t('common.selectRequiredDnoUto'))
     }
     if (onInvalid) onInvalid(e)
   }

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CalendarDays } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
@@ -57,6 +58,7 @@ function aggregate(rows: MineStatsRow[]): { total: number; bars: BarDatum[] } {
 }
 
 const UserCallStats: React.FC = () => {
+  const { t } = useTranslation()
   const { isAuthenticated } = useAuth()
   const [rows, setRows] = useState<MineStatsRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -97,7 +99,7 @@ const UserCallStats: React.FC = () => {
   const { total, bars, totalLabel } = useMemo(() => {
     if (selectedDate) {
       const dayRows = rows.filter(r => r.date === selectedDate)
-      return { ...aggregate(dayRows), totalLabel: `Calls on ${selectedDate}` }
+      return { ...aggregate(dayRows), totalLabel: t('callStats.callsOn', { date: selectedDate }) }
     }
 
     if (season) {
@@ -105,12 +107,18 @@ const UserCallStats: React.FC = () => {
       if (!Number.isNaN(yearNum) && year.trim().length === 4) {
         const [start, end] = seasonRange(season, yearNum)
         const seasonRows = rows.filter(r => r.date && r.date >= start && r.date <= end)
-        return { ...aggregate(seasonRows), totalLabel: `${season} ${yearNum} calls` }
+        return {
+          ...aggregate(seasonRows),
+          totalLabel: t('callStats.seasonCalls', {
+            season: t(`callStats.${season.toLowerCase()}`),
+            year: yearNum,
+          }),
+        }
       }
     }
 
-    return { total: 0, bars: [] as BarDatum[], totalLabel: 'Calls' }
-  }, [selectedDate, season, year, rows])
+    return { total: 0, bars: [] as BarDatum[], totalLabel: t('callStats.calls') }
+  }, [selectedDate, season, year, rows, t])
 
   return (
     <div className="card">
@@ -119,12 +127,12 @@ const UserCallStats: React.FC = () => {
           <span className="icon-chip icon-chip-primary w-9 h-9">
             <CalendarDays className="w-4 h-4" />
           </span>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Call Tracker</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{t('callStats.title')}</h3>
         </div>
       </div>
       <div className="card-body">
         {loading ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
             <div className="md:col-span-2">
@@ -139,22 +147,22 @@ const UserCallStats: React.FC = () => {
               <div className="flex flex-wrap items-end gap-3 mb-5">
                 <div>
                   <label className="form-label" htmlFor="season-select">
-                    Season
+                    {t('callStats.season')}
                   </label>
                   <select
                     id="season-select"
                     value={season}
                     onChange={e => handleSelectSeason(e.target.value)}
-                    className="min-w-[110px] rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                    className="min-w-[140px] rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                   >
-                    <option value="">Select...</option>
-                    <option value="Fall">Fall</option>
-                    <option value="Winter">Winter</option>
+                    <option value="">{t('callStats.selectPlaceholder')}</option>
+                    <option value="Fall">{t('callStats.fall')}</option>
+                    <option value="Winter">{t('callStats.winter')}</option>
                   </select>
                 </div>
                 <div>
                   <label className="form-label" htmlFor="season-year">
-                    Year
+                    {t('callStats.year')}
                   </label>
                   <input
                     id="season-year"

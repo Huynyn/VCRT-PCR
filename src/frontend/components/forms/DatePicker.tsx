@@ -1,4 +1,5 @@
 import React, { forwardRef, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Calendar } from 'lucide-react'
 import { cn } from '@/utils'
 
@@ -16,6 +17,7 @@ const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
   required,
   ...props
 }, ref) => {
+  const { t } = useTranslation()
   const inputId = props.id || `date-${Math.random().toString(36).substr(2, 9)}`
   const internalRef = useRef<HTMLInputElement | null>(null)
 
@@ -64,7 +66,7 @@ const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
           type="button"
           onClick={openPicker}
           tabIndex={-1}
-          aria-label="Open calendar"
+          aria-label={t('common.openCalendar')}
           className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50 focus:text-primary-600 dark:hover:text-primary-400 dark:hover:bg-primary-900/30 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
         >
           <Calendar className="w-4 h-4" />

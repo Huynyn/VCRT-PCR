@@ -94,10 +94,13 @@
       "Bash(cp \"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/add_row_divider.js\" ./__add_divider.js)",
       "Bash(node ./__add_divider.js \"docs_signoff_test.pdf\")",
       "Bash(WIDE_SRC=\"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/orig_pristine_base.pdf\" node ./__add_letterhead.js \"docs_signoff_test.pdf\")",
-      "Bash(WIDE_SRC=\"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/orig_pristine_base2.pdf\" node ./__add_letterhead.js \"docs_signoff_test.pdf\")"
+      "Bash(WIDE_SRC=\"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/orig_pristine_base2.pdf\" node ./__add_letterhead.js \"docs_signoff_test.pdf\")",
+      "Bash(cd \"c:\\\\Users\\\\jeanp\\\\Downloads\\\\VCRT\\\\VCRT-PCR\" && sed -i 's/\\\\bPCR\\\\b/RSP/g' src/frontend/i18n/locales/fr.json && grep -n \"PCR\\\\|RSP\" src/frontend/i18n/locales/fr.json)",
+      "Bash(cd \"c:/Users/jeanp/Downloads/VCRT/VCRT-PCR\" && sed -i 's/DNO ou UTO/N.O. ou I.O./g' src/frontend/i18n/locales/fr.json && grep -c \"N.O. ou I.O.\" src/frontend/i18n/locales/fr.json && grep -n \"DNO\\\\|UTO\" src/frontend/i18n/locales/fr.json)"
     ],
     "additionalDirectories": [
-      "C:\\Users\\jeanp\\Downloads\\VCRT\\VCRT-PCR"
+      "C:\\Users\\jeanp\\Downloads\\VCRT\\VCRT-PCR",
+      "c:\\Users\\jeanp\\Downloads\\VCRT\\VCRT-PCR\\src\\frontend\\i18n\\locales"
     ]
   }
 }
