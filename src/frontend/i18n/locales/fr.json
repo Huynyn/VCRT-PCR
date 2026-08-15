@@ -169,7 +169,7 @@
     "subtitleEditingSubmittedAdmin": "Modification du rapport soumis en tant qu'administrateur - les changements mettront à jour le rapport existant",
     "subtitleEditingDraft": "Modification d'un brouillon existant - complétez et soumettez lorsque prêt",
     "subtitleNew": "Remplissez les champs pour soumettre le rapport",
-    "fillSampleData": "Remplir avec des données d'exemple",
+    "fillSampleData": "Enregistrer",
     "allChangesSaved": "Toutes les modifications sont enregistrées",
     "changesRequestedByAdmin": "Changements demandés par l'administrateur",
     "loadingDraft": "Chargement du brouillon...",
@@ -404,7 +404,8 @@
     "attachments": {
       "title": "Pièces jointes supplémentaires",
       "subtitle": "Téléversez la décharge du patient ou d'autres renseignements (en PDF) à joindre au rapport",
-      "dragDrop": "Glissez-déposez un PDF ici, ou parcourez.",
+      "dragDrop": "Déposez un PDF ici, ou parcourez",
+      "hint": "PDF seulement, jusqu'à {{maxMb}} Mo",
       "browse": "Parcourir",
       "remove": "Retirer",
       "invalidFile": "Veuillez téléverser un fichier PDF.",
@@ -487,8 +488,7 @@
       "formReset": "Formulaire réinitialisé avec succès",
       "loginToSaveDrafts": "Veuillez vous connecter pour enregistrer des brouillons",
       "draftSaved": "Brouillon enregistré avec succès",
-      "draftSaveFailed": "Échec de l'enregistrement du brouillon",
-      "sampleDataFilled": "Données d'exemple remplies pour test"
+      "draftSaveFailed": "Échec de l'enregistrement du brouillon"
     }
   },
   "userManagement": {

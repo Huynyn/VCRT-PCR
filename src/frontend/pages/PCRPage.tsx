@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck, Plus, Trash2, ChevronLeft, ChevronRight, Upload, FileText, X } from 'lucide-react'
 import { Button, Card, Alert, Modal, Tooltip } from '@/components/ui'
 import {
   Input,
@@ -59,6 +59,8 @@ function normalizeLegacyResponders(formData: PCRFormData): PCRFormData {
   }
 }
 
+const MAX_SIGN_OFF_MB = 15
+
 const PCRPage: React.FC = () => {
   const { t } = useTranslation()
 
@@ -106,6 +108,7 @@ const PCRPage: React.FC = () => {
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [signOffPdf, setSignOffPdf] = useState<File | null>(null)
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
+  const [isDraggingSignOff, setIsDraggingSignOff] = useState(false)
   const [responderOptions, setResponderOptions] = useState<string[]>([])
   const [psmOptions, setPsmOptions] = useState<string[]>([])
   const [signerIndex, setSignerIndex] = useState(0)
@@ -412,11 +415,17 @@ const PCRPage: React.FC = () => {
     showNotification(t('pcr.notifications.formReset'), 'success')
   }
 
-  const handleSaveDraft = async () => {
+  // Shared by the normal Save Draft button and fillSampleData (which fills
+  // then saves in one step). Takes an explicit data override because state
+  // updates from fillSampleData's updateField calls haven't landed in `data`
+  // yet by the time it wants to save.
+  const saveDraft = async (overrideData?: Partial<PCRFormData>) => {
     if (!isAuthenticated || !token) {
       showNotification(t('pcr.notifications.loginToSaveDrafts'), 'error')
       return
     }
+
+    const dataToSave = overrideData ?? data
 
     setIsSavingDraft(true)
 
@@ -436,7 +445,7 @@ const PCRPage: React.FC = () => {
       const responseData = await apiRequest(url, {
         method,
         body: JSON.stringify({
-          form_data: data,
+          form_data: dataToSave,
           status: 'draft',
           sign_off_attachment: signOffBase64,
           sign_off_filename: signOffFilename,
@@ -453,16 +462,21 @@ const PCRPage: React.FC = () => {
 
       // Marks the form clean so leaving right after this save doesn't
       // re-trigger the "save draft before leaving?" prompt.
-      loadData(data)
+      loadData(dataToSave)
 
-      showNotification(t('pcr.notifications.draftSaved'), 'success')
+      // Fixed id: saving repeatedly in quick succession (e.g. the fill-sample
+      // testing button) replaces the previous toast instead of stacking a new
+      // one on top of it each time.
+      showNotification(t('pcr.notifications.draftSaved'), 'success', 'pcr-draft-save')
     } catch (error) {
       console.error('Save draft failed:', error)
-      showNotification(t('pcr.notifications.draftSaveFailed'), 'error')
+      showNotification(t('pcr.notifications.draftSaveFailed'), 'error', 'pcr-draft-save')
     } finally {
       setIsSavingDraft(false)
     }
   }
+
+  const handleSaveDraft = () => saveDraft()
 
   // Ctrl+S (or Cmd+S on macOS) saves a draft without leaving the page,
   // instead of triggering the browser/OS "save page" dialog.
@@ -601,8 +615,8 @@ const PCRPage: React.FC = () => {
     }
   }
 
-  // Test function to fill sample data
-  const fillSampleData = () => {
+  // Test function to fill sample data and save it right away
+  const fillSampleData = async () => {
     const sampleData: Partial<PCRFormData> = {
       // --- Basic Information (required) ---
       date: formatDate(new Date()),
@@ -714,7 +728,8 @@ const PCRPage: React.FC = () => {
     Object.entries(sampleData).forEach(([key, value]) => {
       updateField(key as keyof PCRFormData, value as any)
     })
-    showNotification(t('pcr.notifications.sampleDataFilled'), 'info')
+
+    await saveDraft({ ...data, ...sampleData })
   }
 
   // Drop-box for sign-off
@@ -726,8 +741,7 @@ const PCRPage: React.FC = () => {
     }
 
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-    const maxMb = 15
-    const maxBytes = maxMb * 1024 * 1024
+    const maxBytes = MAX_SIGN_OFF_MB * 1024 * 1024
 
     if (!isPdf) {
       setSignOffPdf(null)
@@ -737,11 +751,16 @@ const PCRPage: React.FC = () => {
 
     if (file.size > maxBytes) {
       setSignOffPdf(null)
-      setSignOffPdfError(t('pcr.attachments.tooLarge', { maxMb }))
+      setSignOffPdfError(t('pcr.attachments.tooLarge', { maxMb: MAX_SIGN_OFF_MB }))
       return
     }
 
     setSignOffPdf(file)
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   const hasTourniquet =
@@ -830,9 +849,17 @@ const PCRPage: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          {/* Test button for development */}
-          <Button type="button" variant="outline" size="sm" onClick={fillSampleData}>
-            {t('pcr.fillSampleData')}
+          {/* Test button for development - fills and saves in one step; once
+              testing is done this becomes a plain save button up here. */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={fillSampleData}
+            loading={isSavingDraft}
+            disabled={isSavingDraft}
+            leftIcon={<Save className="w-4 h-4" />}
+          >
+            {isSavingDraft ? t('common.saving') : t('pcr.fillSampleData')}
           </Button>
 
           {!isDirty && isValid && (
@@ -1713,56 +1740,76 @@ const PCRPage: React.FC = () => {
           number={sectionNumber('additionalAttachments')}
           subtitle={t('pcr.attachments.subtitle')}
         >
-          <div
+          <label
             className={cn(
-              'border-2 border-dashed rounded-lg p-4 transition',
-              'hover:bg-gray-50 dark:hover:bg-gray-800/40',
-              signOffPdfError ? 'border-red-300' : 'border-gray-300',
+              'block rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-colors',
+              signOffPdfError
+                ? 'border-red-300 dark:border-red-800'
+                : isDraggingSignOff
+                  ? 'border-primary-400 bg-primary-50/60 dark:border-primary-600 dark:bg-primary-900/20'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500',
             )}
-            onDragOver={e => e.preventDefault()}
+            onDragOver={e => {
+              e.preventDefault()
+              setIsDraggingSignOff(true)
+            }}
+            onDragLeave={() => setIsDraggingSignOff(false)}
             onDrop={e => {
               e.preventDefault()
+              setIsDraggingSignOff(false)
               const file = e.dataTransfer.files?.[0]
               validateAndSetSignOff(file ?? null)
             }}
           >
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {t('pcr.attachments.dragDrop')}
-                </div>
-              </div>
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={e => validateAndSetSignOff(e.target.files?.[0] ?? null)}
+            />
 
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  className="hidden"
-                  onChange={e => validateAndSetSignOff(e.target.files?.[0] ?? null)}
-                />
-                <span className="text-sm font-medium text-blue-600 hover:text-blue-800">
-                  {t('pcr.attachments.browse')}
-                </span>
-              </label>
-            </div>
+            <span className="icon-chip icon-chip-primary w-10 h-10 mx-auto">
+              <Upload className="w-5 h-5" />
+            </span>
+
+            <p className="mt-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+              {t('pcr.attachments.dragDrop')}
+            </p>
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              {t('pcr.attachments.hint', { maxMb: MAX_SIGN_OFF_MB })}
+            </p>
 
             {signOffPdf && (
-              <div className="mt-3 flex items-center justify-between rounded bg-gray-100 dark:bg-gray-800 px-3 py-2">
-                <div className="text-sm text-gray-900 dark:text-gray-100 truncate">
-                  {signOffPdf.name}
+              <div
+                className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-2 text-left"
+                onClick={e => e.preventDefault()}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-sm text-gray-900 dark:text-gray-100 truncate">
+                      {signOffPdf.name}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatFileSize(signOffPdf.size)}
+                    </div>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => validateAndSetSignOff(null)}
-                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                  aria-label={t('pcr.attachments.remove')}
+                  className="shrink-0 p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
-                  {t('pcr.attachments.remove')}
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             )}
 
-            {signOffPdfError && <div className="mt-2 text-sm text-red-600">{signOffPdfError}</div>}
-          </div>
+            {signOffPdfError && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{signOffPdfError}</p>
+            )}
+          </label>
         </FormSection>
 
         {/* Add Signatures */}

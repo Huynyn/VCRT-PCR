@@ -216,15 +216,13 @@ const DebriefQuestionsSection: React.FC = () => {
               </div>
             </div>
           )}
-        </div>
 
-        {i18n.language === 'fr' && (
-          <div className="card-footer">
-            <p className="text-xs italic text-gray-400 dark:text-gray-500">
+          {i18n.language === 'fr' && (
+            <p className="mt-4 text-xs italic text-gray-400 dark:text-gray-500">
               {t('common.contentNotTranslatedNote')}
             </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <Modal

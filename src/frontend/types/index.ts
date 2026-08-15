@@ -224,7 +224,9 @@ export interface FormSectionProps {
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
 
 export interface NotificationContextType {
-  showNotification: (message: string, type: NotificationType) => void;
+  // `id` lets repeated calls (e.g. a save button clicked several times in a
+  // row) update the same toast in place instead of stacking a new one.
+  showNotification: (message: string, type: NotificationType, id?: string) => void;
 }
 
 // Form Context Types

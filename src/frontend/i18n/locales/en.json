@@ -169,7 +169,7 @@
     "subtitleEditingSubmittedAdmin": "Editing submitted report as admin - changes will update the existing report",
     "subtitleEditingDraft": "Editing existing draft - complete and submit when ready",
     "subtitleNew": "Complete fields to submit the report",
-    "fillSampleData": "Fill Sample Data",
+    "fillSampleData": "Save",
     "allChangesSaved": "All changes saved",
     "changesRequestedByAdmin": "Changes requested by admin",
     "loadingDraft": "Loading draft...",
@@ -404,7 +404,8 @@
     "attachments": {
       "title": "Additional Attachments",
       "subtitle": "Upload patient sign-off or other information (as a PDF) to append to the report",
-      "dragDrop": "Drag & drop a PDF here, or browse.",
+      "dragDrop": "Drop a PDF here, or browse",
+      "hint": "PDF only, up to {{maxMb}} MB",
       "browse": "Browse",
       "remove": "Remove",
       "invalidFile": "Please upload a PDF file.",
@@ -487,8 +488,7 @@
       "formReset": "Form reset successfully",
       "loginToSaveDrafts": "Please log in to save drafts",
       "draftSaved": "Draft saved successfully",
-      "draftSaveFailed": "Failed to save draft",
-      "sampleDataFilled": "Sample data filled for testing"
+      "draftSaveFailed": "Failed to save draft"
     }
   },
   "userManagement": {

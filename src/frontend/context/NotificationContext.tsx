@@ -9,8 +9,9 @@ interface NotificationProviderProps {
 }
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
-  const showNotification = useCallback((message: string, type: NotificationType = 'info') => {
+  const showNotification = useCallback((message: string, type: NotificationType = 'info', id?: string) => {
     const options = {
+      ...(id ? { id } : {}),
       duration: 4000,
       position: 'top-right' as const,
       style: {
