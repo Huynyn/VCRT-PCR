@@ -1615,7 +1615,8 @@ const PCRPage: React.FC = () => {
               value={data.comments || ''}
               onChange={e => updateField('comments', e.target.value)}
               error={errors.comments}
-              placeholder="Detailed description of the call... (refer to Sample PCR in Dashboard)"
+              placeholder="Detailed description of the call... (patient condition, interventions, any other relevant information)"
+              helpText="Refer to the Sample PCR and Medical Glossary sections on the Dashboard page"
               rows={4}
               required
             />
@@ -1625,8 +1626,8 @@ const PCRPage: React.FC = () => {
               value={data.transferComments || ''}
               onChange={e => updateField('transferComments', e.target.value)}
               error={errors.transferComments}
-              placeholder="Details about patient transfer (advice given, who was care transfered to)..."
-              helpText="Remember to mention all responders' full names again"
+              placeholder="Details about patient transfer... (advice given, who was care transfered to, patient's plans)"
+              helpText="Remember to include all responders' full names again"
               rows={3}
               required
             />

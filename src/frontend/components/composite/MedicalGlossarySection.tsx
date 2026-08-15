@@ -230,11 +230,11 @@ const MedicalGlossarySection: React.FC = () => {
       <div className="card">
         <div className="card-header">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
               <span className="icon-chip icon-chip-primary w-9 h-9">
                 <BookOpen className="w-4 h-4" />
               </span>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                 Medical Glossary Terms
               </h3>
             </div>
@@ -243,13 +243,13 @@ const MedicalGlossarySection: React.FC = () => {
               <input
                 value={acronymQuery}
                 onChange={e => setAcronymQuery(e.target.value)}
-                placeholder="Search acronym or meaning..."
-                className="w-full sm:w-72 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder:text-gray-400"
+                placeholder="Search term..."
+                className="w-full sm:w-40 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder:text-gray-400"
               />
               <select
                 value={acronymCategory}
                 onChange={e => setAcronymCategory(e.target.value as 'All' | AcronymCategory)}
-                className="w-full sm:w-56 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                className="w-full sm:w-32 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               >
                 {FILTER_CATEGORY_OPTIONS.map(cat => (
                   <option key={cat} value={cat}>

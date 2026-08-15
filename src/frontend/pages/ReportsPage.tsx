@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Eye, Edit, Trash2, Ban, ThumbsUp, Archive, MoreVertical, type LucideIcon } from 'lucide-react'
+import { Eye, Edit, Trash2, Ban, ThumbsUp, Archive, MoreVertical, ChevronRight, MessageSquare, type LucideIcon } from 'lucide-react'
 import { Loading, Alert, Modal, Button } from '@/components/ui'
 import { Textarea } from '@/components/forms'
 import { pdfService } from '@/services/pdf.service'
@@ -21,15 +21,28 @@ interface PCRReport {
   creator_username?: string | null
 }
 
+interface SubAction {
+  label: string
+  icon: LucideIcon
+  onClick: () => void
+}
+
 // A row's actions are collapsed into a single "..." menu, listing only the
 // actions actually available for the report's current status (nothing
 // rendered disabled - unavailable actions are just left out of the array).
 interface ActionSlot {
   label: string
   icon: LucideIcon
-  onClick: () => void
+  onClick?: () => void
   /** Only ever true for the transient "View/Preview PDF is loading" state. */
   disabled?: boolean
+  /**
+   * When set, this slot has no click of its own - hovering it reveals these
+   * as two separately-clickable actions instead (e.g. "Review" expanding
+   * into "Edit" and "Request Changes"), so admins can jump straight to
+   * either without an extra confirmation step.
+   */
+  subActions?: [SubAction, SubAction]
 }
 
 interface RowActionsMenuProps {
@@ -117,31 +130,63 @@ const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions }) => {
           className="z-50 w-56 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
         >
           <ul className="py-1">
-            {actions.map((action, idx) => (
-              <li key={idx}>
-                <button
-                  type="button"
-                  disabled={action.disabled}
-                  onClick={
-                    action.disabled
-                      ? undefined
-                      : () => {
-                          setOpen(false)
-                          action.onClick()
-                        }
-                  }
-                  className={cn(
-                    'flex w-full items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors',
-                    action.disabled
-                      ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 cursor-pointer',
-                  )}
-                >
-                  <action.icon className="w-4 h-4 shrink-0" />
-                  {action.label}
-                </button>
-              </li>
-            ))}
+            {actions.map((action, idx) =>
+              action.subActions ? (
+                <li key={idx} className="group relative">
+                  <div className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors cursor-default">
+                    <action.icon className="w-4 h-4 shrink-0" />
+                    <span className="flex-1">{action.label}</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  </div>
+
+                  {/* Submenu - appears to the left, so it doesn't run off the
+                      screen edge that the main menu is already anchored to. */}
+                  <div className="absolute right-full top-0 z-10 mr-1 hidden w-48 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 group-hover:block">
+                    <ul className="py-1">
+                      {action.subActions.map((sub, subIdx) => (
+                        <li key={subIdx}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpen(false)
+                              sub.onClick()
+                            }}
+                            className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/60 transition-colors cursor-pointer"
+                          >
+                            <sub.icon className="w-4 h-4 shrink-0" />
+                            {sub.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </li>
+              ) : (
+                <li key={idx}>
+                  <button
+                    type="button"
+                    disabled={action.disabled}
+                    onClick={
+                      action.disabled
+                        ? undefined
+                        : () => {
+                            setOpen(false)
+                            action.onClick?.()
+                          }
+                    }
+                    className={cn(
+                      'flex w-full items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors',
+                      action.disabled
+                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 cursor-pointer',
+                    )}
+                  >
+                    <action.icon className="w-4 h-4 shrink-0" />
+                    {action.label}
+                  </button>
+                </li>
+              ),
+            )}
           </ul>
         </div>,
         document.body,
@@ -163,9 +208,8 @@ const ReportsPage = () => {
   const [requestChangesReportId, setRequestChangesReportId] = useState<string | null>(null)
   const [requestChangesComment, setRequestChangesComment] = useState('')
   const [submittingRequestChanges, setSubmittingRequestChanges] = useState(false)
-  // Admin "Edit" chooser modal (submitted -> Edit or Request; changes_requested ->
-  // Edit or update the existing comments) - which report it's for
-  const [editChoiceReport, setEditChoiceReport] = useState<PCRReport | null>(null)
+  // Regular user's read-only "View Comments" modal - which report it's for
+  const [viewCommentsReport, setViewCommentsReport] = useState<PCRReport | null>(null)
   // Admin "approve", "complete" and "cancel" confirmation modals: which report they're for
   const [approveReportId, setApproveReportId] = useState<string | null>(null)
   const [submittingApprove, setSubmittingApprove] = useState(false)
@@ -422,6 +466,7 @@ const ReportsPage = () => {
           return [
             viewSlot,
             { label: 'Edit & Resubmit', icon: Edit, onClick: () => handleEditReport(report.id) },
+            { label: 'View Comments', icon: MessageSquare, onClick: () => setViewCommentsReport(report) },
           ]
         default:
           // submitted, cancelled: locked down to view-only
@@ -439,7 +484,14 @@ const ReportsPage = () => {
       case 'submitted':
         return [
           viewSlot,
-          { label: 'Edit / Request Changes', icon: Edit, onClick: () => setEditChoiceReport(report) },
+          {
+            label: 'Review',
+            icon: Edit,
+            subActions: [
+              { label: 'Edit', icon: Edit, onClick: () => handleEditReport(report.id) },
+              { label: 'Request Changes', icon: MessageSquare, onClick: () => handleOpenRequestChanges(report.id) },
+            ],
+          },
           { label: 'Approve', icon: ThumbsUp, onClick: () => handleOpenApprove(report.id) },
           { label: 'Cancel', icon: Ban, onClick: () => handleOpenCancel(report.id) },
         ]
@@ -452,7 +504,18 @@ const ReportsPage = () => {
       case 'changes_requested':
         return [
           viewSlot,
-          { label: 'Edit / View Comments', icon: Edit, onClick: () => setEditChoiceReport(report) },
+          {
+            label: 'Review',
+            icon: Edit,
+            subActions: [
+              { label: 'Edit', icon: Edit, onClick: () => handleEditReport(report.id) },
+              {
+                label: 'View Comments',
+                icon: MessageSquare,
+                onClick: () => handleOpenRequestChanges(report.id, report.admin_comments || ''),
+              },
+            ],
+          },
           { label: 'Approve', icon: ThumbsUp, onClick: () => handleOpenApprove(report.id) },
         ]
       default:
@@ -570,12 +633,12 @@ const ReportsPage = () => {
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {reports.map(report => (
                     <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 text-center">
                         {displayReportId(report)}
                       </td>
 
                       {isAdmin && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
                           {report.creator_first_name && report.creator_last_name
                             ? `${report.creator_first_name} ${report.creator_last_name}`
                             : report.creator_username
@@ -584,7 +647,7 @@ const ReportsPage = () => {
                         </td>
                       )}
 
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${
                             report.status === 'approved'
@@ -605,10 +668,10 @@ const ReportsPage = () => {
                           {report.status === 'changes_requested' ? 'changes requested' : report.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
                         {formatDate(report.created_at)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
                         {formatDate(report.updated_at)}
                       </td>
                       <td className="w-0 pl-2 pr-4 py-4 whitespace-nowrap text-sm font-medium text-right">
@@ -623,47 +686,6 @@ const ReportsPage = () => {
           )}
         </div>
       </div>
-
-      {/* Admin: Edit chooser modal - edit directly, or send/update comments instead */}
-      <Modal
-        isOpen={editChoiceReport !== null}
-        onClose={() => setEditChoiceReport(null)}
-        title="Edit"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {editChoiceReport?.status === 'submitted'
-              ? 'Edit this report yourself, or send it back with comments instead.'
-              : 'Edit this report yourself, or update the comments sent back to the submitter.'}
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const r = editChoiceReport
-                setEditChoiceReport(null)
-                if (r) handleOpenRequestChanges(r.id, r.status === 'changes_requested' ? r.admin_comments || '' : '')
-              }}
-            >
-              {editChoiceReport?.status === 'submitted' ? 'Request' : 'Comments'}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                const r = editChoiceReport
-                setEditChoiceReport(null)
-                if (r) handleEditReport(r.id)
-              }}
-            >
-              Edit
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Admin: Request Changes modal (also used to update existing comments) */}
       <Modal
@@ -704,6 +726,29 @@ const ReportsPage = () => {
               disabled={submittingRequestChanges || !requestChangesComment.trim()}
             >
               {submittingRequestChanges ? 'Saving...' : 'Send Back'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* User: read-only view of the admin's "changes requested" comments */}
+      <Modal
+        isOpen={viewCommentsReport !== null}
+        onClose={() => setViewCommentsReport(null)}
+        title="Changes Requested"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            The admin sent this report back with the following comments. Edit and resubmit it once
+            you've addressed them.
+          </p>
+          <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
+            {viewCommentsReport?.admin_comments || 'No comments provided.'}
+          </p>
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={() => setViewCommentsReport(null)}>
+              Close
             </Button>
           </div>
         </div>

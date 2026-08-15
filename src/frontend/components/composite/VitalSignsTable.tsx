@@ -58,9 +58,9 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
     { key: 'resp', label: 'RR', width: 'w-32', hint: 'rate, rhythm, quality' },
     { key: 'spo2', label: 'SpO2', width: 'w-32', hint: '0-100' },
     { key: 'bp', label: 'B/P', width: 'w-28', hint: 'SYS/DIA or SYS/PALP' },
-    { key: 'loc', label: 'LOC, GCS', width: 'w-32', hint: 'A&Ox(1-3) or GCS 3-15' },
+    { key: 'loc', label: 'LOC, GCS', width: 'w-32', hint: 'AOx(1-3) or GCS 3-15' },
     { key: 'skin', label: 'Skin', width: 'w-32', hint: 'XX°C, color, temp, moisture' },
-    { key: 'pupils', label: 'Pupils', width: 'w-28', hint: 'PERRLA?, X mm' },
+    { key: 'pupils', label: 'Pupils', width: 'w-28', hint: 'PERRLA?, N mm' },
   ]
 
   const columns = customColumns || defaultColumns

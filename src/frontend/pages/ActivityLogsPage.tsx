@@ -415,7 +415,7 @@ const ActivityLogsPage = () => {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 mt-4">
                   <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Showing page <span className="font-medium">{filters.page}</span> of{' '}
+                    Page <span className="font-medium">{filters.page}</span> of{' '}
                     <span className="font-medium">{totalPages}</span>
                   </p>
                   <div className="flex items-center gap-1">
