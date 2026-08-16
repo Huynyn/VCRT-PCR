@@ -11,6 +11,27 @@ function generateId(): string {
   return 'pcr_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
+// A report row's sign_off_attachments column is stored as a JSON string;
+// parse it back into an array for API responses. Falls back to the legacy
+// single sign_off_attachment/sign_off_filename columns for reports saved
+// before multi-attachment support existed.
+function parseAttachments(row: { sign_off_attachments?: string | null; sign_off_attachment?: string | null; sign_off_filename?: string | null }): Array<{ filename: string; data: string }> {
+  if (row.sign_off_attachments) {
+    try {
+      const parsed = JSON.parse(row.sign_off_attachments);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // Fall through to legacy fields below
+    }
+  }
+
+  if (row.sign_off_attachment && row.sign_off_filename) {
+    return [{ filename: row.sign_off_filename, data: row.sign_off_attachment }];
+  }
+
+  return [];
+}
+
 // GET /api/pcr/:id - Get specific PCR report (must be before GET / to avoid route conflicts)
 router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -43,7 +64,8 @@ router.get('/:id', authenticateToken, (req: AuthenticatedRequest, res: Response)
     // Parse form_data JSON
     const reportData = {
       ...report,
-      form_data: JSON.parse(report.form_data)
+      form_data: JSON.parse(report.form_data),
+      sign_off_attachments: parseAttachments(report)
     };
 
     res.json({
@@ -116,7 +138,7 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
 // POST /api/pcr - Create new PCR report
 router.post('/', authenticateToken, logActivity('create_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { form_data, status = 'draft', sign_off_attachment, sign_off_filename } = req.body;
+    const { form_data, status = 'draft', sign_off_attachments } = req.body;
 
     if (!form_data) {
       return res.status(400).json({ success: false, message: 'Form data required' });
@@ -125,13 +147,12 @@ router.post('/', authenticateToken, logActivity('create_pcr', 'pcr_report'), (re
     const reportId = generateId();
 
     db.prepare(`
-      INSERT INTO pcr_reports (id, form_data, sign_off_attachment, sign_off_filename, status, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO pcr_reports (id, form_data, sign_off_attachments, status, created_by)
+      VALUES (?, ?, ?, ?, ?)
     `).run(
       reportId,
       JSON.stringify(form_data),
-      sign_off_attachment || null,
-      sign_off_filename || null,
+      sign_off_attachments && sign_off_attachments.length > 0 ? JSON.stringify(sign_off_attachments) : null,
       status,
       req.user!.id
     );
@@ -142,7 +163,8 @@ router.post('/', authenticateToken, logActivity('create_pcr', 'pcr_report'), (re
       success: true,
       data: {
         ...newReport,
-        form_data: JSON.parse(newReport.form_data)
+        form_data: JSON.parse(newReport.form_data),
+        sign_off_attachments: parseAttachments(newReport)
       }
     });
 
@@ -156,7 +178,7 @@ router.post('/', authenticateToken, logActivity('create_pcr', 'pcr_report'), (re
 router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { form_data, status, sign_off_attachment, sign_off_filename } = req.body;
+    const { form_data, status, sign_off_attachments } = req.body;
 
     // Fetch report without filtering by created_by
     const existingReport = db.prepare(`
@@ -208,15 +230,14 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
       }
     }
 
-    // Handle sign-off attachment - allow setting to null to remove it
-    if (sign_off_attachment !== undefined) {
-      updateFields.push('sign_off_attachment = ?');
-      updateValues.push(sign_off_attachment || null);
-    }
-
-    if (sign_off_filename !== undefined) {
-      updateFields.push('sign_off_filename = ?');
-      updateValues.push(sign_off_filename || null);
+    // Handle sign-off attachments - allow setting to an empty array to remove
+    // them all. Also clears the legacy single-attachment columns so a report
+    // that started with an old-style attachment doesn't keep showing it
+    // alongside the new list once it's been edited.
+    if (sign_off_attachments !== undefined) {
+      updateFields.push('sign_off_attachments = ?');
+      updateValues.push(sign_off_attachments && sign_off_attachments.length > 0 ? JSON.stringify(sign_off_attachments) : null);
+      updateFields.push('sign_off_attachment = NULL', 'sign_off_filename = NULL');
     }
 
     updateFields.push('updated_at = CURRENT_TIMESTAMP');
@@ -235,7 +256,8 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
       success: true,
       data: {
         ...updatedReport,
-        form_data: JSON.parse(updatedReport.form_data)
+        form_data: JSON.parse(updatedReport.form_data),
+        sign_off_attachments: parseAttachments(updatedReport)
       }
     });
 
@@ -277,7 +299,8 @@ router.put('/:id/approve', authenticateToken, logActivity('approve_pcr', 'pcr_re
       success: true,
       data: {
         ...updatedReport,
-        form_data: JSON.parse(updatedReport.form_data)
+        form_data: JSON.parse(updatedReport.form_data),
+        sign_off_attachments: parseAttachments(updatedReport)
       }
     });
 
@@ -320,7 +343,8 @@ router.put('/:id/complete', authenticateToken, logActivity('complete_pcr', 'pcr_
       success: true,
       data: {
         ...updatedReport,
-        form_data: JSON.parse(updatedReport.form_data)
+        form_data: JSON.parse(updatedReport.form_data),
+        sign_off_attachments: parseAttachments(updatedReport)
       }
     });
 
@@ -362,7 +386,8 @@ router.put('/:id/cancel', authenticateToken, logActivity('cancel_pcr', 'pcr_repo
       success: true,
       data: {
         ...updatedReport,
-        form_data: JSON.parse(updatedReport.form_data)
+        form_data: JSON.parse(updatedReport.form_data),
+        sign_off_attachments: parseAttachments(updatedReport)
       }
     });
 
@@ -412,7 +437,8 @@ router.put('/:id/request-changes', authenticateToken, logActivity('request_chang
       success: true,
       data: {
         ...updatedReport,
-        form_data: JSON.parse(updatedReport.form_data)
+        form_data: JSON.parse(updatedReport.form_data),
+        sign_off_attachments: parseAttachments(updatedReport)
       }
     });
 
@@ -466,7 +492,7 @@ router.delete('/:id', authenticateToken, logActivity('delete_pcr', 'pcr_report')
 // POST /api/submissions - Submit PCR (for compatibility with frontend)
 router.post('/submit', authenticateToken, logActivity('submit_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { data: formData, sign_off_attachment, sign_off_filename } = req.body;
+    const { data: formData, sign_off_attachments } = req.body;
 
     if (!formData) {
       return res.status(400).json({ success: false, message: 'Form data required' });
@@ -474,15 +500,14 @@ router.post('/submit', authenticateToken, logActivity('submit_pcr', 'pcr_report'
 
     const reportId = generateId();
 
-    // Create as submitted report with optional sign-off attachment
+    // Create as submitted report with optional sign-off attachments
     db.prepare(`
-      INSERT INTO pcr_reports (id, form_data, sign_off_attachment, sign_off_filename, status, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO pcr_reports (id, form_data, sign_off_attachments, status, created_by)
+      VALUES (?, ?, ?, ?, ?)
     `).run(
       reportId,
       JSON.stringify(formData),
-      sign_off_attachment || null,
-      sign_off_filename || null,
+      sign_off_attachments && sign_off_attachments.length > 0 ? JSON.stringify(sign_off_attachments) : null,
       'submitted',
       req.user!.id
     );

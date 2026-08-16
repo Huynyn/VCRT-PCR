@@ -161,7 +161,7 @@
       "noMatches": "Aucun résultat",
       "useTyped": "Utiliser « {{query}} » (absent de la liste)"
     },
-    "titleNew": "Rapport de soins préhospitaliers (RSP)",
+    "titleNew": "Rapport de soins préhospitaliers",
     "titleEditResubmit": "Modifier et soumettre à nouveau le RSP",
     "titleEditSubmittedAdmin": "Modifier le RSP soumis (Admin)",
     "titleEditDraft": "Modifier le brouillon du RSP",
@@ -408,6 +408,9 @@
       "hint": "PDF seulement, jusqu'à {{maxMb}} Mo",
       "browse": "Parcourir",
       "remove": "Retirer",
+      "view": "Afficher",
+      "moveUp": "Déplacer vers le haut",
+      "moveDown": "Déplacer vers le bas",
       "invalidFile": "Veuillez téléverser un fichier PDF.",
       "tooLarge": "Le PDF est trop volumineux (max {{maxMb}} Mo)."
     },
@@ -605,7 +608,7 @@
     "deleteFailed": "Échec de la suppression du rapport",
     "deleteDraftConfirm": "Supprimer ce brouillon? Cette action est irréversible.",
     "deleteSubmissionConfirm": "Supprimer cette soumission? Cette action est irréversible.",
-    "noReportId": "Aucun n° de rapport",
+    "noReportId": "Aucun n° rapport",
     "actions": "Actions",
     "loadingPdf": "Chargement...",
     "previewPdf": "Aperçu du PDF",
@@ -621,15 +624,15 @@
     "cancel": "Annuler",
     "complete": "Compléter",
     "noneDash": "—",
-    "columnReportId": "N° de rapport",
+    "columnReportId": "N° rapport",
     "columnCreatedBy": "Créé par",
     "columnStatus": "Statut",
     "columnCreated": "Créé",
-    "columnLastUpdated": "Dernière mise à jour",
+    "columnLastUpdated": "Mise à jour",
     "status": {
       "approved": "approuvé",
       "submitted": "soumis",
-      "changes_requested": "changements demandés",
+      "changes_requested": "changements requis",
       "draft": "brouillon",
       "completed": "complété",
       "cancelled": "annulé"
@@ -643,7 +646,7 @@
     "commentsPlaceholder": "ex. Signes vitaux manquants à 14:32, veuillez confirmer la destination de transport...",
     "sendBack": "Renvoyer",
     "sendingBack": "Enregistrement...",
-    "changesRequestedTitle": "Changements demandés",
+    "changesRequestedTitle": "Changements requis",
     "changesRequestedBody": "L'administrateur a renvoyé ce rapport avec les commentaires suivants. Modifiez-le et soumettez-le à nouveau une fois que vous les aurez pris en compte.",
     "noCommentsProvided": "Aucun commentaire fourni.",
     "approveTitle": "Approuver le RSP",
@@ -736,7 +739,7 @@
     "viewAllReports": "Voir tous les rapports",
     "status": {
       "draft": "Brouillon en cours",
-      "changes_requested": "Modifications demandées",
+      "changes_requested": "Changements requis",
       "submitted": "En attente d'approbation"
     }
   },

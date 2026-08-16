@@ -408,6 +408,9 @@
       "hint": "PDF only, up to {{maxMb}} MB",
       "browse": "Browse",
       "remove": "Remove",
+      "view": "View",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
       "invalidFile": "Please upload a PDF file.",
       "tooLarge": "PDF is too large (max {{maxMb}} MB)."
     },

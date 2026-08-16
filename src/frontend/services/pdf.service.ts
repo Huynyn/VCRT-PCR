@@ -19,7 +19,7 @@ interface PDFOptions {
     bottom: number
     left: number
   }
-  appendPdf?: File
+  appendPdf?: File[]
 }
 
 interface PDFGenerationResult {
@@ -255,11 +255,14 @@ export class PDFService {
       // Generate blob
       let pdfBlob = pdf.output('blob')
 
-      // Append optional sign-off PDF (STRICT: fail loudly if it can't be appended)
-      const appendix = opts.appendPdf
-      if (appendix) {
-        console.log('[PDF] Appending sign-off PDF:', appendix.name, appendix.type, appendix.size)
-        pdfBlob = await this.appendPdfToBlob(pdfBlob, appendix)
+      // Append optional sign-off attachments, in the order the user arranged
+      // them (STRICT: fail loudly if one can't be appended)
+      const appendices = opts.appendPdf
+      if (appendices && appendices.length > 0) {
+        for (const appendix of appendices) {
+          console.log('[PDF] Appending sign-off PDF:', appendix.name, appendix.type, appendix.size)
+          pdfBlob = await this.appendPdfToBlob(pdfBlob, appendix)
+        }
       }
 
 
@@ -483,6 +486,7 @@ export class PDFService {
       if (result) URL.revokeObjectURL(result.url)
     })
   }
+
 
   private async appendPdfToBlob(baseBlob: Blob, appendix: File): Promise<Blob> {
     const baseBytes = new Uint8Array(await baseBlob.arrayBuffer())

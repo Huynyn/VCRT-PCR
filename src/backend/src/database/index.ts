@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS pcr_reports (
     form_data TEXT NOT NULL,
     sign_off_attachment TEXT,
     sign_off_filename TEXT,
+    sign_off_attachments TEXT,
     status TEXT CHECK (status IN ('draft', 'completed', 'submitted', 'approved', 'changes_requested', 'cancelled')) DEFAULT 'draft',
     admin_comments TEXT,
     created_by TEXT NOT NULL,
@@ -537,6 +538,20 @@ export class DatabaseManager {
         }
       } catch (migrationError) {
         console.error('Migration error (cancelled constraint):', migrationError);
+      }
+
+      // Migration: Add sign_off_attachments (JSON array of {filename, data},
+      // in display/merge order) - replaces the single sign_off_attachment
+      // column so a report can carry more than one attachment. The old
+      // column is left in place so already-saved single attachments stay
+      // readable (see routes/pcr.ts, which falls back to it). Runs after the
+      // table-recreate migrations above so it can never be dropped by one of
+      // their column lists on a database that hadn't run them yet.
+      const currentColumnNames = (this.database.prepare('PRAGMA table_info(pcr_reports)').all() as Array<{ name: string }>)
+        .map(col => col.name);
+      if (!currentColumnNames.includes('sign_off_attachments')) {
+        this.database.exec('ALTER TABLE pcr_reports ADD COLUMN sign_off_attachments TEXT');
+        console.log('Migration: Added sign_off_attachments column to pcr_reports');
       }
     } catch (error) {
       console.error('Migration error:', error);

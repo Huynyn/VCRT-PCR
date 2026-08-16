@@ -81,17 +81,20 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Logout */}
           {user && (
-            <Tooltip content={t('header.logout')}>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onLogout}
-                className="text-gray-500 hover:text-burgundy-600 dark:text-gray-400 dark:hover:text-burgundy-400"
-                aria-label={t('header.logout')}
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </Tooltip>
+            <>
+              <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
+              <Tooltip content={t('header.logout')}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onLogout}
+                  className="text-gray-500 hover:text-burgundy-600 dark:text-gray-400 dark:hover:text-burgundy-400"
+                  aria-label={t('header.logout')}
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+            </>
           )}
         </div>
       </div>

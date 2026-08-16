@@ -270,11 +270,12 @@ const ReportsPage = () => {
       const data = await apiRequest(`/pcr/${reportId}`)
       const reportData = data.data
 
-      // Convert sign-off attachment from base64 to File if present
-      let appendPdf: File | undefined
-      if (reportData.sign_off_attachment && reportData.sign_off_filename) {
-        appendPdf = base64ToFile(reportData.sign_off_attachment, reportData.sign_off_filename)
-      }
+      // Convert sign-off attachments from base64 to Files, in saved order
+      const appendPdf: File[] | undefined = reportData.sign_off_attachments?.length
+        ? reportData.sign_off_attachments.map((a: { filename: string; data: string }) =>
+            base64ToFile(a.data, a.filename),
+          )
+        : undefined
 
       // Show PDF preview using the existing PDF service (only admins can download)
       await pdfService.showDownloadPreview(

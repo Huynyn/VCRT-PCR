@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck, Plus, Trash2, ChevronLeft, ChevronRight, Upload, FileText, X } from 'lucide-react'
+import { Send, RotateCcw, AlertTriangle, Clock, CheckCircle, Save, UserCheck, Plus, Trash2, ChevronLeft, ChevronRight, Upload, FileText, X, Eye, ArrowUp, ArrowDown } from 'lucide-react'
 import { Button, Card, Alert, Modal, Tooltip } from '@/components/ui'
 import {
   Input,
@@ -106,9 +106,11 @@ const PCRPage: React.FC = () => {
   const [loadedStatus, setLoadedStatus] = useState<string | null>(null)
   const [adminComments, setAdminComments] = useState<string | null>(null)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
-  const [signOffPdf, setSignOffPdf] = useState<File | null>(null)
+  const [signOffAttachments, setSignOffAttachments] = useState<File[]>([])
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
   const [isDraggingSignOff, setIsDraggingSignOff] = useState(false)
+  const [viewingAttachmentIndex, setViewingAttachmentIndex] = useState<number | null>(null)
+  const [viewUrl, setViewUrl] = useState<string | null>(null)
   const [responderOptions, setResponderOptions] = useState<string[]>([])
   const [psmOptions, setPsmOptions] = useState<string[]>([])
   const [signerIndex, setSignerIndex] = useState(0)
@@ -157,6 +159,20 @@ const PCRPage: React.FC = () => {
     return new File([byteArray], filename, { type: 'application/pdf' })
   }
 
+  const viewingAttachment = viewingAttachmentIndex !== null ? signOffAttachments[viewingAttachmentIndex] ?? null : null
+
+  // Blob URL for whichever attachment is currently open in the view modal,
+  // revoked once it's no longer needed.
+  useEffect(() => {
+    if (!viewingAttachment) {
+      setViewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(viewingAttachment)
+    setViewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [viewingAttachment])
+
   useEffect(() => {
     let ignore = false
 
@@ -180,10 +196,13 @@ const PCRPage: React.FC = () => {
           if (draftData.status === 'draft') {
             loadData(normalizeLegacyResponders(draftData.form_data))
             setLoadedStatus('draft')
-            // Restore sign-off attachment if present
-            if (draftData.sign_off_attachment && draftData.sign_off_filename) {
-              const file = base64ToFile(draftData.sign_off_attachment, draftData.sign_off_filename)
-              setSignOffPdf(file)
+            // Restore sign-off attachments if present, in their saved order
+            if (draftData.sign_off_attachments?.length) {
+              setSignOffAttachments(
+                draftData.sign_off_attachments.map((a: { filename: string; data: string }) =>
+                  base64ToFile(a.data, a.filename),
+                ),
+              )
             }
             showNotification(t('pcr.notifications.draftLoaded'), 'success')
           } else {
@@ -211,10 +230,13 @@ const PCRPage: React.FC = () => {
             loadData(normalizeLegacyResponders(reportData.form_data))
             setLoadedStatus(reportData.status)
             setAdminComments(reportData.admin_comments || null)
-            // Restore sign-off attachment if present
-            if (reportData.sign_off_attachment && reportData.sign_off_filename) {
-              const file = base64ToFile(reportData.sign_off_attachment, reportData.sign_off_filename)
-              setSignOffPdf(file)
+            // Restore sign-off attachments if present, in their saved order
+            if (reportData.sign_off_attachments?.length) {
+              setSignOffAttachments(
+                reportData.sign_off_attachments.map((a: { filename: string; data: string }) =>
+                  base64ToFile(a.data, a.filename),
+                ),
+              )
             }
             showNotification(t('pcr.notifications.reportLoaded'), 'success')
           } else {
@@ -316,7 +338,7 @@ const PCRPage: React.FC = () => {
       // Generate PDF and show download confirmation workflow
       await pdfService.confirmDownloadedWorkflow(
         data,
-        { appendPdf: signOffPdf ?? undefined },
+        { appendPdf: signOffAttachments },
         async (confirmed, timestamp) => {
           if (confirmed) {
             try {
@@ -326,13 +348,13 @@ const PCRPage: React.FC = () => {
               const url = reportIdToUpdate ? `/pcr/${reportIdToUpdate}` : '/submissions'
               const method = reportIdToUpdate ? 'PUT' : 'POST'
 
-              // Convert sign-off PDF to base64 if present
-              let signOffBase64: string | null = null
-              let signOffFilename: string | null = null
-              if (signOffPdf) {
-                signOffBase64 = await fileToBase64(signOffPdf)
-                signOffFilename = signOffPdf.name
-              }
+              // Convert sign-off attachments to base64, in their current order
+              const signOffAttachmentsPayload = await Promise.all(
+                signOffAttachments.map(async file => ({
+                  filename: file.name,
+                  data: await fileToBase64(file),
+                })),
+              )
 
               await apiRequest(url, {
                 method,
@@ -345,8 +367,7 @@ const PCRPage: React.FC = () => {
                           downloadConfirmed: true,
                         },
                         status: 'submitted',
-                        sign_off_attachment: signOffBase64,
-                        sign_off_filename: signOffFilename,
+                        sign_off_attachments: signOffAttachmentsPayload,
                       }
                     : {
                         data: {
@@ -354,8 +375,7 @@ const PCRPage: React.FC = () => {
                           downloadedAt: timestamp,
                           downloadConfirmed: true,
                         },
-                        sign_off_attachment: signOffBase64,
-                        sign_off_filename: signOffFilename,
+                        sign_off_attachments: signOffAttachmentsPayload,
                       },
                 ),
               })
@@ -367,7 +387,7 @@ const PCRPage: React.FC = () => {
                   : t('pcr.notifications.formSubmitted')
               showNotification(successMessage, 'success')
               reset()
-              setSignOffPdf(null)
+              setSignOffAttachments([])
               // Clear state and URL to start fresh
               setCurrentReportId(null)
               setCurrentDraftId(null)
@@ -389,7 +409,7 @@ const PCRPage: React.FC = () => {
     } catch (error) {
       console.error('PDF generation failed:', error)
       showNotification(
-        signOffPdf
+        signOffAttachments.length > 0
           ? t('pcr.notifications.pdfGenerationFailedWithSignOff')
           : t('pcr.notifications.pdfGenerationFailed'),
         'error',
@@ -399,7 +419,7 @@ const PCRPage: React.FC = () => {
   }
 
   const handleReset = () => {
-    if (isDirty || signOffPdf) {
+    if (isDirty || signOffAttachments.length > 0) {
       setShowUnsavedChangesModal(true)
     } else {
       reset()
@@ -409,7 +429,7 @@ const PCRPage: React.FC = () => {
 
   const confirmReset = () => {
     reset()
-    setSignOffPdf(null)
+    setSignOffAttachments([])
     setSignOffPdfError('')
     setShowUnsavedChangesModal(false)
     showNotification(t('pcr.notifications.formReset'), 'success')
@@ -434,21 +454,20 @@ const PCRPage: React.FC = () => {
       const url = currentDraftId ? `/pcr/${currentDraftId}` : '/pcr'
       const method = currentDraftId ? 'PUT' : 'POST'
 
-      // Convert sign-off PDF to base64 if present
-      let signOffBase64: string | null = null
-      let signOffFilename: string | null = null
-      if (signOffPdf) {
-        signOffBase64 = await fileToBase64(signOffPdf)
-        signOffFilename = signOffPdf.name
-      }
+      // Convert sign-off attachments to base64, in their current order
+      const signOffAttachmentsPayload = await Promise.all(
+        signOffAttachments.map(async file => ({
+          filename: file.name,
+          data: await fileToBase64(file),
+        })),
+      )
 
       const responseData = await apiRequest(url, {
         method,
         body: JSON.stringify({
           form_data: dataToSave,
           status: 'draft',
-          sign_off_attachment: signOffBase64,
-          sign_off_filename: signOffFilename,
+          sign_off_attachments: signOffAttachmentsPayload,
         }),
       })
 
@@ -491,7 +510,7 @@ const PCRPage: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSavingDraft, isAuthenticated, token, currentDraftId, data, signOffPdf])
+  }, [isSavingDraft, isAuthenticated, token, currentDraftId, data, signOffAttachments])
 
   // Registers with the Electron close flow (see electronCloseGuard) so that
   // closing the app while this form has unsaved changes prompts to save the
@@ -732,30 +751,49 @@ const PCRPage: React.FC = () => {
     await saveDraft({ ...data, ...sampleData })
   }
 
-  // Drop-box for sign-off
-  const validateAndSetSignOff = (file: File | null) => {
+  // Drop-box for sign-off - accepts one or more PDFs at once (drag-drop of a
+  // multi-select, or the file picker's own multi-select) and appends the
+  // valid ones to whatever's already attached.
+  const addSignOffAttachments = (files: FileList | File[] | null) => {
+    if (!files || files.length === 0) return
+
     setSignOffPdfError('')
-    if (!file) {
-      setSignOffPdf(null)
-      return
-    }
-
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
     const maxBytes = MAX_SIGN_OFF_MB * 1024 * 1024
+    const validFiles: File[] = []
+    let error = ''
 
-    if (!isPdf) {
-      setSignOffPdf(null)
-      setSignOffPdfError(t('pcr.attachments.invalidFile'))
-      return
+    Array.from(files).forEach(file => {
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+      if (!isPdf) {
+        error = t('pcr.attachments.invalidFile')
+        return
+      }
+      if (file.size > maxBytes) {
+        error = t('pcr.attachments.tooLarge', { maxMb: MAX_SIGN_OFF_MB })
+        return
+      }
+      validFiles.push(file)
+    })
+
+    if (validFiles.length > 0) {
+      setSignOffAttachments(prev => [...prev, ...validFiles])
     }
+    if (error) setSignOffPdfError(error)
+  }
 
-    if (file.size > maxBytes) {
-      setSignOffPdf(null)
-      setSignOffPdfError(t('pcr.attachments.tooLarge', { maxMb: MAX_SIGN_OFF_MB }))
-      return
-    }
+  const removeSignOffAttachment = (index: number) => {
+    if (viewingAttachmentIndex === index) setViewingAttachmentIndex(null)
+    setSignOffAttachments(prev => prev.filter((_, i) => i !== index))
+  }
 
-    setSignOffPdf(file)
+  const moveSignOffAttachment = (index: number, direction: -1 | 1) => {
+    setSignOffAttachments(prev => {
+      const target = index + direction
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
   }
 
   const formatFileSize = (bytes: number) => {
@@ -1757,15 +1795,18 @@ const PCRPage: React.FC = () => {
             onDrop={e => {
               e.preventDefault()
               setIsDraggingSignOff(false)
-              const file = e.dataTransfer.files?.[0]
-              validateAndSetSignOff(file ?? null)
+              addSignOffAttachments(e.dataTransfer.files)
             }}
           >
             <input
               type="file"
               accept="application/pdf,.pdf"
+              multiple
               className="hidden"
-              onChange={e => validateAndSetSignOff(e.target.files?.[0] ?? null)}
+              onChange={e => {
+                addSignOffAttachments(e.target.files)
+                e.target.value = ''
+              }}
             />
 
             <span className="icon-chip icon-chip-primary w-10 h-10 mx-auto">
@@ -1779,30 +1820,63 @@ const PCRPage: React.FC = () => {
               {t('pcr.attachments.hint', { maxMb: MAX_SIGN_OFF_MB })}
             </p>
 
-            {signOffPdf && (
-              <div
-                className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-2 text-left"
-                onClick={e => e.preventDefault()}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-sm text-gray-900 dark:text-gray-100 truncate">
-                      {signOffPdf.name}
+            {signOffAttachments.length > 0 && (
+              <div className="mt-4 space-y-2 text-left" onClick={e => e.preventDefault()}>
+                {signOffAttachments.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-sm text-gray-900 dark:text-gray-100 truncate">
+                          {file.name}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatFileSize(file.size)}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatFileSize(signOffPdf.size)}
+
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => moveSignOffAttachment(index, -1)}
+                        disabled={index === 0}
+                        aria-label={t('pcr.attachments.moveUp')}
+                        className="p-1.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ArrowUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveSignOffAttachment(index, 1)}
+                        disabled={index === signOffAttachments.length - 1}
+                        aria-label={t('pcr.attachments.moveDown')}
+                        className="p-1.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ArrowDown className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewingAttachmentIndex(index)}
+                        aria-label={t('pcr.attachments.view')}
+                        className="p-1.5 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:text-primary-400 dark:hover:bg-primary-900/20 transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeSignOffAttachment(index)}
+                        aria-label={t('pcr.attachments.remove')}
+                        className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => validateAndSetSignOff(null)}
-                  aria-label={t('pcr.attachments.remove')}
-                  className="shrink-0 p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                ))}
               </div>
             )}
 
@@ -1956,6 +2030,27 @@ const PCRPage: React.FC = () => {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* View attachment */}
+      <Modal
+        isOpen={viewingAttachmentIndex !== null}
+        onClose={() => setViewingAttachmentIndex(null)}
+        title={viewingAttachment?.name}
+        size="lg"
+      >
+        {viewUrl && (
+          // Sized to fit within the modal's own scroll area (see Modal.tsx)
+          // so only the PDF viewer itself scrolls, not the modal around it.
+          <div className="w-full h-[calc(100vh-260px)]">
+            <iframe
+              // #toolbar=0 hides the browser's own PDF viewer toolbar
+              src={`${viewUrl}#toolbar=0`}
+              title={viewingAttachment?.name}
+              className="w-full h-full rounded border border-gray-200 dark:border-gray-700"
+            />
+          </div>
+        )}
       </Modal>
     </div>
   )
