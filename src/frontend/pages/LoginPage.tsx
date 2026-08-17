@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Eye, EyeOff, Lock, Moon, Sun, X, XCircle } from 'lucide-react'
+import { Eye, EyeOff, Lock, Moon, Sun, XCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, Tooltip } from '@/components/ui'
 import { Input } from '@/components/forms'
@@ -161,14 +161,6 @@ const LoginPage: React.FC = () => {
                     <div className="flex items-center gap-3 p-4 rounded-lg border border-burgundy-200 bg-burgundy-50 dark:border-burgundy-800/60 dark:bg-burgundy-900/20">
                       <XCircle className="w-5 h-5 text-burgundy-500 dark:text-burgundy-400 shrink-0" />
                       <p className="flex-1 text-sm text-burgundy-800 dark:text-burgundy-200">{error}</p>
-                      <button
-                        type="button"
-                        onClick={() => setError('')}
-                        aria-label={t('login.dismiss')}
-                        className="shrink-0 p-1 rounded text-burgundy-500 hover:text-burgundy-700 hover:bg-burgundy-100 dark:text-burgundy-400 dark:hover:text-burgundy-200 dark:hover:bg-burgundy-900/40"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
                     </div>
                   )
                 )}
