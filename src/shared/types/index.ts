@@ -20,7 +20,7 @@ export interface PCRReport {
   createdBy: string
   createdAt?: string
   updatedAt?: string
-  status: 'draft' | 'completed' | 'submitted' | 'approved' | 'changes_requested'
+  status: 'draft' | 'completed' | 'submitted' | 'approved' | 'changes_requested' | 'cancelled'
   adminComments?: string | null
 }
 
@@ -86,7 +86,7 @@ export interface User {
   firstName: string
   lastName: string
   email: string
-  role: 'emt' | 'paramedic' | 'supervisor' | 'admin'
+  role: 'admin' | 'user'
   licenseNumber: string
   department: string
   isActive: boolean

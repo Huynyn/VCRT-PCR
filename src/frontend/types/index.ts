@@ -108,7 +108,11 @@ export interface OxygenProtocol {
   o2_responder1?: string;
   o2_responder2?: string;
   o2_responder3?: string;
-  reasonForO2Therapy?: string[];
+  // Spec'd as multi-select checkboxes (see form_inputs.md), but the rendered
+  // control (OxygenProtocolForm.tsx) is a single free-text input - matching
+  // that actual, already-shipped UI rather than the array type it never
+  // really held once touched.
+  reasonForO2Therapy?: string;
   reasonForO2TherapyOther?: string;
   timeTherapyStarted?: string;
   timeTherapyEnded?: string;
@@ -149,7 +153,7 @@ export interface PCRFormData extends BasicInformation, PatientInformation, Medic
 export interface User {
   id: string;
   username: string;
-  role: 'admin' | 'user' | 'supervisor';
+  role: 'admin' | 'user';
   firstName: string;
   lastName: string;
   isActive: boolean;

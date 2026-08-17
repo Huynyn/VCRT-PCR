@@ -29,7 +29,7 @@ const initialState: FormState = {
     immobilization: [],
     opqrstEntries: [],
     oxygenProtocol: {
-      reasonForO2Therapy: [],
+      reasonForO2Therapy: '',
     },
   },
   errors: {},

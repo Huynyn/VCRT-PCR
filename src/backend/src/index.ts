@@ -1,3 +1,12 @@
+// Must run before anything else in this file - many modules imported below
+// read process.env.* (DATABASE_PATH, JWT_SECRET, etc.) at module-load time,
+// so .env has to be loaded first or those reads just see undefined. Electron
+// doesn't ship a .env file (it sets what it needs directly on process.env
+// before loading this module - see electron/main.ts), so this is a no-op
+// there rather than an error; dotenv silently does nothing if the file
+// isn't found.
+import 'dotenv/config';
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -14,7 +23,7 @@ import psmMembersRoutes from './routes/psmMembers';
 import settingsRoutes from './routes/settings';
 
 // Import database to initialize
-import { initDatabase, closeDatabase } from './database';
+import { initDatabase, closeDatabase, getDatabaseHealth } from './database';
 import { cleanupService } from './services/cleanup';
 
 // Electron environment detection
@@ -31,8 +40,11 @@ function createApp(): express.Application {
   const app = express();
 
   // Middleware
+  const isProduction = process.env.NODE_ENV === 'production';
   app.use(helmet({
-    contentSecurityPolicy: false, // Disable for development
+    // CSP off in development so the Vite dev server's inline/HMR scripts
+    // aren't blocked; on in production, where no such dev tooling runs.
+    contentSecurityPolicy: isProduction ? undefined : false,
     crossOriginEmbedderPolicy: false
   }));
 
@@ -47,16 +59,10 @@ function createApp(): express.Application {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
 
-  // Trust proxy for accurate IP addresses
-  app.set('trust proxy', true);
-
-  // Debug middleware to log all requests (only in non-embedded mode to reduce noise)
-  if (!isEmbedded) {
-    app.use((req, res, next) => {
-      console.log(`${req.method} ${req.url} - Headers: ${JSON.stringify(req.headers, null, 2)}`);
-      next();
-    });
-  }
+  // This app isn't deployed behind a reverse proxy, so trusting
+  // X-Forwarded-For here would let any client spoof the IP address that
+  // ends up in the activity-log audit trail. Leave Express's default
+  // (don't trust proxy headers) in place.
 
   // API Routes
   app.use('/api/auth', authRoutes);
@@ -79,7 +85,8 @@ function createApp(): express.Application {
     res.json({
       success: true,
       message: 'PCR API Server is running',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      database: getDatabaseHealth()
     });
   });
 

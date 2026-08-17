@@ -22,10 +22,6 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
     onChange({ ...data, [field]: value })
   }
 
-  const handleReasonChange = (reasons: string[]) => {
-    onChange({ ...data, reasonForO2Therapy: reasons })
-  }
-
   const handleFlowRateChange = (index: number, field: 'time' | 'flowRate', value: string) => {
     const alterations = data.flowRateAlterations || []
     const newAlterations = [...alterations]
@@ -127,7 +123,7 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
           <FormSection title={t('pcr.oxygenProtocol.reasonForTherapy')}>
             <Input
               label={t('pcr.oxygenProtocol.reasonForO2Therapy')}
-              value={data.reasonForO2Therapy || []}
+              value={data.reasonForO2Therapy || ''}
               onChange={(e) => handleFieldChange('reasonForO2Therapy', e.target.value)}
               error={errors.reasonForO2Therapy}
               placeholder={t('pcr.oxygenProtocol.reasonForO2TherapyPlaceholder')}

@@ -19,17 +19,20 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     
-    /* Path mapping */
+    /* Path mapping - mirrors resolve.alias in vite.config.ts, which is what
+       actually governs these imports at build/dev-server time. The default
+       "@/*" catch-all resolves under src/frontend, matching Vite's generic
+       '@' alias; only @/types and @/shared need their own entries since
+       those two live outside src/frontend (everywhere else - @/components,
+       @/utils, @/context, @/services, @/i18n, etc. - falls through to the
+       catch-all correctly, same as Vite). */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@/components/*": ["src/frontend/components/*"],
-      "@/pages/*": ["src/frontend/pages/*"],
-      "@/hooks/*": ["src/frontend/hooks/*"],
-      "@/utils/*": ["src/frontend/utils/*"],
+      "@/*": ["src/frontend/*"],
+      "@/types": ["src/shared/types"],
       "@/types/*": ["src/shared/types/*"],
-      "@/shared/*": ["src/shared/*"],
-      "@/backend/*": ["src/backend/*"]
+      "@/shared": ["src/shared"],
+      "@/shared/*": ["src/shared/*"]
     },
     
     /* Additional options */
@@ -49,8 +52,5 @@
     "build",
     "dist",
     "electron"
-  ],
-  "references": [
-    { "path": "./src/backend/tsconfig.json" }
   ]
 }

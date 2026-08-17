@@ -101,6 +101,9 @@ data/
 # deliberately named to not look like a key
 .runtime_idx
 
+# Auto-generated JWT signing secret (see src/backend/src/utils/jwt.ts)
+.runtime_jwt
+
 # Temporary files
 tmp/
 temp/

@@ -5,12 +5,19 @@ import db from '../database';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { logActivity } from '../middleware/logger';
 import { validatePasswordStrength } from '../utils/password';
+import { JWT_SECRET } from '../utils/jwt';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'pcr-dev-secret-key';
 
 const MAX_LOGIN_ATTEMPTS = 3;
 const LOCKOUT_MS = 10 * 60 * 1000; // 10 minutes
+
+// Fixed placeholder hash used to give the "username not found" path a
+// bcrypt cost similar to the real comparison below - otherwise a nonexistent
+// username returns near-instantly while a real one takes ~50-100ms longer,
+// and that timing gap alone lets an attacker enumerate valid usernames
+// despite both cases returning the same "Invalid credentials" message.
+const TIMING_DEFENSE_HASH = bcrypt.hashSync('pcr-timing-defense-placeholder', 10);
 
 function lockoutMessage(lockedUntil: string): string {
   const remainingMs = new Date(lockedUntil).getTime() - Date.now();
@@ -41,6 +48,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const user = db.prepare('SELECT * FROM users WHERE username = ? AND is_active = 1').get(username) as any;
 
     if (!user) {
+      await bcrypt.compare(password, TIMING_DEFENSE_HASH);
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
@@ -53,7 +61,15 @@ router.post('/login', async (req: Request, res: Response) => {
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
-      const attempts = (user.failed_login_attempts || 0) + 1;
+      // Incremented by SQL from the live stored value, not a count read into
+      // a JS variable before the `await` above - the await yields the event
+      // loop, so concurrent failed attempts reading the same stale count
+      // and writing back count+1 could otherwise cancel each other out and
+      // let the lockout be bypassed by guessing in parallel batches.
+      db.prepare('UPDATE users SET failed_login_attempts = failed_login_attempts + 1 WHERE id = ?').run(user.id);
+      const { failed_login_attempts: attempts } = db
+        .prepare('SELECT failed_login_attempts FROM users WHERE id = ?')
+        .get(user.id) as { failed_login_attempts: number };
 
       if (attempts >= MAX_LOGIN_ATTEMPTS) {
         const lockedUntil = new Date(Date.now() + LOCKOUT_MS).toISOString();
@@ -61,7 +77,6 @@ router.post('/login', async (req: Request, res: Response) => {
         return res.status(429).json({ success: false, message: lockoutMessage(lockedUntil) });
       }
 
-      db.prepare('UPDATE users SET failed_login_attempts = ? WHERE id = ?').run(attempts, user.id);
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 

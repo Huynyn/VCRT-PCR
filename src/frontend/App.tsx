@@ -4,7 +4,6 @@ import { Layout } from '@/components/layout'
 import { Loading } from '@/components/ui'
 import LoginPage from './pages/LoginPage'
 import { AuthProvider, NotificationProvider, FormProvider, useAuth } from '@/context'
-import { useTimeout } from '@/hooks'
 import { runPcrNavigationGuard } from '@/utils/navigationGuard'
 
 // Code-split by route: each page becomes its own chunk instead of all being
@@ -47,13 +46,6 @@ const AppContent: React.FC = () => {
     setCurrentPath(location.pathname)
   }, [location.pathname])
 
-  // Session timeout management
-  useTimeout({
-    timeoutDuration: 30 * 60 * 1000, // 30 minutes
-    warningDuration: 5 * 60 * 1000, // 5 minutes warning
-    enabled: isAuthenticated,
-  })
-
   // Theme toggle
   const toggleTheme = () => {
     const newTheme = !darkMode
@@ -87,6 +79,16 @@ const AppContent: React.FC = () => {
     setCurrentPath(href)
   }
 
+  // Logging out also leaves whatever page is currently mounted, so it goes
+  // through the same "save draft before leaving?" guard as an in-app nav
+  // click - otherwise clicking Logout on the New PCR page silently discards
+  // an unsaved draft.
+  const handleLogout = async () => {
+    const okToLeave = await runPcrNavigationGuard()
+    if (!okToLeave) return
+    await logout()
+  }
+
   if (isLoading) {
     return <Loading text="Initializing application..." overlay />
   }
@@ -106,7 +108,7 @@ const AppContent: React.FC = () => {
             }
           : undefined
       }
-      onLogout={logout}
+      onLogout={handleLogout}
       onNavigate={handleNavigate}
       darkMode={darkMode}
       onToggleTheme={toggleTheme}

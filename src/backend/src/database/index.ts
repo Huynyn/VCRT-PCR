@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { getEncryptionKey, encryptBuffer, decryptBuffer, isEncrypted } from './encryption';
+import { DEFAULT_ADMIN_PASSWORD, DEFAULT_USER_PASSWORD } from '../utils/password';
 
 // Electron environment detection
 const isElectron = process.env.IS_ELECTRON === 'true';
@@ -259,7 +260,15 @@ class DatabaseWrapper {
         fs.closeSync(fd);
       }
       fs.renameSync(tempPath, this.dbPath);
+      lastSaveError = null;
     } catch (error) {
+      // Besides logging, this is tracked so /api/health can report it - a
+      // failed save (disk full, file locked, permissions) would otherwise be
+      // invisible: every API call keeps returning 200 from the in-memory DB
+      // while the on-disk copy silently stops updating, until a crash or
+      // power loss loses everything written since the last successful save.
+      const message = error instanceof Error ? error.message : String(error);
+      lastSaveError = { message, at: new Date().toISOString() };
       console.error('Error saving database:', error);
     }
   }
@@ -286,6 +295,14 @@ StatementWrapper.prototype.run = function(...params: any[]) {
 };
 
 let dbWrapper: DatabaseWrapper | null = null;
+
+// Tracks the most recent saveToFile() failure, if any, so it can be surfaced
+// via /api/health instead of only ever reaching a console log.
+let lastSaveError: { message: string; at: string } | null = null;
+
+export function getDatabaseHealth(): { healthy: boolean; lastSaveError: { message: string; at: string } | null } {
+  return { healthy: lastSaveError === null, lastSaveError };
+}
 
 export class DatabaseManager {
   private database: DatabaseWrapper | null = null;
@@ -554,7 +571,13 @@ export class DatabaseManager {
         console.log('Migration: Added sign_off_attachments column to pcr_reports');
       }
     } catch (error) {
+      // Rethrown (unlike the inner per-migration try/catches above, which
+      // intentionally stay isolated) so a failure here fails startup loudly
+      // instead of leaving the app running against a partially-migrated
+      // schema, where every route touching a column/constraint a skipped
+      // migration would have added just 500s with no clue why.
       console.error('Migration error:', error);
+      throw error;
     }
   }
 
@@ -571,20 +594,20 @@ export class DatabaseManager {
         const generateId = () => 'user_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
         // Create admin user
-        const adminHash = await bcrypt.hash('vcrt-ebic2026!', 10);
+        const adminHash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
         this.database.prepare(`
           INSERT INTO users (id, username, password_hash, first_name, last_name, role, is_active)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `).run(generateId(), 'admin', adminHash, 'System', 'Administrator', 'admin', 1);
-        console.log('Created admin user (admin/vcrt-ebic2026!)');
+        console.log(`Created admin user (admin/${DEFAULT_ADMIN_PASSWORD})`);
 
         // Create regular user
-        const userHash = await bcrypt.hash('user', 10);
+        const userHash = await bcrypt.hash(DEFAULT_USER_PASSWORD, 10);
         this.database.prepare(`
           INSERT INTO users (id, username, password_hash, first_name, last_name, role, is_active)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `).run(generateId(), 'user', userHash, 'Regular', 'User', 'user', 1);
-        console.log('Created regular user (user/user)');
+        console.log(`Created regular user (user/${DEFAULT_USER_PASSWORD})`);
 
         // Save immediately
         this.database.saveToFile();
@@ -608,6 +631,11 @@ export class DatabaseManager {
   close(): void {
     if (this.database) {
       this.database.close();
+      // Cleared so a second close() call (e.g. the SIGINT handler's explicit
+      // closeDatabase() followed by the process 'exit' handler's safety-net
+      // closeDatabase()) is a no-op instead of closing the same underlying
+      // sql.js database twice.
+      this.database = null;
     }
   }
 }

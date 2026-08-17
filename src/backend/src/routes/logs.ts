@@ -35,8 +35,8 @@ router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRe
       dateTo,
     } = req.query
 
-    const pageNum = parseInt(page as string, 10)
-    const limitNum = parseInt(limit as string, 10)
+    const pageNum = Math.max(parseInt(page as string, 10) || 1, 1)
+    const limitNum = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 200)
     const offset = (pageNum - 1) * limitNum
 
     const whereConditions: string[] = []

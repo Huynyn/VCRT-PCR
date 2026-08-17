@@ -47,11 +47,15 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
     // rejected as an invalid time.
     if (newValue && !validateTime(newValue) && !isDnoUtoValue(newValue)) {
       setInputError(t('common.invalidTime'))
-      return
     }
 
+    // Propagated even while incomplete/invalid (previously this returned
+    // early above and skipped onChange entirely) - otherwise the field can
+    // visibly show what was typed (e.g. "19:4") while the actual form value
+    // stays empty, so submit fails with a confusing "required" error on a
+    // field that looks filled in.
     const formattedValue = formatTime(newValue)
-    
+
     if (onChange) {
       const syntheticEvent = {
         ...e,

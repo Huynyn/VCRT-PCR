@@ -252,6 +252,24 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
     }
   }, [availableColors, activeNumber])
 
+  // Removing an OPQRST section drops the marker numbers/colors past the new
+  // count from the picker above, but any dots already drawn with one of
+  // those now-unavailable numbers would otherwise just stay on the body
+  // diagram forever - no longer selectable, no longer corresponding to any
+  // OPQRST entry, but still rendered. Drop them here and re-commit so the
+  // PDF snapshot reflects the same trim.
+  useEffect(() => {
+    const maxNumber = Math.max(1, Math.min(4, opqrstCount || 0))
+    setMarkers(prev => {
+      const trimmed = prev.filter(m => m.number <= maxNumber)
+      if (trimmed.length === prev.length) return prev
+      const serialized = JSON.stringify({ markers: trimmed, imageData: buildSnapshot(trimmed) })
+      lastSentRef.current = serialized
+      onChange(serialized)
+      return trimmed
+    })
+  }, [opqrstCount, onChange])
+
   const commit = (next: InjuryMarker[]) => {
     setMarkers(next)
     const serialized = JSON.stringify({ markers: next, imageData: buildSnapshot(next) })

@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import db from '../database';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'pcr-dev-secret-key';
+import { JWT_SECRET } from '../utils/jwt';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -13,33 +12,23 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  console.log('Auth middleware - Request path:', req.path, 'URL:', req.url);
-  console.log('Auth middleware - Auth header:', req.headers['authorization']);
-
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
-    console.log('Auth middleware - No token provided');
     return res.status(401).json({ success: false, message: 'Access token required' });
   }
 
-  console.log('Auth middleware - Token (first 50 chars):', token.substring(0, 50) + '...');
-
   try {
-    console.log('Auth middleware - Verifying token...');
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    console.log('Auth middleware - Token decoded successfully, userId:', decoded.userId);
 
     // Verify user still exists and is active
     const user = db.prepare('SELECT id, username, role, is_active FROM users WHERE id = ?').get(decoded.userId) as any;
 
     if (!user || !user.is_active) {
-      console.log('Auth middleware - User not found or inactive');
       return res.status(401).json({ success: false, message: 'Invalid or inactive user' });
     }
 
-    console.log('Auth middleware - User authenticated successfully:', user.username);
     req.user = {
       id: user.id,
       username: user.username,
@@ -48,8 +37,13 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
 
     next();
   } catch (error) {
-    console.log('Auth middleware - Token verification failed:', error.message);
-    return res.status(403).json({ success: false, message: 'Invalid token' });
+    // 401 (not authenticated), not 403 (authenticated but forbidden) - this
+    // is what an expired or otherwise invalid token is. Keeping it distinct
+    // from the 403s that requireRole()/ownership checks return elsewhere in
+    // the app lets the frontend safely treat 401 alone as "session is no
+    // longer valid, redirect to login" without also catching ordinary
+    // permission-denied responses.
+    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
   }
 };
 

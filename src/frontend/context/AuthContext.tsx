@@ -300,9 +300,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const scheduleLogout = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
+      timeoutId = setTimeout(async () => {
         // Don’t logout while the browser is unloading / refreshing
         if (isUnloadingRef.current) return;
+
+        // Same "unsaved PCR draft?" prompt the Electron close handler uses
+        // for the same situation - resolves immediately with true if there's
+        // no active draft with unsaved changes, so this is a no-op except
+        // when it actually matters.
+        const okToLogout = await runPcrCloseHandler();
+        if (!okToLogout || isUnloadingRef.current) return;
         logout();
       }, INACTIVITY_MS);
     };

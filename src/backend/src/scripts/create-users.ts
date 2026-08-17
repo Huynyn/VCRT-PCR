@@ -1,5 +1,10 @@
+// Run standalone via `npm run create-accounts`, not through index.ts, so it
+// needs its own .env load (see the comment on the same import in index.ts).
+import 'dotenv/config';
+
 import bcrypt from 'bcryptjs';
 import { initDatabase, getDatabase } from '../database';
+import { validatePasswordStrength, DEFAULT_ADMIN_PASSWORD, DEFAULT_USER_PASSWORD } from '../utils/password';
 
 // Generate simple ID
 function generateId(prefix: string): string {
@@ -18,7 +23,10 @@ async function createDefaultUsers() {
     const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
 
     if (!existingAdmin) {
-      const adminPasswordHash = await bcrypt.hash('vcrt-ebic2026!', 10);
+      const adminPasswordError = validatePasswordStrength(DEFAULT_ADMIN_PASSWORD);
+      if (adminPasswordError) throw new Error(`Default admin password fails policy: ${adminPasswordError}`);
+
+      const adminPasswordHash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
 
       db.prepare(`
         INSERT INTO users (id, username, password_hash, first_name, last_name, role, is_active)
@@ -33,7 +41,7 @@ async function createDefaultUsers() {
         1
       );
 
-      console.log('✅ Admin user created (username: admin, password: vcrt-ebic2026!)');
+      console.log(`✅ Admin user created (username: admin, password: ${DEFAULT_ADMIN_PASSWORD})`);
     } else {
       console.log('ℹ️ Admin user already exists');
     }
@@ -42,7 +50,10 @@ async function createDefaultUsers() {
     const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get('user');
 
     if (!existingUser) {
-      const userPasswordHash = await bcrypt.hash('user', 10);
+      const userPasswordError = validatePasswordStrength(DEFAULT_USER_PASSWORD);
+      if (userPasswordError) throw new Error(`Default user password fails policy: ${userPasswordError}`);
+
+      const userPasswordHash = await bcrypt.hash(DEFAULT_USER_PASSWORD, 10);
 
       db.prepare(`
         INSERT INTO users (id, username, password_hash, first_name, last_name, role, is_active)
@@ -57,7 +68,7 @@ async function createDefaultUsers() {
         1
       );
 
-      console.log('✅ Regular user created (username: user, password: user)');
+      console.log(`✅ Regular user created (username: user, password: ${DEFAULT_USER_PASSWORD})`);
     } else {
       console.log('ℹ️ Regular user already exists');
     }
@@ -68,8 +79,8 @@ async function createDefaultUsers() {
 
     console.log('\n🎉 Default users setup complete!');
     console.log('You can now login with:');
-    console.log('  Admin: username=admin, password=vcrt-ebic2026!');
-    console.log('  User:  username=user, password=user');
+    console.log(`  Admin: username=admin, password=${DEFAULT_ADMIN_PASSWORD}`);
+    console.log(`  User:  username=user, password=${DEFAULT_USER_PASSWORD}`);
 
   } catch (error) {
     console.error('❌ Error creating users:', error);

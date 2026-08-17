@@ -41,6 +41,7 @@ try {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let splashWindow: BrowserWindow | null = null;
 let serverPort: number = 0;
 let allowClose = false;
 let closeConfirmTimer: NodeJS.Timeout | null = null;
@@ -114,6 +115,93 @@ function stopBackend(): void {
 }
 
 /**
+ * Small frameless window shown immediately on launch, while the embedded
+ * backend starts and the main window's renderer loads - both of which take
+ * long enough (first-run DB setup especially) that without this the user
+ * just sees nothing for a few seconds after clicking the app icon.
+ */
+function createSplashWindow(): void {
+  splashWindow = new BrowserWindow({
+    width: 360,
+    height: 220,
+    frame: false,
+    resizable: false,
+    movable: false,
+    center: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    show: false,
+    backgroundColor: '#1f2a51',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  const splashHtml = `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          html, body {
+            margin: 0;
+            height: 100%;
+            background: #1f2a51;
+            color: #ffffff;
+            font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+          }
+          .spinner {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.25);
+            border-top-color: #ffffff;
+            animation: spin 0.8s linear infinite;
+          }
+          .title {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="wrap">
+          <div class="spinner"></div>
+          <div class="title">PCR Application</div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHtml)}`);
+  splashWindow.once('ready-to-show', () => splashWindow?.show());
+  splashWindow.on('closed', () => {
+    splashWindow = null;
+  });
+}
+
+function closeSplashWindow(): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+  }
+  splashWindow = null;
+}
+
+/**
  * Create the main application window
  */
 function createWindow(): void {
@@ -141,9 +229,11 @@ function createWindow(): void {
     show: false, // Don't show until ready
   });
 
-  // Show window when ready to prevent flash
+  // Show window when ready to prevent flash - and hand off from the splash
+  // screen, which has been covering this same load time up to now.
   mainWindow.once('ready-to-show', () => {
     log('Window ready to show');
+    closeSplashWindow();
     mainWindow?.show();
   });
 
@@ -341,6 +431,8 @@ app.whenReady().then(async () => {
 
   log('App ready');
 
+  createSplashWindow();
+
   try {
     await startBackend();
     createWindow();
@@ -348,6 +440,8 @@ app.whenReady().then(async () => {
     const errorMessage = (error as Error).message || 'Unknown error';
     log(`FATAL: Failed to start application: ${errorMessage}`);
     log(`Stack: ${(error as Error).stack}`);
+
+    closeSplashWindow();
 
     // Show error dialog to user instead of silent quit
     dialog.showErrorBox(

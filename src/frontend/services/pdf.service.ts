@@ -94,6 +94,10 @@ type NewPageFn = () => number
   // a section banner + its first row will fit before drawing either.
   const FIELD_BOX_GAP = 3      // horizontal gap between adjacent boxes in a row
   const FIELD_BOX_PAD_X = 2    // horizontal padding for the answer text inside the box
+  // Extra breathing room reserved only on the right side of the box, on top
+  // of FIELD_BOX_PAD_X, so wrapped/long answer text never crowds right up
+  // against the box's right edge.
+  const FIELD_BOX_PAD_X_RIGHT = 1.5
   const FIELD_BOX_PAD_Y = 1.7  // vertical padding above/below the answer text inside the box
   const FIELD_LABEL_GAP = 1.6  // gap between the label and the top of its box
   const FIELD_ROW_SPACING = 3.5 // gap after a fields row, before the next one
@@ -134,7 +138,7 @@ type NewPageFn = () => number
       // paper form this replaces.
       const raw = String(field.value ?? '').toUpperCase()
       pdf.setFont('helvetica', 'normal')
-      const valueLinesRaw: string[] = pdf.splitTextToSize(raw, Math.max(4, boxW - FIELD_BOX_PAD_X * 2))
+      const valueLinesRaw: string[] = pdf.splitTextToSize(raw, Math.max(4, boxW - FIELD_BOX_PAD_X * 2 - FIELD_BOX_PAD_X_RIGHT))
 
       return { labelLines, valueLines: valueLinesRaw.length ? valueLinesRaw : [''], boxW, slotW }
     })
@@ -185,10 +189,34 @@ type NewPageFn = () => number
     const ascent = fontSize * 0.3528 * 0.8
     const hasAnyLabel = fields.some(f => (f.label ?? '') !== '')
 
-    const { totalBlockH, labelH, effectiveLabelGap, boxH, measured, labelLinesMax } = measureFieldsRow(pdf, fields, spans, contentWidth, valueLineGap)
+
+    let { totalBlockH, labelH, effectiveLabelGap, boxH, measured, labelLinesMax } = measureFieldsRow(pdf, fields, spans, contentWidth, valueLineGap)
 
     const pageHeight = pdf.internal.pageSize.getHeight()
     const bottom = options.margins.bottom
+
+    // A row this tall would still run past the bottom margin even starting
+    // from the top of a brand-new page - only possible for one field's
+    // wrapped text being unusually long (e.g. a very long pasted Call
+    // Description). The page-break below only ever moves the whole row to a
+    // fresh page; it doesn't re-check whether the row still fits once
+    // there. Clamp the offending field(s) to what actually fits on a single
+    // page instead of silently drawing past the margin uncorrected.
+    const maxPageContentH = pageHeight - options.margins.top - bottom - PAGE_GUARD
+    if (totalBlockH > maxPageContentH) {
+      const maxBoxH = Math.max(lineH, maxPageContentH - labelH - effectiveLabelGap)
+      const maxLines = Math.max(1, Math.floor((maxBoxH - FIELD_BOX_PAD_Y * 2 + valueLineGap) / (lineH + valueLineGap)))
+      measured = measured.map(m => {
+        if (m.valueLines.length <= maxLines) return m
+        const kept = m.valueLines.slice(0, Math.max(1, maxLines - 1))
+        kept.push('[TEXT TRUNCATED - TOO LONG TO FIT]')
+        return { ...m, valueLines: kept }
+      })
+      const valueLinesMax = Math.max(1, ...measured.map(m => m.valueLines.length))
+      boxH = valueLinesMax * lineH + Math.max(0, valueLinesMax - 1) * valueLineGap + FIELD_BOX_PAD_Y * 2
+      totalBlockH = labelH + effectiveLabelGap + boxH
+    }
+
     if (y + totalBlockH > pageHeight - bottom - PAGE_GUARD) {
       y = newPage()
     }
@@ -382,6 +410,24 @@ export class PDFService {
 
   closeActiveModals(): void {
     for (const close of [...this.activeModalCloseFns]) close()
+  }
+
+  // These modals are appended straight to document.body rather than mounted
+  // where the reusable <Modal> component's own overflow-lock would apply, so
+  // without this the page behind them stays scrollable - showing up as a
+  // stray scrollbar around the whole app while the popup is open. Reference
+  // counted because the confirm-download modal can open the preview modal on
+  // top of itself; the lock should only lift once every raw-DOM modal is closed.
+  private modalLockCount = 0
+
+  private lockBodyScroll(): void {
+    if (this.modalLockCount === 0) document.body.style.overflow = 'hidden'
+    this.modalLockCount++
+  }
+
+  private unlockBodyScroll(): void {
+    this.modalLockCount = Math.max(0, this.modalLockCount - 1)
+    if (this.modalLockCount === 0) document.body.style.overflow = ''
   }
 
   private downloadPDF(result: PDFGenerationResult): void {
@@ -655,6 +701,7 @@ export class PDFService {
     `
 
     document.body.appendChild(modal)
+    this.lockBodyScroll()
 
     const downloadBtn = modal.querySelector('#download-btn')
     const closeBtn = modal.querySelector('#close-btn')
@@ -663,6 +710,7 @@ export class PDFService {
 
     const closeModal = () => {
       document.body.removeChild(modal)
+      this.unlockBodyScroll()
       if (ownsResult) URL.revokeObjectURL(result.url)
       document.removeEventListener('keydown', handleEsc)
       this.activeModalCloseFns.delete(closeModal)
@@ -766,12 +814,14 @@ export class PDFService {
     `
 
     document.body.appendChild(modal)
+    this.lockBodyScroll()
 
     // Force-closing (e.g. an idle-session logout) just tears the modal down
     // - it doesn't call onConfirm, since that would fire a real submit/cancel
     // side effect the user never actually chose.
     const closeModal = () => {
       document.body.removeChild(modal)
+      this.unlockBodyScroll()
       if (result) URL.revokeObjectURL(result.url)
       this.activeModalCloseFns.delete(closeModal)
     }

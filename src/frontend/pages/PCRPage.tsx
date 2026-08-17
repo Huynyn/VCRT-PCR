@@ -821,6 +821,18 @@ const PCRPage: React.FC = () => {
   }
   const removeResponderAt = (index: number) => {
     updateField('responders', responderList.filter((_, i) => i !== index))
+
+    // signatures.responders is keyed by the same index as responders (see
+    // the comment on SignerRef below) - without also removing this entry,
+    // every responder after the removed one keeps showing the signature
+    // that was actually drawn for whoever used to be one slot ahead of them.
+    const responderSignatures = data.signatures?.responders
+    if (responderSignatures && responderSignatures.length > 0) {
+      updateField('signatures', {
+        ...(data.signatures || {}),
+        responders: responderSignatures.filter((_, i) => i !== index),
+      })
+    }
   }
   const addResponder = () => {
     if (responderList.length >= MAX_RESPONDERS) return

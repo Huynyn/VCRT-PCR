@@ -102,8 +102,11 @@ router.get('/', authenticateToken, requireRole(['admin']), (req: AuthenticatedRe
       params.push(active === 'true' ? 1 : 0);
     }
 
+    const limitNum = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 200);
+    const offsetNum = Math.max(parseInt(offset as string, 10) || 0, 0);
+
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit as string), parseInt(offset as string));
+    params.push(limitNum, offsetNum);
 
     const users = db.prepare(query).all(...params) as any[];
 
@@ -222,6 +225,9 @@ router.put('/:id', authenticateToken, logActivity('update_user', 'user'), (req: 
     // Only admin can update role and active status
     if (req.user!.role === 'admin') {
       if (role) {
+        if (!['admin', 'user'].includes(role)) {
+          return res.status(400).json({ success: false, message: 'Invalid role. Must be admin or user' });
+        }
         updateFields.push('role = ?');
         updateValues.push(role);
       }
@@ -292,7 +298,7 @@ router.delete(
 
       // Fetch target
       const target = db
-        .prepare('SELECT id, username, role FROM users WHERE id = ?')
+        .prepare('SELECT id, username, role, is_active FROM users WHERE id = ?')
         .get(id) as any;
 
       if (!target) {
@@ -302,12 +308,15 @@ router.delete(
       // Do not allow deleting admins (or at least the last admin)
       if (String(target.role).toLowerCase() === 'admin') {
         // If you want to allow deleting admins except the last one, use this block:
-        const adminCount = (db
-          .prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'admin'")
-          .get() as any).c as number;
+        // Match the deactivation guard above: count only active admins, so a
+        // previously-deactivated admin row can't be used to make it look like
+        // there's a "spare" admin when there isn't one actually usable.
+        const activeAdminCount = (db
+          .prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'admin' AND is_active = 1 AND id != ?")
+          .get(id) as any).c as number;
 
-        if (adminCount <= 1) {
-          return res.status(400).json({ success: false, message: 'Cannot delete the last admin user.' });
+        if (String(target.is_active) === '1' && activeAdminCount === 0) {
+          return res.status(400).json({ success: false, message: 'Cannot delete the last active admin user.' });
         }
 
         // If you want to strictly forbid deleting any admin at all, use:

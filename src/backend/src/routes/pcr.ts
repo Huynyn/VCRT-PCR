@@ -6,6 +6,15 @@ import { cleanupService } from '../services/cleanup';
 
 const router = Router();
 
+// Statuses settable through the generic create/update endpoints below. Every
+// other transition (approved, completed, cancelled, changes_requested) has
+// its own dedicated admin-only endpoint further down this file, which also
+// carries side effects (clearing admin_comments, etc.) that this generic
+// path doesn't perform - so it must never accept those values directly, or
+// a caller could jump a report straight to "approved"/"completed" without
+// ever going through admin review.
+const CREATABLE_STATUSES = new Set(['draft', 'submitted']);
+
 // Generate simple ID
 function generateId(): string {
   return 'pcr_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
@@ -119,8 +128,11 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
       params.push(status);
     }
 
+    const limitNum = Math.min(Math.max(parseInt(limit as string, 10) || 50, 1), 200);
+    const offsetNum = Math.max(parseInt(offset as string, 10) || 0, 0);
+
     query += ' ORDER BY pcr_reports.updated_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit as string), parseInt(offset as string));
+    params.push(limitNum, offsetNum);
 
     const reports = db.prepare(query).all(...params);
 
@@ -140,8 +152,12 @@ router.post('/', authenticateToken, logActivity('create_pcr', 'pcr_report'), (re
   try {
     const { form_data, status = 'draft', sign_off_attachments } = req.body;
 
-    if (!form_data) {
+    if (!form_data || typeof form_data !== 'object' || Array.isArray(form_data)) {
       return res.status(400).json({ success: false, message: 'Form data required' });
+    }
+
+    if (!CREATABLE_STATUSES.has(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
     const reportId = generateId();
@@ -208,6 +224,14 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
     // submitted/approved reports are locked for non-admins
     if (!isAdmin && existingReport.status !== 'draft' && existingReport.status !== 'changes_requested') {
       return res.status(403).json({ success: false, message: 'This report cannot be edited' });
+    }
+
+    if (form_data !== undefined && (typeof form_data !== 'object' || form_data === null || Array.isArray(form_data))) {
+      return res.status(400).json({ success: false, message: 'Form data must be an object' });
+    }
+
+    if (status !== undefined && !CREATABLE_STATUSES.has(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
     // Update report
@@ -570,7 +594,7 @@ router.post('/cleanup/run', authenticateToken, logActivity('manual_cleanup', 'pc
       data: {
         deletedPCRCount: result.deletedPCRCount,
         deletedLogsCount: result.deletedLogsCount,
-        message: `Successfully deleted ${result.deletedPCRCount} PCR report(s) older than 72 hours and ${result.deletedLogsCount} log(s) older than 7 days`
+        message: `Successfully deleted ${result.deletedPCRCount} PCR report(s) older than 730 days and ${result.deletedLogsCount} log(s) older than 7 days`
       }
     });
 

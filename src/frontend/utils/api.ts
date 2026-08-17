@@ -54,6 +54,15 @@ export async function apiRequest<T = any>(
 
   if (!response.ok) {
     if (response.status === 401) {
+      // The backend only returns 401 for "not authenticated" (missing,
+      // invalid, or expired token / deactivated user) - never for ordinary
+      // permission-denied cases (those are 403, e.g. requireRole() or
+      // report-ownership checks), so this is safe to treat as "the session
+      // is no longer valid" without risk of logging someone out just for
+      // hitting an admin-only endpoint or someone else's report.
+      // AuthContext listens for this and redirects to the login screen,
+      // instead of every save/submit failing forever with a generic error.
+      window.dispatchEvent(new Event('session-invalid'));
       throw new Error('Authentication required');
     }
     // Backend error responses are { success: false, message: '...' } - surface

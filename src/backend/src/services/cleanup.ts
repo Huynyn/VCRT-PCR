@@ -13,6 +13,15 @@ export class CleanupService {
   private readonly FINALIZED_RETENTION_DAYS = 7
 
   start(): void {
+    // Guard against a second start() without an intervening stop() (e.g. the
+    // embedded server restarting within the same process) leaking the
+    // previous setInterval handle - it would never get cleared, and cleanup
+    // would run duplicated/overlapping every hour from then on.
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval)
+      this.cleanupInterval = null
+    }
+
     console.log('📅 Starting cleanup service...')
 
     // Run cleanup immediately on start
@@ -122,13 +131,17 @@ export class CleanupService {
     try {
       console.log('🧹 Running manual cleanup...')
 
-      // Delete PCR reports older than configured retention
+      // Delete PCR reports older than configured retention. Status list
+      // matches cleanupPCRReports() above (the scheduled job) - including
+      // 'draft' - so a preview/manual run reports the same thing the
+      // automatic hourly job would actually do, instead of only showing
+      // submitted/approved and silently leaving old drafts out of the count.
       const ageCondition = `datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_DAYS} days')`
       db.prepare(archivePcrReportsSql(ageCondition)).run()
 
       const pcrDeleteQuery = `
         DELETE FROM pcr_reports
-        WHERE status IN ('submitted','approved')
+        WHERE status IN ('submitted','draft','approved')
         AND ${ageCondition}
       `
       const pcrResult = db.prepare(pcrDeleteQuery).run()
@@ -168,7 +181,7 @@ export class CleanupService {
       const pcrQuery = `
         SELECT COUNT(*) as count, MIN(created_at) as oldestDate
         FROM pcr_reports
-        WHERE status IN ('submitted','approved')
+        WHERE status IN ('submitted','draft','approved')
         AND datetime(created_at) < datetime('now', '-${this.PCR_RETENTION_DAYS} days')
       `
       const pcrResult = db.prepare(pcrQuery).get() as { count: number, oldestDate: string | null }

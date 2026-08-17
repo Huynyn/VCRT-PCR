@@ -32,6 +32,14 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const containerRef = useRef<HTMLDivElement>(null)
   const inputId = useRef(`searchable-select-${Math.random().toString(36).substr(2, 9)}`).current
 
+  // Click-outside below needs the latest typed text, but only resubscribes
+  // when `value`/`onChange` change (not on every keystroke) - so it's kept
+  // in a ref rather than added to that effect's dependency array.
+  const queryRef = useRef(query)
+  useEffect(() => {
+    queryRef.current = query
+  }, [query])
+
   useEffect(() => {
     setQuery(value)
   }, [value])
@@ -40,12 +48,21 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false)
-        setQuery(value)
+        // Clicking/tabbing away used to silently discard whatever was typed
+        // unless the user pressed Enter or clicked a suggestion first -
+        // commit it instead, same as Enter/"Use typed" does, so typing a
+        // custom value and clicking elsewhere doesn't lose it.
+        const typed = queryRef.current.trim()
+        if (typed && typed !== value) {
+          onChange(typed)
+        } else {
+          setQuery(value)
+        }
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [value])
+  }, [value, onChange])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()

@@ -57,8 +57,8 @@ npm run electron:dev
 
 After running the account setup script, the app creates default accounts:
 
-- Admin: `admin` / `vcrt-ebic2026!`
-- User: `user` / `user`
+- Admin: `admin` / `Vcrt-Ebic2026!`
+- User: `user` / `Vcrt-User2026!`
 
 ## Useful scripts
 
