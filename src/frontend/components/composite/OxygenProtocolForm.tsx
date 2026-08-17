@@ -86,9 +86,8 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
 
           <Input
             label={t('pcr.oxygenProtocol.initialSpo2')}
-            type="number"
-            min="0"
-            max="100"
+            type="text"
+            inputMode="numeric"
             value={data.spo2 || ''}
             onChange={(e) => handleFieldChange('spo2', e.target.value)}
             error={errors.spo2}
@@ -164,10 +163,8 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label={t('pcr.oxygenProtocol.initialFlowRate')}
-                    type="number"
-                    min="0"
-                    max="15"
-                    step="any"
+                    type="text"
+                    inputMode="decimal"
                     value={data.flowRate || ''}
                     onChange={(e) => handleFieldChange('flowRate', e.target.value)}
                     error={errors.flowRate}
@@ -223,10 +220,8 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                       <div className="flex-1">
                         <Input
                           label={t('pcr.oxygenProtocol.newFlowRate')}
-                          type="number"
-                          min="0"
-                          max="15"
-                          step="any"
+                          type="text"
+                          inputMode="decimal"
                           value={alteration.flowRate || ''}
                           onChange={(e) => handleFlowRateChange(index, 'flowRate', e.target.value)}
                         />

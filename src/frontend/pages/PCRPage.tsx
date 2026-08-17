@@ -1135,9 +1135,8 @@ const PCRPage: React.FC = () => {
 
             <Input
               label={t('pcr.patientInfo.age')}
-              type="number"
-              min="0"
-              max="150"
+              type="text"
+              inputMode="numeric"
               value={data.age || ''}
               onChange={e => handleAgeChange(e.target.value)}
               error={errors.age}
@@ -1481,7 +1480,8 @@ const PCRPage: React.FC = () => {
                     />
                     <Input
                       label={t('pcr.treatment.numberOfCycles')}
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={data.numberOfCycles || ''}
                       onChange={e => updateField('numberOfCycles', e.target.value)}
                       placeholder="0"
@@ -1496,14 +1496,16 @@ const PCRPage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <Input
                       label={t('pcr.treatment.shocksNumber')}
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={data.numberOfShocks || ''}
                       onChange={e => updateField('numberOfShocks', e.target.value)}
                       placeholder="0"
                     />
                     <Input
                       label={t('pcr.treatment.shockNotAdvisedNumber')}
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={data.shockNotAdvised || ''}
                       onChange={e => updateField('shockNotAdvised', e.target.value)}
                       placeholder="0"
@@ -1523,7 +1525,8 @@ const PCRPage: React.FC = () => {
                     />
                     <Input
                       label={t('pcr.treatment.numberOfTurns')}
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={data.numberOfTurns || ''}
                       onChange={e => updateField('numberOfTurns', e.target.value)}
                       placeholder="0"
@@ -1635,9 +1638,8 @@ const PCRPage: React.FC = () => {
 
                     <Input
                       label={t('pcr.opqrst.scale')}
-                      type="number"
-                      min="1"
-                      max="10"
+                      type="text"
+                      inputMode="numeric"
                       value={entry.scale || ''}
                       onChange={e => updateOpqrstEntry(entry.id, 'scale', e.target.value)}
                       placeholder={t('pcr.opqrst.scalePlaceholder')}
@@ -1696,6 +1698,7 @@ const PCRPage: React.FC = () => {
               error={errors.comments}
               placeholder={t('pcr.additionalInfo.callDescriptionPlaceholder')}
               helpText={t('pcr.additionalInfo.callDescriptionHelp')}
+              hideDnoUtoHint
               rows={4}
               required
             />
@@ -1707,6 +1710,7 @@ const PCRPage: React.FC = () => {
               error={errors.transferComments}
               placeholder={t('pcr.additionalInfo.transferOfCarePlaceholder')}
               helpText={t('pcr.additionalInfo.transferOfCareHelp')}
+              hideDnoUtoHint
               rows={3}
               required
             />

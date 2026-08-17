@@ -25,6 +25,18 @@ export function validateTime(time: string): boolean {
   return timeRegex.test(time)
 }
 
+// Matches the "Did Not Obtain"/"Unable to Obtain" shorthand (DNO/UTO) or its
+// French equivalent ("N.O."/"I.O." - Non Obtenu / Impossible d'Obtenir),
+// with or without periods between the letters (e.g. "DNO", "D.N.O.", "no",
+// "N.O."). Used to let these values through fields that would otherwise
+// reject non-numeric/non-time input, and to trigger the "explain in comment
+// section" hint wherever they're entered.
+export function isDnoUtoValue(value: string | number | null | undefined): boolean {
+  if (value === null || value === undefined) return false
+  const stripped = String(value).trim().replace(/\./g, '').toUpperCase()
+  return stripped === 'DNO' || stripped === 'UTO' || stripped === 'NO' || stripped === 'IO'
+}
+
 export function validateDate(date: string): boolean {
   if (!date) return false
   const dateObj = new Date(date)

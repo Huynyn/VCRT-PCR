@@ -1,7 +1,7 @@
 import React, { forwardRef, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Minimize2 } from 'lucide-react'
-import { cn } from '@/utils'
+import { cn, isDnoUtoValue } from '@/utils'
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string
@@ -10,6 +10,9 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   resize?: 'none' | 'both' | 'horizontal' | 'vertical'
   /** Treat as required and, if empty, show a custom message suggesting DNO/UTO when unknown */
   requireUnknown?: boolean
+  /** Suppress the "explain in comment section" hint even if the value looks
+   * like DNO/UTO - used on the comment fields themselves. */
+  hideDnoUtoHint?: boolean
 }
 
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
@@ -20,6 +23,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
   className,
   required,
   requireUnknown,
+  hideDnoUtoHint,
   id,
   onInvalid,
   onInput,
@@ -27,6 +31,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
 }, ref) => {
   const { t } = useTranslation()
   const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`
+  const showDnoUtoHint = !hideDnoUtoHint && isDnoUtoValue(props.value as string | number | null | undefined)
   const innerRef = useRef<HTMLTextAreaElement | null>(null)
 
   const setRefs = (node: HTMLTextAreaElement | null) => {
@@ -114,8 +119,14 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
           {error}
         </p>
       )}
-      
-      {helpText && !error && (
+
+      {!error && showDnoUtoHint && (
+        <p id={`${textareaId}-dno-uto-hint`} className="form-help">
+          {t('common.explainInComments')}
+        </p>
+      )}
+
+      {!error && !showDnoUtoHint && helpText && (
         <p id={`${textareaId}-help`} className="form-help">
           {helpText}
         </p>

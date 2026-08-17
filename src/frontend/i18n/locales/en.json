@@ -12,6 +12,7 @@
     "invalidTime": "Please enter a valid time (HH:MM)",
     "fillRequiredDnoUto": "Please fill in (use DNO or UTO if unknown)",
     "selectRequiredDnoUto": "Please select a value (use DNO or UTO if unknown)",
+    "explainInComments": "Explain in comment section",
     "edit": "Edit",
     "delete": "Delete",
     "back": "Back",

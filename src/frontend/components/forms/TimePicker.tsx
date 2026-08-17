@@ -1,13 +1,16 @@
 import React, { forwardRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Clock } from 'lucide-react'
-import { cn, formatTime, validateTime } from '@/utils'
+import { cn, formatTime, validateTime, isDnoUtoValue } from '@/utils'
 
 interface TimePickerProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string
   error?: string
   helpText?: string
   format24?: boolean
+  /** Suppress the "explain in comment section" hint even if the value looks
+   * like DNO/UTO - used on the comment fields themselves. */
+  hideDnoUtoHint?: boolean
 }
 
 const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
@@ -19,12 +22,14 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
   required,
   onChange,
   value,
+  hideDnoUtoHint,
   ...props
 }, ref) => {
   const { t } = useTranslation()
   const [displayValue, setDisplayValue] = useState(value || '')
   const [inputError, setInputError] = useState('')
   const inputId = props.id || `time-${Math.random().toString(36).substr(2, 9)}`
+  const showDnoUtoHint = !hideDnoUtoHint && isDnoUtoValue(displayValue as string)
 
   useEffect(() => {
     if (value !== displayValue) {
@@ -37,7 +42,10 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
     setDisplayValue(newValue)
     setInputError('')
 
-    if (newValue && !validateTime(newValue)) {
+    // DNO/UTO (or the French N.O./I.O.) is a valid "not obtained" answer
+    // here too, so it bypasses the HH:MM format check instead of being
+    // rejected as an invalid time.
+    if (newValue && !validateTime(newValue) && !isDnoUtoValue(newValue)) {
       setInputError(t('common.invalidTime'))
       return
     }
@@ -135,8 +143,14 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(({
           {finalError}
         </p>
       )}
-      
-      {helpText && !finalError && (
+
+      {!finalError && showDnoUtoHint && (
+        <p id={`${inputId}-dno-uto-hint`} className="form-help">
+          {t('common.explainInComments')}
+        </p>
+      )}
+
+      {!finalError && !showDnoUtoHint && helpText && (
         <p id={`${inputId}-help`} className="form-help">
           {helpText}
         </p>

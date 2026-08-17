@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react'
-import { validationRules } from '@/utils'
+import { validationRules, isDnoUtoValue } from '@/utils'
 import type { FormContextType, PCRFormData } from '@/types'
 
 interface FormState {
@@ -57,22 +57,23 @@ const validationSchema: Record<string, [(value: any) => boolean, string][]> = {
   transferComments: [[(v: string) => validationRules.required(v), 'pcr.validation.transferOfCareRequired']],
   patientCareTransferred: [[(v: string) => validationRules.required(v), 'pcr.validation.patientCareTransferredRequired']],
 
-  // Time fields (required + format) — NO duplicate keys
+  // Time fields (required + format) — NO duplicate keys. DNO/UTO (or the
+  // French N.O./I.O.) is accepted in place of an actual HH:MM time.
   timeNotified: [
     [(v: string) => validationRules.required(v), 'pcr.validation.timeNotifiedRequired'],
-    [(v: string) => HHMM.test(v), 'pcr.validation.timeFormat'],
+    [(v: string) => HHMM.test(v) || isDnoUtoValue(v), 'pcr.validation.timeFormat'],
   ],
   onScene: [
     [(v: string) => validationRules.required(v), 'pcr.validation.onSceneTimeRequired'],
-    [(v: string) => HHMM.test(v), 'pcr.validation.timeFormat'],
+    [(v: string) => HHMM.test(v) || isDnoUtoValue(v), 'pcr.validation.timeFormat'],
   ],
   clearedScene: [
     [(v: string) => validationRules.required(v), 'pcr.validation.clearedSceneTimeRequired'],
-    [(v: string) => HHMM.test(v), 'pcr.validation.timeFormat'],
+    [(v: string) => HHMM.test(v) || isDnoUtoValue(v), 'pcr.validation.timeFormat'],
   ],
   timeCareTransferred: [
     [(v: string) => validationRules.required(v), 'pcr.validation.timeCareTransferredRequired'],
-    [(v: string) => HHMM.test(v), 'pcr.validation.timeFormat'],
+    [(v: string) => HHMM.test(v) || isDnoUtoValue(v), 'pcr.validation.timeFormat'],
   ],
 
   // Email (optional, but must be valid if present)
@@ -80,8 +81,9 @@ const validationSchema: Record<string, [(value: any) => boolean, string][]> = {
     [(v: string) => !v || /\S+@\S+\.\S+/.test(v), 'pcr.validation.validEmail'],
   ],
 
-  // Numbers
-  age: [[(v: any) => v === '' || v === undefined || (+v >= 0 && +v <= 150), 'pcr.validation.validAge']],
+  // Numbers - DNO/UTO (or the French N.O./I.O.) is accepted in place of an
+  // actual age.
+  age: [[(v: any) => v === '' || v === undefined || isDnoUtoValue(v) || (+v >= 0 && +v <= 150), 'pcr.validation.validAge']],
 
   // Composite: either age or dob must exist
   ageOrDob: [[

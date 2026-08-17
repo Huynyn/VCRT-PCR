@@ -52,15 +52,6 @@ type NewPageFn = () => number
   // it follows, so the two are easy to tell apart at a glance.
   const ANSWER_COLOR: [number, number, number] = [80, 80, 80]
 
-  // pdf.getTextWidth() doesn't always match the actual rendered ink width of
-  // a bold label in every viewer (measured empirically: for some label
-  // strings the value ends up drawn right at/into the tail of the label with
-  // no visible gap, even though the label already ends in ": "). Padding the
-  // computed label width with a small fixed buffer before positioning the
-  // value guards against that mismatch instead of trusting the measurement
-  // to the pixel.
-  const LABEL_VALUE_GAP = 1.2
-
   // Draws a bold field label in black - so it's visually obvious which part
   // is the header vs. the (lighter-colored) answer that follows it - and
   // returns its rendered width, so the caller knows where the value should
@@ -74,7 +65,110 @@ type NewPageFn = () => number
     return pdf.getTextWidth(label)
   }
 
-  // Helper: render a row of fields with column spans
+  // Wraps a bl()-built "English | French" label. Naive word-wrapping treats
+  // the whole string as one run of words, so it can break mid-way through
+  // the French half (or even mid-word) once the label doesn't fit on one
+  // line. Instead, if the label as a whole doesn't fit, split it at its "
+  // | " separator and give the French half its own line(s) entirely -
+  // wrapping further only if that half alone still doesn't fit.
+  function wrapBilingualLabel(pdf: jsPDF, label: string, maxWidth: number): string[] {
+    if (!label) return ['']
+    if (pdf.getTextWidth(label) <= maxWidth) return [label]
+
+    const sepIdx = label.indexOf(' | ')
+    if (sepIdx === -1) {
+      return pdf.splitTextToSize(label, maxWidth)
+    }
+
+    // Keep the "|" separator attached to the end of the English line rather
+    // than dropping it, so the break still reads as "English | \n French".
+    const en = label.slice(0, sepIdx) + ' |'
+    const fr = label.slice(sepIdx + 3)
+    const enLines: string[] = pdf.getTextWidth(en) <= maxWidth ? [en] : pdf.splitTextToSize(en, maxWidth)
+    const frLines: string[] = pdf.getTextWidth(fr) <= maxWidth ? [fr] : pdf.splitTextToSize(fr, maxWidth)
+    return [...enLines, ...frLines]
+  }
+
+  // Shared layout constants for renderFieldsRow's label+box field entries -
+  // also used by measureFieldsRowHeight() so a caller can pre-check whether
+  // a section banner + its first row will fit before drawing either.
+  const FIELD_BOX_GAP = 3      // horizontal gap between adjacent boxes in a row
+  const FIELD_BOX_PAD_X = 2    // horizontal padding for the answer text inside the box
+  const FIELD_BOX_PAD_Y = 1.7  // vertical padding above/below the answer text inside the box
+  const FIELD_LABEL_GAP = 1.6  // gap between the label and the top of its box
+  const FIELD_ROW_SPACING = 3.5 // gap after a fields row, before the next one
+
+  interface MeasuredField { labelLines: string[]; valueLines: string[]; boxW: number; slotW: number }
+
+  // Pure measurement pass shared by renderFieldsRow (to decide its own page
+  // break) and by callers that need to know a row's height up front (e.g.
+  // to keep a section banner from being stranded above a row that gets
+  // pushed to the next page).
+  //
+  // valueLineGap adds extra breathing room BETWEEN wrapped lines of answer
+  // text (on top of the normal line height) - used for the longer free-text
+  // paragraphs (Call Description, Transfer Comments) where tight line
+  // spacing reads as cramped. It has no effect on single-line answers.
+  function measureFieldsRow(
+    pdf: jsPDF,
+    fields: { label: string; value: string | number }[],
+    spans: number[],
+    contentWidth: number,
+    valueLineGap = 0
+  ): { totalBlockH: number; labelH: number; effectiveLabelGap: number; boxH: number; measured: MeasuredField[]; labelLinesMax: number } {
+    const colUnit = contentWidth / 4
+    const fontSize = pdf.getFontSize() || 8
+    const lineH = pdf.getLineHeightFactor() * (fontSize * 0.3528)
+    const hasAnyLabel = fields.some(f => (f.label ?? '') !== '')
+
+    const measured: MeasuredField[] = fields.map((field, i) => {
+      const span = spans[i] || 1
+      const slotW = colUnit * span
+      const boxW = Math.max(10, slotW - FIELD_BOX_GAP)
+
+      pdf.setFont('helvetica', 'bold')
+      const label = field.label ?? ''
+      const labelLines: string[] = wrapBilingualLabel(pdf, label, boxW)
+
+      // Answer text is rendered all-caps, matching how it reads on the
+      // paper form this replaces.
+      const raw = String(field.value ?? '').toUpperCase()
+      pdf.setFont('helvetica', 'normal')
+      const valueLinesRaw: string[] = pdf.splitTextToSize(raw, Math.max(4, boxW - FIELD_BOX_PAD_X * 2))
+
+      return { labelLines, valueLines: valueLinesRaw.length ? valueLinesRaw : [''], boxW, slotW }
+    })
+
+    const labelLinesMax = Math.max(1, ...measured.map(m => m.labelLines.length))
+    const valueLinesMax = Math.max(1, ...measured.map(m => m.valueLines.length))
+    const labelH = hasAnyLabel ? labelLinesMax * lineH : 0
+    const effectiveLabelGap = hasAnyLabel ? FIELD_LABEL_GAP : 0
+    const boxH = valueLinesMax * lineH + Math.max(0, valueLinesMax - 1) * valueLineGap + FIELD_BOX_PAD_Y * 2
+    const totalBlockH = labelH + effectiveLabelGap + boxH
+
+    return { totalBlockH, labelH, effectiveLabelGap, boxH, measured, labelLinesMax }
+  }
+
+  // A convenience wrapper for the common single-field, full-width case
+  // (e.g. a section banner immediately followed by one free-text field).
+  function measureFieldsRowHeight(
+    pdf: jsPDF,
+    fields: { label: string; value: string | number }[],
+    spans: number[],
+    contentWidth: number,
+    valueLineGap = 0
+  ): number {
+    return measureFieldsRow(pdf, fields, spans, contentWidth, valueLineGap).totalBlockH
+  }
+
+  // Renders a row of "field entries": each field is a bold label with a
+  // light-blue answer box (same fill as the vital-signs/flow-rate table
+  // headers) underneath it, sized by the field's column span out of 4 units.
+  // Every box in the row shares the same height (tallest field's wrapped
+  // line count wins) so the row reads as a clean, aligned strip. The whole
+  // label+box unit for the row moves to a fresh page together rather than
+  // splitting a box - or separating a label from its box - across a page
+  // break.
   function renderFieldsRow(
     pdf: jsPDF,
     fields: { label: string; value: string | number }[],
@@ -82,110 +176,61 @@ type NewPageFn = () => number
     y: number,
     options: Required<PDFOptions>,
     contentWidth: number,
-    newPage: NewPageFn
+    newPage: NewPageFn,
+    valueLineGap = 0
   ): number {
-    const colUnit = contentWidth / 4
+    const fontSize = pdf.getFontSize() || 8
+    const lineH = pdf.getLineHeightFactor() * (fontSize * 0.3528)
+    const valueStep = lineH + valueLineGap
+    const ascent = fontSize * 0.3528 * 0.8
+    const hasAnyLabel = fields.some(f => (f.label ?? '') !== '')
 
-    const lineH = pdf.getLineHeightFactor() * (pdf.getFontSize() * 0.3528)
-    let neededLinesMax = 1
+    const { totalBlockH, labelH, effectiveLabelGap, boxH, measured, labelLinesMax } = measureFieldsRow(pdf, fields, spans, contentWidth, valueLineGap)
 
-    const measured = fields.map((field, i) => {
-      const span = spans[i] || 1
-      const maxWidth = colUnit * span
-
-      pdf.setFont('helvetica', 'bold')
-      const label = field.label ?? ''
-      const labelW = pdf.getTextWidth(label)
-      const valueMaxW = Math.max(4, maxWidth - labelW - LABEL_VALUE_GAP)
-
-      const raw = String(field.value ?? '')
-      pdf.setFont('helvetica', 'normal')
-      const lines = pdf.splitTextToSize(raw, valueMaxW)
-      neededLinesMax = Math.max(neededLinesMax, Math.max(1, lines.length))
-
-      return { label, labelW, lines, maxWidth }
-    })
-
-    const pageH = pdf.internal.pageSize.getHeight()
+    const pageHeight = pdf.internal.pageSize.getHeight()
     const bottom = options.margins.bottom
-    const neededHeight = neededLinesMax * lineH
-
-    if (y + neededHeight > pageH - bottom) {
+    if (y + totalBlockH > pageHeight - bottom - PAGE_GUARD) {
       y = newPage()
     }
+
+    const boxY = y + labelH + effectiveLabelGap
 
     let xCursor = options.margins.left
     measured.forEach((m) => {
-      drawLabel(pdf, m.label, xCursor, y)
+      if (hasAnyLabel) {
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(fontSize)
+        pdf.setTextColor(0, 0, 0)
+        // Labels shorter than the row's tallest label are bottom-aligned
+        // (pushed down to sit flush with the box, rather than flush with
+        // the top of the label area) so every box in the row still starts
+        // right after its own label instead of leaving a gap above it.
+        const lineDeficit = labelLinesMax - m.labelLines.length
+        m.labelLines.forEach((ln: string, idx: number) => {
+          pdf.text(ln, xCursor, y + ascent + (idx + lineDeficit) * lineH)
+        })
+      }
+
+      pdf.setFillColor(...VCRT_BLUE_LIGHT)
+      pdf.setDrawColor(195, 195, 200)
+      pdf.setLineWidth(0.2)
+      pdf.rect(xCursor, boxY, m.boxW, boxH, 'FD')
 
       pdf.setFont('helvetica', 'normal')
-      pdf.setTextColor(...ANSWER_COLOR)
-      const xVal = xCursor + m.labelW + LABEL_VALUE_GAP
-      m.lines.forEach((ln, idx) => {
-        pdf.text(ln, xVal, y + idx * lineH)
-      })
+      pdf.setFontSize(fontSize)
       pdf.setTextColor(0, 0, 0)
+      const textX = xCursor + FIELD_BOX_PAD_X
+      const firstBaseline = boxY + FIELD_BOX_PAD_Y + ascent
+      m.valueLines.forEach((ln: string, idx: number) => {
+        pdf.text(ln, textX, firstBaseline + idx * valueStep)
+      })
 
-      xCursor += m.maxWidth
+      xCursor += m.slotW
     })
 
-    return y + neededHeight + 1
-  }
-
-// Add this helper near renderFieldsRow
-function renderMultilineBlock(
-  pdf: jsPDF,
-  label: string,
-  value: string,
-  y: number,
-  options: Required<PDFOptions>,
-  contentWidth: number,
-  newPage: NewPageFn
-): number {
-  const pageHeight = pdf.internal.pageSize.getHeight()
-  const left = options.margins.left
-  const bottom = options.margins.bottom
-  const lineHeight = pdf.getLineHeightFactor() * (pdf.getFontSize() * 0.3528)
-
-  // Ensure there's space for at least one line
-  if (y + lineHeight > pageHeight - bottom) {
-    y = newPage()
-  }
-
-  // Draw label (bold)
-  const labelWidth = drawLabel(pdf, label, left, y)
-
-  // Wrap value to remaining width
-  const valueMaxWidth = Math.max(10, contentWidth - labelWidth - LABEL_VALUE_GAP)
-  const lines = pdf.splitTextToSize(value || '', valueMaxWidth)
-
-  // Draw value (normal, lighter color than the label)
-  pdf.setFont('helvetica', 'normal')
-  pdf.setTextColor(...ANSWER_COLOR)
-  const xVal = left + labelWidth + LABEL_VALUE_GAP
-
-  if (lines.length === 0) {
     pdf.setTextColor(0, 0, 0)
-    return y + lineHeight + 2
+    return y + totalBlockH + FIELD_ROW_SPACING
   }
-
-  for (let i = 0; i < lines.length; i++) {
-    if (y + lineHeight > pageHeight - bottom) {
-      y = newPage()
-
-      // optional but nice: re-print label when it spills onto a new page
-      drawLabel(pdf, label, left, y)
-      pdf.setFont('helvetica', 'normal')
-      pdf.setTextColor(...ANSWER_COLOR)
-    }
-
-    pdf.text(lines[i], xVal, y)
-    y += lineHeight
-  }
-
-  pdf.setTextColor(0, 0, 0)
-  return y + 1
-}
 
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace('#', '')
@@ -866,28 +911,16 @@ private addPageWithHeader(
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
 
-    // Date / Report #
+    // Date / Report # / Call # / Location - all short, one row of 4
     yPosition = renderFieldsRow(
       pdf,
       [
         { label: `${bl('Date', 'Date')}: `, value: data.date || '' },
         { label: `${bl('Report Number', 'N° de rapport')}: `, value: data.reportNumber || '' },
-      ],
-      [2, 2],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    )
-
-    // Call # / Location
-    yPosition = renderFieldsRow(
-      pdf,
-      [
         { label: `${bl('Call Number', "N° d'appel")}: `, value: data.callNumber || '' },
         { label: `${bl('Location', 'Lieu')}: `, value: data.location || '' },
       ],
-      [2, 2],
+      [1, 1, 1, 1],
       yPosition,
       options,
       contentWidth,
@@ -920,50 +953,31 @@ private addPageWithHeader(
       newPage
     )
 
-    // Time Notified / On Scene
+    // Time Notified / On Scene / Transport Arrived / Cleared Scene - all
+    // short times, one row of 4
     yPosition = renderFieldsRow(
       pdf,
       [
         { label: `${bl('Time Notified', 'Heure de notification')}: `, value: data.timeNotified || '' },
         { label: `${bl('On Scene', 'Arrivée sur les lieux')}: `, value: data.onScene || '' },
-      ],
-      [2, 2],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    )
-
-    // Transport Arrived / Cleared Scene
-    yPosition = renderFieldsRow(
-      pdf,
-      [
         { label: `${bl('Transport Arrived', 'Arrivée du transport')}: `, value: data.transportArrived || 'N/A' },
         { label: `${bl('Cleared Scene', 'Départ des lieux')}: `, value: data.clearedScene || '' },
       ],
+      [1, 1, 1, 1],
+      yPosition,
+      options,
+      contentWidth,
+      newPage
+    )
+
+    // Paramedics Called by / First Agency on Scene
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: `${bl('Paramedics Called by', 'Paramédics appelés par')}: `, value: data.paramedicsCalledBy || 'N/A' },
+        { label: `${bl('First Agency on Scene', 'Premier service sur les lieux')}: `, value: data.firstAgencyOnScene || '' },
+      ],
       [2, 2],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    )
-
-    // Paramedics Called by (own row)
-    yPosition = renderFieldsRow(
-      pdf,
-      [{ label: `${bl('Paramedics Called by', 'Paramédics appelés par')}: `, value: data.paramedicsCalledBy || 'N/A' }],
-      [4],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    )
-
-    // First Agency on Scene (own row)
-    yPosition = renderFieldsRow(
-      pdf,
-      [{ label: `${bl('First Agency on Scene', 'Premier service sur les lieux')}: `, value: data.firstAgencyOnScene || '' }],
-      [4],
       yPosition,
       options,
       contentWidth,
@@ -997,7 +1011,7 @@ private addPageWithHeader(
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
 
-    // Patient Name / DOB
+    // Patient Name / DOB - own row, kept prominent
     yPosition = renderFieldsRow(
       pdf,
       [
@@ -1011,28 +1025,16 @@ private addPageWithHeader(
       newPage
     )
 
-    // Age / Sex
+    // Age / Sex / Status / Student/Employee # - all short, one row of 4
     yPosition = renderFieldsRow(
       pdf,
       [
         { label: `${bl('Age', 'Âge')}: `, value: data.age ? data.age.toString() : 'Not Recorded' },
         { label: `${bl('Sex', 'Sexe')}: `, value: data.sex || '' },
-      ],
-      [2, 2],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    )
-
-    // Status / Student/Employee #
-    yPosition = renderFieldsRow(
-      pdf,
-      [
         { label: `${bl('Status', 'Statut')}: `, value: data.status || '' },
         { label: `${bl('Student/Employee #', "N° d'étudiant/employé")}: `, value: data.studentEmployeeNumber || ' Not Recorded' },
       ],
-      [2, 2],
+      [1, 1, 1, 1],
       yPosition,
       options,
       contentWidth,
@@ -1060,28 +1062,17 @@ private addPageWithHeader(
       newPage
     )
 
-    // Contacted? / Contact Phone
+    // Contacted? / Contact Phone / Contacted by / Workplace Injury? - all
+    // short, one row of 4
     yPosition = renderFieldsRow(
       pdf,
       [
         { label: `${bl('Contacted?', 'Contacté?')}: `, value: data.contacted || '' },
         { label: `${bl('Contact Phone', 'Téléphone du contact')}: `, value: data.emergencyContactPhone || '' },
-      ],
-      [2, 2],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    )
-
-    // Contacted by / Workplace Injury?
-    yPosition = renderFieldsRow(
-      pdf,
-      [
         { label: `${bl('Contacted by', 'Contacté par')}: `, value: data.contactedBy || '' },
         { label: `${bl('Workplace Injury?', 'Blessure au travail?')}: `, value: data.workplaceInjury || '' },
       ],
-      [2, 2],
+      [1, 1, 1, 1],
       yPosition,
       options,
       contentWidth,
@@ -1117,23 +1108,31 @@ private addPageWithHeader(
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
 
-    yPosition = renderMultilineBlock(
-      pdf, `${bl('Chief Complaint', 'Motif principal')}: `, data.chiefComplaint || '', yPosition, options, contentWidth, newPage
+    yPosition = renderFieldsRow(
+      pdf,
+      [{ label: `${bl('Chief Complaint', 'Motif principal')}: `, value: data.chiefComplaint || '' }],
+      [4], yPosition, options, contentWidth, newPage
     )
-    yPosition = renderMultilineBlock(
-      pdf, `${bl('Signs & Symptoms', 'Signes et symptômes')}: `, data.signsSymptoms|| '', yPosition, options, contentWidth, newPage
+    yPosition = renderFieldsRow(
+      pdf,
+      [{ label: `${bl('Signs & Symptoms', 'Signes et symptômes')}: `, value: data.signsSymptoms || '' }],
+      [4], yPosition, options, contentWidth, newPage
     )
-    yPosition = renderMultilineBlock(
-      pdf, `${bl('Allergies', 'Allergies')}: `, data.allergies || '', yPosition, options, contentWidth, newPage
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: `${bl('Allergies', 'Allergies')}: `, value: data.allergies || '' },
+        { label: `${bl('Medications', 'Médicaments')}: `, value: data.medications || '' },
+      ],
+      [2, 2], yPosition, options, contentWidth, newPage
     )
-    yPosition = renderMultilineBlock(
-      pdf, `${bl('Medications', 'Médicaments')}: `, data.medications || '', yPosition, options, contentWidth, newPage
-    )
-    yPosition = renderMultilineBlock(
-      pdf, `${bl('Pertinent Medical History', 'Antécédents médicaux pertinents')}: `, data.medicalHistory || '', yPosition, options, contentWidth, newPage
-    )
-    yPosition = renderMultilineBlock(
-      pdf, `${bl('Last Oral Intake', 'Dernière prise alimentaire')}: `, data.lastMeal || '', yPosition, options, contentWidth, newPage
+    yPosition = renderFieldsRow(
+      pdf,
+      [
+        { label: `${bl('Pertinent Medical History', 'Antécédents médicaux pertinents')}: `, value: data.medicalHistory || '' },
+        { label: `${bl('Last Oral Intake', 'Dernière prise alimentaire')}: `, value: data.lastMeal || '' },
+      ],
+      [2, 2], yPosition, options, contentWidth, newPage
     )
 
     pdf.setDrawColor(0)
@@ -1146,8 +1145,10 @@ private addPageWithHeader(
     )
     yPosition += 6
 
-    yPosition = renderMultilineBlock(
-      pdf, `${bl('Rapid Body Survey Findings', "Constats de l'examen corporel rapide")}: `, data.bodySurvey || '', yPosition, options, contentWidth, newPage
+    yPosition = renderFieldsRow(
+      pdf,
+      [{ label: `${bl('Rapid Body Survey Findings', "Constats de l'examen corporel rapide")}: `, value: data.bodySurvey || '' }],
+      [4], yPosition, options, contentWidth, newPage
     )
 
     return yPosition
@@ -1181,56 +1182,19 @@ private addPageWithHeader(
     const airwayManagement = Array.isArray(data.airwayManagement) && data.airwayManagement.length > 0
     ? data.airwayManagement.join(', ')
     : ''
-    yPosition = renderFieldsRow( pdf, [{ label: `${bl('Airway Management', 'Gestion des voies respiratoires')}: `, value: airwayManagement || ' N/A' }], [4], yPosition, options, contentWidth, newPage)
-
-    // CPR (kept as-is) Time Started / Number of Cycles
-    yPosition = renderFieldsRow(
-      pdf,
-      [
-        { label: `${bl('CPR Time Started', 'Heure de début RCP')}: `, value: data.timeStarted || ' N/A' },
-        { label: `${bl('CPR Number of Cycles', 'Nombre de cycles RCP')}: `, value: data.numberOfCycles || ' N/A' },
-      ],
-      [2, 2],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    )
-
-    // AED (kept as-is) Number of Shocks / Shock Not Advised
-    yPosition = renderFieldsRow(
-      pdf,
-      [
-        { label: `${bl('AED Number of Shocks', 'Nombre de chocs DEA')}: `, value: data.numberOfShocks || ' N/A' },
-        { label: `${bl('Shock Not Advised', 'Choc non recommandé')}: `, value: data.shockNotAdvised || ' N/A' },
-      ],
-      [2, 2],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    )
-
     const hemorrhageControl = Array.isArray(data.hemorrhageControl) && data.hemorrhageControl.length > 0
     ? data.hemorrhageControl.join(', ')
     : ''
     const hasTourniquet =
       Array.isArray(data.hemorrhageControl) &&
       data.hemorrhageControl.includes('Tourniquet');
-    yPosition = renderFieldsRow(
-      pdf,
-      [{ label: `${bl('Hemorrhage Control', "Contrôle de l'hémorragie")}: `, value: hemorrhageControl || ' N/A' }],
-      [4],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    )
+
+    // Airway Management / Hemorrhage Control share a row
     yPosition = renderFieldsRow(
       pdf,
       [
-        { label: `${bl('Tourniquet Time', "Heure d'application (garrot)")}: `, value: hasTourniquet ? (data.timeApplied || '') : ' N/A' },
-        { label: `${bl('Turns', 'Tours')}: `, value: hasTourniquet ? (String(data.numberOfTurns ?? '')) : ' N/A' },
+        { label: `${bl('Airway Management', 'Gestion des voies respiratoires')}: `, value: airwayManagement || ' N/A' },
+        { label: `${bl('Hemorrhage Control', "Contrôle de l'hémorragie")}: `, value: hemorrhageControl || ' N/A' },
       ],
       [2, 2],
       yPosition,
@@ -1238,6 +1202,23 @@ private addPageWithHeader(
       contentWidth,
       newPage
     )
+
+    // Tourniquet - only shown when one was actually used, instead of a
+    // blank/N/A row every time
+    if (hasTourniquet) {
+      yPosition = renderFieldsRow(
+        pdf,
+        [
+          { label: `${bl('Tourniquet Time', "Heure d'application (garrot)")}: `, value: data.timeApplied || '' },
+          { label: `${bl('Turns', 'Tours')}: `, value: String(data.numberOfTurns ?? '') },
+        ],
+        [2, 2],
+        yPosition,
+        options,
+        contentWidth,
+        newPage
+      )
+    }
 
     const immobilization = Array.isArray(data.immobilization) && data.immobilization.length > 0
     ? data.immobilization.join(', ')
@@ -1251,6 +1232,35 @@ private addPageWithHeader(
       contentWidth,
       newPage
     )
+
+    // CPR / AED - each half only shown when actually performed, instead of
+    // a blank/N/A row every time. Whichever combination is present shares
+    // one row (2-up if only one was performed, 4-up if both were).
+    const cprFields = data.cprPerformed
+      ? [
+          { label: `${bl('CPR Time Started', 'Heure de début RCP')}: `, value: data.timeStarted || '' },
+          { label: `${bl('CPR Number of Cycles', 'Nombre de cycles RCP')}: `, value: data.numberOfCycles || '' },
+        ]
+      : []
+    const aedFields = data.aedPerformed
+      ? [
+          { label: `${bl('AED Number of Shocks', 'Nombre de chocs DEA')}: `, value: data.numberOfShocks || '' },
+          { label: `${bl('Shock Not Advised', 'Choc non recommandé')}: `, value: data.shockNotAdvised || '' },
+        ]
+      : []
+    const cprAedFields = [...cprFields, ...aedFields]
+    if (cprAedFields.length > 0) {
+      yPosition = renderFieldsRow(
+        pdf,
+        cprAedFields,
+        cprAedFields.length === 4 ? [1, 1, 1, 1] : [2, 2],
+        yPosition,
+        options,
+        contentWidth,
+        newPage
+      )
+    }
+
     yPosition = renderFieldsRow(
       pdf,
       [{ label: `${bl('Patient Position', 'Position du patient')}: `, value: data.positionOfPatient || '' }],
@@ -1301,9 +1311,11 @@ private addPageWithHeader(
       )
       yPosition += 6
 
-      drawLabel(pdf, `${bl('Pain Assessment & Injury Location', "Évaluation de la douleur & Emplacement de la blessure")}: `, options.margins.left, yPosition)
-
-      // Extract the rendered body-diagram snapshot, if any
+      // Extract the rendered body-diagram snapshot, if any, and measure it
+      // BEFORE deciding on a page break - so the heading and its diagram/
+      // OPQRST content below it page-break together as one unit instead of
+      // the heading getting stranded on the previous page while the
+      // content it introduces jumps to the next one.
       let imageDataUrl = ''
       try {
         const parsed = JSON.parse(markersData)
@@ -1329,8 +1341,18 @@ private addPageWithHeader(
         }
       }
 
-      const blockNeed = Math.max(imageDataUrl ? imgHeight : 0, 40)
+      // Gap between the heading and the diagram/OPQRST content below it -
+      // keeps the diagram's top edge clear of the heading text instead of
+      // starting flush with it.
+      const headingGap = 6
+      const headingFontSize = pdf.getFontSize() || 8
+      const headingLineH = pdf.getLineHeightFactor() * (headingFontSize * 0.3528)
+      const blockNeed = headingLineH + headingGap + Math.max(imageDataUrl ? imgHeight : 0, 40)
       yPosition = ensureSpaceFor(pdf, options, yPosition, blockNeed, newPage)
+
+      drawLabel(pdf, `${bl('Pain Assessment & Injury Location', "Évaluation de la douleur & Emplacement de la blessure")}: `, options.margins.left, yPosition)
+      yPosition += headingGap
+
       const startY = yPosition
       const startPage = pdf.getNumberOfPages()
 
@@ -1363,26 +1385,28 @@ private addPageWithHeader(
         pdf.setTextColor(0, 0, 0)
         yText += 5
 
-        yText = renderMultilineBlock(
-          pdf, `${bl('Area', 'Zone')}: `, entry.area || '', yText, options, leftColWidth, newPage
-        )
-        yText = renderMultilineBlock(
-          pdf, `${bl('Onset', 'Apparition')}: `, entry.onset || '', yText, options, leftColWidth, newPage
-        )
-        yText = renderMultilineBlock(
-          pdf, `${bl('Provocation', 'Provocation')}: `, entry.provocation || '', yText, options, leftColWidth, newPage
-        )
-        yText = renderMultilineBlock(
-          pdf, `${bl('Quality', 'Qualité')}: `, entry.quality || '', yText, options, leftColWidth, newPage
-        )
-        yText = renderMultilineBlock(
-          pdf, `${bl('Radiation', 'Irradiation')}: `, entry.radiation || '', yText, options, leftColWidth, newPage
+        yText = renderFieldsRow(
+          pdf, [{ label: `${bl('Area', 'Zone')}: `, value: entry.area || '' }], [4], yText, options, leftColWidth, newPage
         )
         yText = renderFieldsRow(
-          pdf, [{ label: `${bl('Scale', 'Échelle')}: `, value: entry.scale || '' }], [4], yText, options, leftColWidth, newPage
+          pdf, [{ label: `${bl('Onset', 'Apparition')}: `, value: entry.onset || '' }], [4], yText, options, leftColWidth, newPage
         )
         yText = renderFieldsRow(
-          pdf, [{ label: `${bl('Time', 'Heure')}: `, value: entry.time || '' }], [4], yText, options, leftColWidth, newPage
+          pdf, [{ label: `${bl('Provocation', 'Provocation')}: `, value: entry.provocation || '' }], [4], yText, options, leftColWidth, newPage
+        )
+        yText = renderFieldsRow(
+          pdf, [{ label: `${bl('Quality', 'Qualité')}: `, value: entry.quality || '' }], [4], yText, options, leftColWidth, newPage
+        )
+        yText = renderFieldsRow(
+          pdf, [{ label: `${bl('Radiation', 'Irradiation')}: `, value: entry.radiation || '' }], [4], yText, options, leftColWidth, newPage
+        )
+        yText = renderFieldsRow(
+          pdf,
+          [
+            { label: `${bl('Scale', 'Échelle')}: `, value: entry.scale || '' },
+            { label: `${bl('Time', 'Heure')}: `, value: entry.time || '' },
+          ],
+          [2, 2], yText, options, leftColWidth, newPage
         )
         yText += 3
       })
@@ -1449,10 +1473,12 @@ private addPageWithHeader(
       yPosition += headerBarH + 4
     }
 
+    // Header cells (column titles) stay plain, like every other field label
+    // in the report; the light-blue fill now marks the DATA cells instead,
+    // matching the "label above, answer in a light-blue box" convention
+    // used everywhere else.
     const drawTableHeader = () => {
-      pdf.setFillColor(...VCRT_BLUE_LIGHT)
       pdf.setFontSize(8)
-      pdf.rect(x0, yPosition, contentWidth, headerRowH, 'F')
       pdf.setFont('helvetica', 'bold')
       pdf.setTextColor(0, 0, 0)
       for (let i = 0; i < nCols; i++) {
@@ -1465,7 +1491,8 @@ private addPageWithHeader(
           pdf.text(fr, cellX + colW / 2, yPosition + headerRowH / 2 + lineH, { align: 'center' })
         }
       }
-      pdf.setDrawColor(0)
+      pdf.setDrawColor(195, 195, 200)
+      pdf.setLineWidth(0.2)
       pdf.rect(x0, yPosition, contentWidth, headerRowH)
       for (let i = 1; i < nCols; i++) {
         const vx = x0 + i * colW
@@ -1473,7 +1500,7 @@ private addPageWithHeader(
       }
       yPosition += headerRowH
       pdf.setFont('helvetica', 'normal')
-      pdf.setTextColor(...ANSWER_COLOR)
+      pdf.setTextColor(0, 0, 0)
     }
 
     const ensureRoom = (need: number) => {
@@ -1496,7 +1523,7 @@ private addPageWithHeader(
 
     pdf.setFont('helvetica', 'normal')
     pdf.setFontSize(8)
-    pdf.setTextColor(...ANSWER_COLOR)
+    pdf.setTextColor(0, 0, 0)
 
     for (const v of vitalSigns) {
       const rowVals = [
@@ -1508,7 +1535,7 @@ private addPageWithHeader(
         v.loc ?? '',
         v.skin ?? '',
         v.pupils ?? '',
-      ].map(String)
+      ].map(v => String(v).toUpperCase())
 
       const cellLines: string[][] = []
       let rowLinesMax = 1
@@ -1522,15 +1549,22 @@ private addPageWithHeader(
       const rowH = rowLinesMax * lineH + 2
       ensureRoom(rowH)
 
-      pdf.rect(x0, yPosition, contentWidth, rowH)
+      // Data cells get the light-blue answer fill (matching the boxed field
+      // style); the column-divider lines share the same light-grey border
+      // used everywhere else.
+      pdf.setFillColor(...VCRT_BLUE_LIGHT)
+      pdf.setDrawColor(195, 195, 200)
+      pdf.setLineWidth(0.2)
+      pdf.rect(x0, yPosition, contentWidth, rowH, 'FD')
       for (let i = 1; i < nCols; i++) {
         const vx = x0 + i * colW
         pdf.line(vx, yPosition, vx, yPosition + rowH)
       }
 
+      pdf.setTextColor(0, 0, 0)
       for (let i = 0; i < nCols; i++) {
-        const cellCX = x0 + i * colW + colW / 2   
-        const startY = yPosition + lineH         
+        const cellCX = x0 + i * colW + colW / 2
+        const startY = yPosition + lineH
         const lines = cellLines[i]
         for (let k = 0; k < lines.length; k++) {
           pdf.text(lines[k], cellCX, startY + k * lineH, { align: 'center' })
@@ -1568,22 +1602,15 @@ private addPageWithHeader(
     const hasSaturationAny =
       !!oxygenProtocol?.saturation_range || oxygenProtocol?.spo2 !== undefined || !!oxygenProtocol?.spo2_acceptable
     if (hasSaturationAny) {
-      yPosition = renderFieldsRow(
-        pdf,
-        [{ label: `${bl('Saturation Target Range', 'Plage cible de saturation')}: `, value: oxygenProtocol?.saturation_range || '' }],
-        [4],
-        yPosition,
-        options,
-        contentWidth,
-        newPage
-      )
+      // Saturation Target Range / Initial SpO2 % / Initial SpO2 Acceptable
       yPosition = renderFieldsRow(
         pdf,
         [
+          { label: `${bl('Saturation Target Range', 'Plage cible de saturation')}: `, value: oxygenProtocol?.saturation_range || '' },
           { label: `${bl('Initial SpO2 %', 'SpO2 initiale %')}: `, value: oxygenProtocol?.spo2 || '' },
           { label: `${bl('Initial SpO2 Acceptable', 'SpO2 initiale acceptable')}: `, value: oxygenProtocol?.spo2_acceptable || '' },
         ],
-        [2, 2],
+        [2, 1, 1],
         yPosition,
         options,
         contentWidth,
@@ -1593,19 +1620,14 @@ private addPageWithHeader(
 
     // 2) Oxygen Therapy Decision
     if (oxygenProtocol?.oxygen_given) {
+      // Oxygen Therapy Given? / Who Started Therapy
       yPosition = renderFieldsRow(
         pdf,
-        [{ label: `${bl('Oxygen Therapy Given?', 'Oxygénothérapie administrée?')}: `, value: oxygenProtocol.oxygen_given || '' }],
-        [4],
-        yPosition,
-        options,
-        contentWidth,
-        newPage
-      )
-      yPosition = renderFieldsRow(
-        pdf,
-        [{ label: `${bl('Who Started Therapy', 'Qui a débuté le traitement')}: `, value: String(oxygenProtocol.whoStartedTherapy ?? ' N/A') }],
-        [4],
+        [
+          { label: `${bl('Oxygen Therapy Given?', 'Oxygénothérapie administrée?')}: `, value: oxygenProtocol.oxygen_given || '' },
+          { label: `${bl('Who Started Therapy', 'Qui a débuté le traitement')}: `, value: String(oxygenProtocol.whoStartedTherapy ?? ' N/A') },
+        ],
+        [2, 2],
         yPosition,
         options,
         contentWidth,
@@ -1650,17 +1672,11 @@ private addPageWithHeader(
       if (oxygenProtocol.oxygen_given === 'yes' && hasInitFlowDevice) {
         yPosition = renderFieldsRow(
           pdf,
-          [{ label: `${bl('Delivery Device', "Dispositif d'administration")}: `, value: oxygenProtocol?.deliveryDevice || '' }],
-          [4],
-          yPosition,
-          options,
-          contentWidth,
-          newPage
-        )
-        yPosition = renderFieldsRow(
-          pdf,
-          [{ label: `${bl('Initial Flow Rate (L/min)', 'Débit initial (L/min)')}: `, value: oxygenProtocol?.flowRate || '' }],
-          [4],
+          [
+            { label: `${bl('Delivery Device', "Dispositif d'administration")}: `, value: oxygenProtocol?.deliveryDevice || '' },
+            { label: `${bl('Initial Flow Rate (L/min)', 'Débit initial (L/min)')}: `, value: oxygenProtocol?.flowRate || '' },
+          ],
+          [2, 2],
           yPosition,
           options,
           contentWidth,
@@ -1696,16 +1712,20 @@ private addPageWithHeader(
 
     const x0 = options.margins.left
     const tableWidth = labelColWidth + nDataCols * dataColWidth
+    const dataAreaWidth = nDataCols * dataColWidth
 
-    // left header column background
+    // Data cells get the light-blue answer fill; the label column stays
+    // plain (bold text only) - matching the "label above/beside, answer in
+    // a light-blue box" convention used everywhere else in the report.
     pdf.setFillColor(...VCRT_BLUE_LIGHT)
-    pdf.rect(x0, yPosition, labelColWidth, tableHeight, 'F')
+    pdf.rect(x0 + labelColWidth, yPosition, dataAreaWidth, tableHeight, 'F')
 
     // outer border (actual used width)
-    pdf.setDrawColor(0)
+    pdf.setDrawColor(195, 195, 200)
+    pdf.setLineWidth(0.2)
     pdf.rect(x0, yPosition, tableWidth, tableHeight)
 
-    // black vertical separator after labels column
+    // vertical separator after labels column
     const sepX = x0 + labelColWidth
     pdf.line(sepX, yPosition, sepX, yPosition + tableHeight)
 
@@ -1724,6 +1744,7 @@ private addPageWithHeader(
     // row labels - shrink font as needed so the bilingual label fits the
     // narrow label column on one line
     pdf.setFont('helvetica', 'bold')
+    pdf.setTextColor(0, 0, 0)
     let labelFontSize = 8
     pdf.setFontSize(labelFontSize)
     const maxLabelWidth = labelColWidth - 2
@@ -1738,13 +1759,14 @@ private addPageWithHeader(
     // data cells
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
+    pdf.setTextColor(0, 0, 0)
     for (let c = 0; c < nDataCols; c++) {
       const a = alterations[c] || {}
       const colValues = [a?.time ?? '', a?.flowRate != null ? String(a.flowRate) : '']
       colValues.forEach((cell, r) => {
         const cellX = x0 + labelColWidth + c * dataColWidth
         const cellY = yPosition + r * rowHeight
-        pdf.text(String(cell), cellX + (dataColWidth / 2), cellY + 4, { align: 'center' })
+        pdf.text(String(cell).toUpperCase(), cellX + (dataColWidth / 2), cellY + 4, { align: 'center' })
       })
     }
 
@@ -1756,13 +1778,10 @@ private addPageWithHeader(
       if (hasEnd) {
         // Reason
         if (oxygenProtocol?.reasonForEndingTherapy) {
-          yPosition = renderMultilineBlock(
+          yPosition = renderFieldsRow(
             pdf,
-            `${bl('Reason for Ending Therapy', "Raison de l'arrêt du traitement")}: `, oxygenProtocol.reasonForEndingTherapy || '',
-            yPosition,
-            options,
-            contentWidth,
-            newPage
+            [{ label: `${bl('Reason for Ending Therapy', "Raison de l'arrêt du traitement")}: `, value: oxygenProtocol.reasonForEndingTherapy || '' }],
+            [4], yPosition, options, contentWidth, newPage
           )
         }
       }
@@ -1785,16 +1804,22 @@ private addPageWithHeader(
   ): number {
     const boxHeight = 8
 
-    // Measure the full banner + wrapped-text height up front so the whole
-    // call description moves to a fresh page as a unit instead of the
-    // paragraph splitting mid-sentence across a page break.
+    // Free-text paragraphs (this section and Transfer Comments below) get
+    // extra breathing room between wrapped lines - the default tight line
+    // height that works fine for one-line answers reads as cramped over
+    // several lines of prose.
+    const PARAGRAPH_LINE_GAP = 1.4
+
+    // Measure the full banner + answer-box height up front so the whole
+    // call description section moves to a fresh page as a unit instead of
+    // the banner rendering at the bottom of one page with its box (or the
+    // paragraph inside it) stranded on the next.
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
     const commentsText = (data.comments || '').trim()
-    const descLineHeight = pdf.getLineHeightFactor() * (pdf.getFontSize() * 0.3528)
-    const descLines = pdf.splitTextToSize(commentsText, Math.max(10, contentWidth - LABEL_VALUE_GAP))
-    const commentsHeight = descLines.length > 0 ? descLines.length * descLineHeight + 1 : descLineHeight + 2
-    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6 + commentsHeight, newPage)
+    const commentsField = [{ label: '', value: commentsText }]
+    const commentsBoxHeight = measureFieldsRowHeight(pdf, commentsField, [4], contentWidth, PARAGRAPH_LINE_GAP)
+    yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight + 6 + commentsBoxHeight, newPage)
 
     const boxX = options.margins.left
     const boxWidth = pdf.internal.pageSize.getWidth() - options.margins.left - options.margins.right
@@ -1804,15 +1829,7 @@ private addPageWithHeader(
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
 
-    yPosition = renderMultilineBlock(
-      pdf,
-      '',
-      commentsText,
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    );
+    yPosition = renderFieldsRow(pdf, commentsField, [4], yPosition, options, contentWidth, newPage, PARAGRAPH_LINE_GAP)
 
     const boxHeight2 = 8
     yPosition = ensureSpaceFor(pdf, options, yPosition, boxHeight2 + 6, newPage)
@@ -1824,23 +1841,27 @@ private addPageWithHeader(
     pdf.setFontSize(8)
     pdf.setFont('helvetica', 'normal')
 
-    // Patient Care Transferred To (own row - runs long)
+    // Patient Care Transferred To / Time Care Transferred - both short,
+    // always shown, so they share a row.
     yPosition = renderFieldsRow(
       pdf,
-      [{ label: `${bl('Patient Care Transferred To', 'Soins du patient transférés à')}: `, value: data.patientCareTransferred || '' }],
-      [4],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
+      [
+        { label: `${bl('Patient Care Transferred To', 'Soins du patient transférés à')}: `, value: data.patientCareTransferred || '' },
+        { label: `${bl('Time Care Transferred', 'Heure du transfert des soins')}: `, value: data.timeCareTransferred || '' },
+      ],
+      [2, 2], yPosition, options, contentWidth, newPage
     )
 
-    // Destination-specific field (own row)
-    if (data.patientCareTransferred === 'Paramedics' && data.unitNumber) {
+    // Destination-specific field(s) - Paramedics pairs Unit # with Hospital
+    // Destination on one row; Police/Clinic have only a single field.
+    if (data.patientCareTransferred === 'Paramedics') {
       yPosition = renderFieldsRow(
         pdf,
-        [{ label: `${bl('Unit #', "N° d'unité")}: `, value: data.unitNumber }],
-        [4], yPosition, options, contentWidth, newPage
+        [
+          { label: `${bl('Unit #', "N° d'unité")}: `, value: data.unitNumber || '' },
+          { label: `${bl('Hospital Destination', 'Hôpital de destination')}: `, value: data.hospitalDestination || '' },
+        ],
+        [2, 2], yPosition, options, contentWidth, newPage
       )
     } else if (data.patientCareTransferred === 'Police' && data.badgeNumber) {
       yPosition = renderFieldsRow(
@@ -1856,43 +1877,8 @@ private addPageWithHeader(
       )
     }
 
-    // Time Care Transferred (own row)
-    yPosition = renderFieldsRow(
-      pdf,
-      [{ label: `${bl('Time Care Transferred', 'Heure du transfert des soins')}: `, value: data.timeCareTransferred || '' }],
-      [4],
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    )
-
-    // If paramedics, render Hospital Destination on its own row under it
-    if (data.patientCareTransferred === 'Paramedics') {
-      yPosition = renderFieldsRow(
-        pdf,
-        [{ label: `${bl('Hospital Destination', 'Hôpital de destination')}: `, value: data.hospitalDestination || '' }],
-        [4],
-        yPosition,
-        options,
-        contentWidth,
-        newPage
-      )
-    }
-
-    drawLabel(pdf, `${bl('Comments', 'Commentaires')}: `, options.margins.left, yPosition)
-		pdf.setFont('helvetica', 'normal')
-		yPosition += 4
-
-    yPosition = renderMultilineBlock(
-      pdf,
-      '',
-      (data.transferComments || '').trim(),
-      yPosition,
-      options,
-      contentWidth,
-      newPage
-    );
+    const transferCommentsField = [{ label: `${bl('Comments', 'Commentaires')}: `, value: (data.transferComments || '').trim() }]
+    yPosition = renderFieldsRow(pdf, transferCommentsField, [4], yPosition, options, contentWidth, newPage, PARAGRAPH_LINE_GAP)
 
     return yPosition + 4
   }
