@@ -984,6 +984,9 @@ private addPageWithHeader(
       newPage
     )
 
+    // The row above already ends with FIELD_ROW_SPACING of gap baked in -
+    // top it up so the gap before the line matches the gap after it.
+    yPosition += 6 - FIELD_ROW_SPACING
     pdf.setDrawColor(0)
     pdf.setLineWidth(0.4)
     pdf.line(
@@ -1041,6 +1044,9 @@ private addPageWithHeader(
       newPage
     )
 
+    // The row above already ends with FIELD_ROW_SPACING of gap baked in -
+    // top it up so the gap before the line matches the gap after it.
+    yPosition += 6 - FIELD_ROW_SPACING
     pdf.setDrawColor(0)
     pdf.setLineWidth(0.4)
     pdf.line(
@@ -1135,6 +1141,9 @@ private addPageWithHeader(
       [2, 2], yPosition, options, contentWidth, newPage
     )
 
+    // The row above already ends with FIELD_ROW_SPACING of gap baked in -
+    // top it up so the gap before the line matches the gap after it.
+    yPosition += 6 - FIELD_ROW_SPACING
     pdf.setDrawColor(0)
     pdf.setLineWidth(0.4)
     pdf.line(
@@ -1301,6 +1310,9 @@ private addPageWithHeader(
     newPage: NewPageFn
   ): Promise<number> {
     try {
+      // The row above already ends with FIELD_ROW_SPACING of gap baked in -
+      // top it up so the gap before the line matches the gap after it.
+      yPosition += 6 - FIELD_ROW_SPACING
       pdf.setDrawColor(0)
       pdf.setLineWidth(0.4)
       pdf.line(
