@@ -96,7 +96,16 @@
       "Bash(WIDE_SRC=\"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/orig_pristine_base.pdf\" node ./__add_letterhead.js \"docs_signoff_test.pdf\")",
       "Bash(WIDE_SRC=\"C:/Users/jeanp/AppData/Local/Temp/claude/c--Users-jeanp-Downloads-VCRT-VCRT-PCR/68d61c9a-efba-4ab6-91d5-59c978206b3c/scratchpad/orig_pristine_base2.pdf\" node ./__add_letterhead.js \"docs_signoff_test.pdf\")",
       "Bash(cd \"c:\\\\Users\\\\jeanp\\\\Downloads\\\\VCRT\\\\VCRT-PCR\" && sed -i 's/\\\\bPCR\\\\b/RSP/g' src/frontend/i18n/locales/fr.json && grep -n \"PCR\\\\|RSP\" src/frontend/i18n/locales/fr.json)",
-      "Bash(cd \"c:/Users/jeanp/Downloads/VCRT/VCRT-PCR\" && sed -i 's/DNO ou UTO/N.O. ou I.O./g' src/frontend/i18n/locales/fr.json && grep -c \"N.O. ou I.O.\" src/frontend/i18n/locales/fr.json && grep -n \"DNO\\\\|UTO\" src/frontend/i18n/locales/fr.json)"
+      "Bash(cd \"c:/Users/jeanp/Downloads/VCRT/VCRT-PCR\" && sed -i 's/DNO ou UTO/N.O. ou I.O./g' src/frontend/i18n/locales/fr.json && grep -c \"N.O. ou I.O.\" src/frontend/i18n/locales/fr.json && grep -n \"DNO\\\\|UTO\" src/frontend/i18n/locales/fr.json)",
+      "Bash(sed -i \"s/}:\\\\`/}: \\\\`/g\" src/frontend/services/pdf.service.ts)",
+      "Bash(grep -c '}: `' src/frontend/services/pdf.service.ts)",
+      "Bash(grep -c '}:`' src/frontend/services/pdf.service.ts)",
+      "Bash(rm -f src/frontend/debug-pdf-test.html pdf-debug.cjs pdf-inspect.cjs debug-content.txt debug-output.pdf)",
+      "Bash(npm run *)",
+      "Bash(cp debug-output.pdf \"docs/Supervisor Call Checklist.pdf\")",
+      "Bash(rm -f src/frontend/debug-pdf-test.html pdf-debug.cjs debug-output.pdf debug-full.png)",
+      "Bash(cp signoff-test-output.pdf \"docs/PCR Sign-Off Sheet.pdf\")",
+      "Bash(rm -f pdf-inspect2.cjs pdf-debug.cjs add-separator.cjs signoff-content.txt signoff-body.txt signoff-depth0.txt signoff-depth1.txt signoff-test-output.pdf debug-full.png debug-crop-gap.png)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jeanp\\Downloads\\VCRT\\VCRT-PCR",

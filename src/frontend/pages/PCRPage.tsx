@@ -404,7 +404,14 @@ const PCRPage: React.FC = () => {
           }
           setIsSubmitting(false)
         },
-        { allowDownload: isAdmin },
+        // Admins can still download when submitting a new report or a
+        // draft, but not while editing a report that's already submitted -
+        // there's nothing new to download, just the update to save.
+        {
+          allowDownload:
+            isAdmin &&
+            !(currentReportId && (loadedStatus === 'submitted' || loadedStatus === 'approved')),
+        },
       )
     } catch (error) {
       console.error('PDF generation failed:', error)
@@ -886,7 +893,7 @@ const PCRPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col items-end gap-1">
           {/* Test button for development - fills and saves in one step; once
               testing is done this becomes a plain save button up here. */}
           <Button

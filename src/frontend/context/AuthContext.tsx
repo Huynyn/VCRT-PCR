@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect, useCallback } 
 import type { AuthContextType, User } from '@/types'
 import { sessionService } from '@/services/session.service'
 import { runPcrCloseHandler } from '@/utils/electronCloseGuard'
+import { pdfService } from '@/services/pdf.service'
 
 interface AuthState {
   user: User | null
@@ -223,6 +224,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const logout = useCallback(async (): Promise<void> => {
+    // The PDF preview/confirm modals are raw DOM (appended to document.body,
+    // not part of the React tree), so unmounting on logout wouldn't close
+    // them on its own - and leaving a patient report on screen after the
+    // session's timed out is a real privacy problem.
+    pdfService.closeActiveModals()
+
     try {
       // Invalidate session on backend
       const token = localStorage.getItem('pcr_token')
