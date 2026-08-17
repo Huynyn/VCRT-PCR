@@ -142,7 +142,7 @@
     "enterBoth": "Veuillez entrer un nom d'utilisateur et un mot de passe",
     "incorrectCredentials": "Nom d'utilisateur ou mot de passe incorrect.",
     "tooManyAttempts": "Trop de tentatives échouées.",
-    "copyright": "© 2026 RSP"
+    "copyright": "© 2026 Rapport de soins préhospitaliers"
   },
   "header": {
     "patientCareReport": "Rapport de soins préhospitaliers",
