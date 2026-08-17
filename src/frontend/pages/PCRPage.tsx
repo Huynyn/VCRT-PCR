@@ -24,6 +24,23 @@ import { setPcrCloseHandler } from '../utils/electronCloseGuard'
 import { setPcrNavigationGuard } from '../utils/navigationGuard'
 import type { PCRFormData, VitalSign, OPQRSTEntry } from '../types'
 
+// A draft/submitted report elsewhere in the database that shares at least 2
+// of {reportNumber, callNumber, patientName, date} with the one currently
+// being filled in - see GET /pcr/stats/potential-duplicates. The matched
+// patient name itself is never sent back (PHI) - only that patientName was
+// or wasn't one of the matched fields.
+interface DuplicateMatch {
+  id: string
+  status: string
+  matchedFields: Array<'reportNumber' | 'callNumber' | 'patientName' | 'date'>
+  reportNumber: string | null
+  callNumber: string | null
+  date: string | null
+  updatedAt: string
+  creatorFirstName: string | null
+  creatorLastName: string | null
+}
+
 // Reshapes form_data saved before responders became a plain list: those rows
 // have fixed responder1/2/3 (and matching signatures.responder1/2/3) keys
 // instead of a responders[] array. Re-indexing keeps each signature image
@@ -106,6 +123,8 @@ const PCRPage: React.FC = () => {
   const [loadedStatus, setLoadedStatus] = useState<string | null>(null)
   const [adminComments, setAdminComments] = useState<string | null>(null)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const isAutosavingRef = useRef(false)
+  const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [signOffAttachments, setSignOffAttachments] = useState<File[]>([])
   const [signOffPdfError, setSignOffPdfError] = useState<string>('')
   const [isDraggingSignOff, setIsDraggingSignOff] = useState(false)
@@ -115,6 +134,9 @@ const PCRPage: React.FC = () => {
   const [psmOptions, setPsmOptions] = useState<string[]>([])
   const [signerIndex, setSignerIndex] = useState(0)
   const [autoCallNumber, setAutoCallNumber] = useState<string | null>(null)
+  const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatch[]>([])
+  const [dismissedDuplicateSignature, setDismissedDuplicateSignature] = useState<string | null>(null)
+  const duplicateCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showCloseSaveModal, setShowCloseSaveModal] = useState(false)
   const [closeReason, setCloseReason] = useState<'app-close' | 'navigate'>('app-close')
   const closeResolveRef = useRef<((okToClose: boolean) => void) | null>(null)
@@ -295,6 +317,81 @@ const PCRPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.date, currentDraftId, currentReportId, isAuthenticated])
 
+  // Nudge (not a block) for possible duplicate calls: ~600ms after the
+  // date/call number/patient name/report number settle down, ask the
+  // backend whether another draft/submitted report - possibly started by a
+  // different responder on this same shared laptop - already matches on at
+  // least 2 of those 4 fields. Skipped while a draft/report is still being
+  // loaded, since `data` briefly holds stale values during that swap.
+  useEffect(() => {
+    if (isLoadingDraft) return
+    if (!isAuthenticated || !token) {
+      setDuplicateMatches([])
+      return
+    }
+
+    const excludeId = currentReportId || currentDraftId || ''
+    const hasAnyField = !!(data.date || data.callNumber || data.patientName || data.reportNumber)
+    if (!hasAnyField) {
+      setDuplicateMatches([])
+      return
+    }
+
+    if (duplicateCheckTimeoutRef.current) clearTimeout(duplicateCheckTimeoutRef.current)
+
+    duplicateCheckTimeoutRef.current = setTimeout(() => {
+      const params = new URLSearchParams()
+      if (data.date) params.set('date', data.date)
+      if (data.callNumber) params.set('callNumber', data.callNumber)
+      if (data.patientName) params.set('patientName', data.patientName)
+      if (data.reportNumber) params.set('reportNumber', data.reportNumber)
+      if (excludeId) params.set('excludeId', excludeId)
+
+      apiRequest(`/pcr/stats/potential-duplicates?${params.toString()}`)
+        .then(res => setDuplicateMatches(res.data || []))
+        .catch(() => {
+          // Silently fail - it's an informational nudge, not required for saving/submitting
+        })
+    }, 600)
+
+    return () => {
+      if (duplicateCheckTimeoutRef.current) clearTimeout(duplicateCheckTimeoutRef.current)
+    }
+  }, [
+    data.date,
+    data.callNumber,
+    data.patientName,
+    data.reportNumber,
+    currentDraftId,
+    currentReportId,
+    isAuthenticated,
+    token,
+    isLoadingDraft,
+  ])
+
+  // Matches are re-fetched on every relevant field change, so a signature of
+  // the current match set (not just "any matches") is what dismissal keys
+  // off of - editing a field enough to change which reports match brings the
+  // nudge back even if it was dismissed for the previous set.
+  const duplicateSignature = duplicateMatches.length
+    ? duplicateMatches.map(m => m.id).sort().join(',')
+    : null
+  const visibleDuplicateMatches =
+    duplicateSignature && duplicateSignature !== dismissedDuplicateSignature ? duplicateMatches : []
+
+  const matchedFieldLabel = (field: DuplicateMatch['matchedFields'][number]): string => {
+    switch (field) {
+      case 'date':
+        return t('pcr.basicInfo.date')
+      case 'callNumber':
+        return t('pcr.basicInfo.callNumber')
+      case 'reportNumber':
+        return t('pcr.basicInfo.reportNumber')
+      case 'patientName':
+        return t('pcr.patientInfo.patientName')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -442,19 +539,28 @@ const PCRPage: React.FC = () => {
     showNotification(t('pcr.notifications.formReset'), 'success')
   }
 
-  // Shared by the normal Save Draft button and fillSampleData (which fills
-  // then saves in one step). Takes an explicit data override because state
-  // updates from fillSampleData's updateField calls haven't landed in `data`
-  // yet by the time it wants to save.
-  const saveDraft = async (overrideData?: Partial<PCRFormData>) => {
+  // Shared by the normal Save Draft button, fillSampleData (which fills then
+  // saves in one step), and the background autosave below. Takes an explicit
+  // data override because state updates from fillSampleData's updateField
+  // calls haven't landed in `data` yet by the time it wants to save.
+  // `silent` skips the success toast (used by autosave, so it doesn't pop up
+  // a notification on every field blur) - failures still surface, since a
+  // responder needs to know if their data isn't actually being saved.
+  const saveDraft = async (overrideData?: Partial<PCRFormData>, opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false
+
     if (!isAuthenticated || !token) {
-      showNotification(t('pcr.notifications.loginToSaveDrafts'), 'error')
+      if (!silent) showNotification(t('pcr.notifications.loginToSaveDrafts'), 'error')
       return
     }
 
     const dataToSave = overrideData ?? data
 
-    setIsSavingDraft(true)
+    if (silent) {
+      isAutosavingRef.current = true
+    } else {
+      setIsSavingDraft(true)
+    }
 
     try {
       // If we're editing an existing draft, update it. Otherwise create new draft.
@@ -487,18 +593,23 @@ const PCRPage: React.FC = () => {
       }
 
       // Marks the form clean so leaving right after this save doesn't
-      // re-trigger the "save draft before leaving?" prompt.
+      // re-trigger the "save draft before leaving?" prompt, and flips the
+      // "All changes saved" indicator on (isDirty === false).
       loadData(dataToSave)
 
       // Fixed id: saving repeatedly in quick succession (e.g. the fill-sample
       // testing button) replaces the previous toast instead of stacking a new
       // one on top of it each time.
-      showNotification(t('pcr.notifications.draftSaved'), 'success', 'pcr-draft-save')
+      if (!silent) showNotification(t('pcr.notifications.draftSaved'), 'success', 'pcr-draft-save')
     } catch (error) {
       console.error('Save draft failed:', error)
       showNotification(t('pcr.notifications.draftSaveFailed'), 'error', 'pcr-draft-save')
     } finally {
-      setIsSavingDraft(false)
+      if (silent) {
+        isAutosavingRef.current = false
+      } else {
+        setIsSavingDraft(false)
+      }
     }
   }
 
@@ -518,6 +629,30 @@ const PCRPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSavingDraft, isAuthenticated, token, currentDraftId, data, signOffAttachments])
+
+  // Once the first manual Save has created a draft, keep it up to date in
+  // the background: further edits save automatically ~1s after the user
+  // stops interacting with a field (typing, dragging a signature, ticking a
+  // checkbox), instead of only on demand. Debounced off of `data` itself
+  // (rather than wired to each field's blur handler) so a burst of changes
+  // collapses into a single save, and the effect body itself stays cheap
+  // (just resets a timer) no matter how many fields exist on the form.
+  useEffect(() => {
+    if (!currentDraftId || !isAuthenticated || !token) return
+    if (!isDirty || isSubmitting || isLoadingDraft) return
+
+    autosaveTimeoutRef.current = setTimeout(() => {
+      // A previous autosave is still in flight (e.g. slow disk) - skip this
+      // round rather than overlap; the next edit will schedule another.
+      if (isAutosavingRef.current) return
+      saveDraft(undefined, { silent: true })
+    }, 800)
+
+    return () => {
+      if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, currentDraftId, isAuthenticated, token, isSubmitting, isLoadingDraft])
 
   // Registers with the Electron close flow (see electronCloseGuard) so that
   // closing the app while this form has unsaved changes prompts to save the
@@ -930,6 +1065,34 @@ const PCRPage: React.FC = () => {
 
       {adminComments && (
         <Alert type="warning" title={t('pcr.changesRequestedByAdmin')} message={adminComments} />
+      )}
+
+      {visibleDuplicateMatches.length > 0 && (
+        <Alert
+          type="warning"
+          title={t('pcr.duplicateWarning.title')}
+          message={t('pcr.duplicateWarning.intro', { count: visibleDuplicateMatches.length })}
+          dismissible
+          onDismiss={() => setDismissedDuplicateSignature(duplicateSignature)}
+        >
+          <ul className="list-disc list-inside space-y-0.5">
+            {visibleDuplicateMatches.map(match => {
+              const name =
+                match.creatorFirstName || match.creatorLastName
+                  ? `${match.creatorFirstName || ''} ${match.creatorLastName || ''}`.trim()
+                  : t('pcr.duplicateWarning.unknownResponder')
+              return (
+                <li key={match.id}>
+                  {t('pcr.duplicateWarning.entry', {
+                    status: t(`reports.status.${match.status}`),
+                    name,
+                    fields: match.matchedFields.map(matchedFieldLabel).join(', '),
+                  })}
+                </li>
+              )
+            })}
+          </ul>
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8" noValidate>

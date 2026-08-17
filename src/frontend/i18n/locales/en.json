@@ -174,6 +174,12 @@
     "allChangesSaved": "All changes saved",
     "changesRequestedByAdmin": "Changes requested by admin",
     "loadingDraft": "Loading draft...",
+    "duplicateWarning": {
+      "title": "Possible duplicate report",
+      "intro": "This looks similar to {{count}} other draft/submitted report(s) already on file:",
+      "entry": "{{status}} report by {{name}} — matches on {{fields}}",
+      "unknownResponder": "another responder"
+    },
     "basicInfo": {
       "title": "Basic Information",
       "subtitle": "Essential call details and response information",

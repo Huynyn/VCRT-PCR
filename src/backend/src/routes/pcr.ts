@@ -727,4 +727,107 @@ router.get('/stats/submitted-range', authenticateToken, requireRole(['admin']), 
   }
 });
 
+// GET /api/pcr/stats/potential-duplicates - Flags other draft/submitted PCRs
+// that share at least 2 of {reportNumber, callNumber, patientName, date} with
+// the one currently being filled in, so two responders (or the same one
+// twice) don't end up logging the same call as separate reports. Scans
+// across all users, not just the caller's own - the whole point is to catch
+// a colleague who already started the same call on this shared laptop.
+router.get('/stats/potential-duplicates', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { reportNumber, callNumber, patientName, date, excludeId } = req.query;
+
+    const norm = (v: unknown): string => (typeof v === 'string' ? v.trim().toLowerCase() : '');
+
+    const candidate = {
+      reportNumber: norm(reportNumber),
+      callNumber: norm(callNumber),
+      patientName: norm(patientName),
+      date: norm(date),
+    };
+
+    // Nothing meaningful to compare against yet
+    if (!candidate.reportNumber && !candidate.callNumber && !candidate.patientName && !candidate.date) {
+      return res.json({ success: true, data: [] });
+    }
+
+    let query = `
+      SELECT
+        pcr_reports.id,
+        pcr_reports.status,
+        pcr_reports.updated_at,
+        json_extract(form_data, '$.reportNumber') AS report_number,
+        json_extract(form_data, '$.callNumber') AS call_number,
+        json_extract(form_data, '$.patientName') AS patient_name,
+        json_extract(form_data, '$.date') AS date,
+        users.first_name AS creator_first_name,
+        users.last_name AS creator_last_name
+      FROM pcr_reports
+      LEFT JOIN users ON pcr_reports.created_by = users.id
+      WHERE pcr_reports.status IN ('draft', 'submitted')
+    `;
+    const params: any[] = [];
+
+    if (typeof excludeId === 'string' && excludeId) {
+      query += ' AND pcr_reports.id != ?';
+      params.push(excludeId);
+    }
+
+    const rows = db.prepare(query).all(...params) as Array<{
+      id: string;
+      status: string;
+      updated_at: string;
+      report_number: string | null;
+      call_number: string | null;
+      patient_name: string | null;
+      date: string | null;
+      creator_first_name: string | null;
+      creator_last_name: string | null;
+    }>;
+
+    const matches = rows
+      .map(row => {
+        const matchedFields: string[] = [];
+        if (candidate.reportNumber && candidate.reportNumber === norm(row.report_number)) matchedFields.push('reportNumber');
+        if (candidate.callNumber && candidate.callNumber === norm(row.call_number)) matchedFields.push('callNumber');
+        if (candidate.patientName && candidate.patientName === norm(row.patient_name)) matchedFields.push('patientName');
+        if (candidate.date && candidate.date === norm(row.date)) matchedFields.push('date');
+        return { row, matchedFields };
+      })
+      // At least 2 fields must match. Date-matching pairs are sorted first
+      // below rather than required outright, since a report logged just
+      // after midnight for a call from the day before is still worth flagging.
+      .filter(({ matchedFields }) => matchedFields.length >= 2)
+      .sort((a, b) => {
+        const aHasDate = a.matchedFields.includes('date') ? 1 : 0;
+        const bHasDate = b.matchedFields.includes('date') ? 1 : 0;
+        if (aHasDate !== bHasDate) return bHasDate - aHasDate;
+        if (a.matchedFields.length !== b.matchedFields.length) return b.matchedFields.length - a.matchedFields.length;
+        return new Date(b.row.updated_at).getTime() - new Date(a.row.updated_at).getTime();
+      })
+      .slice(0, 5)
+      // patientName is used above to decide *whether* something matches, but
+      // is never included in the response below - patient names are PHI, and
+      // a match can legitimately fire on the other 3 fields alone, in which
+      // case the other report's patient could be someone else entirely. The
+      // nudge only needs to say a match exists and roughly why, not who.
+      .map(({ row, matchedFields }) => ({
+        id: row.id,
+        status: row.status,
+        matchedFields,
+        reportNumber: row.report_number,
+        callNumber: row.call_number,
+        date: row.date,
+        updatedAt: row.updated_at,
+        creatorFirstName: row.creator_first_name,
+        creatorLastName: row.creator_last_name,
+      }));
+
+    res.json({ success: true, data: matches });
+  } catch (error) {
+    console.error('Get potential duplicates error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 export default router;
