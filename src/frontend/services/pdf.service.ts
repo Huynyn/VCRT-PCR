@@ -1888,8 +1888,10 @@ private addPageWithHeader(
    * ink color, transparent background - so it redraws faithfully if the
    * widget remounts. The PDF has no theme, so normalize independently here:
    * recolor every drawn pixel to a fixed dark ink (keeping each pixel's
-   * original alpha for smooth anti-aliased edges) and fill the transparent
-   * gaps with solid white.
+   * original alpha for smooth anti-aliased edges). The background stays
+   * transparent - the signature is drawn on top of the light-blue answer
+   * box, so an opaque fill here would paint over the box and leave only its
+   * border ring visible instead of a solid blue box with the ink on top.
    */
   private normalizeSignatureImage(dataUrl: string): Promise<string> {
     return new Promise(resolve => {
@@ -1906,9 +1908,6 @@ private addPageWithHeader(
         ctx.drawImage(img, 0, 0)
         ctx.globalCompositeOperation = 'source-in'
         ctx.fillStyle = '#111827'
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-        ctx.globalCompositeOperation = 'destination-over'
-        ctx.fillStyle = '#ffffff'
         ctx.fillRect(0, 0, canvas.width, canvas.height)
         resolve(canvas.toDataURL('image/png'))
       }
@@ -1963,10 +1962,9 @@ private addPageWithHeader(
     const hasSecondRow = row2.length > 0
 
     // Shrink the per-row height when a second row is needed so the combined
-    // strip doesn't blow up the footer - still tall enough for a label, the
-    // signature image, and a signature line/caption underneath.
+    // strip doesn't blow up the footer - still tall enough for a label and
+    // the signature box underneath.
     const rowHeight = hasSecondRow ? 26 : 34
-    const imageH = hasSecondRow ? 11 : 15
     const stripHeight = hasSecondRow ? rowHeight * 2 : rowHeight
     const stripTopY = pageH - bottom - stripHeight
 
@@ -1988,9 +1986,9 @@ private addPageWithHeader(
       )
 
       const labelY = rowTopY + 5
-      const imageY = rowTopY + 10
-      const lineY = imageY + imageH + 2
-      const captionY = lineY + 4
+      const boxY = rowTopY + 10
+      const boxBottomMargin = hasSecondRow ? 3 : 4
+      const boxH = rowHeight - 10 - boxBottomMargin
 
       rowCols.forEach((col, i) => {
         const colX0 = x0 + i * colW
@@ -2012,25 +2010,28 @@ private addPageWithHeader(
         pdf.text(nameLines, colCenterX, labelY + 3, { align: 'center' })
         pdf.setTextColor(0, 0, 0)
 
+        // Same light-blue answer box used for every other field in the
+        // report - the signature image (if any) is drawn inside it.
+        const boxX = colX0 + 5
+        const boxW = colW - 10
+        pdf.setFillColor(...VCRT_BLUE_LIGHT)
+        pdf.setDrawColor(195, 195, 200)
+        pdf.setLineWidth(0.2)
+        pdf.rect(boxX, boxY, boxW, boxH, 'FD')
+
         const normalizedImage = normalizedImages[i]
         if (normalizedImage) {
           try {
-            const imgW = colW - 10
-            pdf.addImage(normalizedImage, 'PNG', colX0 + 5, imageY, imgW, imageH, undefined, 'FAST')
+            const imgPad = 1.5
+            pdf.addImage(
+              normalizedImage, 'PNG',
+              boxX + imgPad, boxY + imgPad, boxW - imgPad * 2, boxH - imgPad * 2,
+              undefined, 'FAST'
+            )
           } catch {
-            // Corrupt/unsupported signature image data - leave the line blank below
+            // Corrupt/unsupported signature image data - leave the box empty
           }
         }
-
-        pdf.setDrawColor(150)
-        pdf.setLineWidth(0.2)
-        pdf.line(colX0 + 5, lineY, colX0 + colW - 5, lineY)
-
-        pdf.setFont('helvetica', 'normal')
-        pdf.setFontSize(6.5)
-        pdf.setTextColor(120)
-        pdf.text('Signature', colCenterX, captionY, { align: 'center' })
-        pdf.setTextColor(0)
       })
     }
 
