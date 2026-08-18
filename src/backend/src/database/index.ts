@@ -110,6 +110,21 @@ CREATE TABLE IF NOT EXISTS activity_logs (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Requests from a non-admin user asking an admin to change their name or
+-- password (regular users can't change either themselves - see
+-- routes/profileRequests.ts). Surfaced to admins via the notification bell
+-- on the Profile page until an admin resolves them.
+CREATE TABLE IF NOT EXISTS profile_change_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT CHECK (status IN ('pending', 'resolved')) DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME,
+    resolved_by TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_by ON pcr_reports(created_by);
@@ -118,6 +133,7 @@ CREATE INDEX IF NOT EXISTS idx_pcr_reports_created_at ON pcr_reports(created_at)
 CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_profile_change_requests_status ON profile_change_requests(status);
 `;
 
 // Statement wrapper to mimic better-sqlite3 API

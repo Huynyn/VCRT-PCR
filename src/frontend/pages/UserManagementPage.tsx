@@ -25,8 +25,16 @@ interface EditUserForm {
 }
 
 interface PasswordForm {
+  currentPassword: string
   newPassword: string
   confirmPassword: string
+}
+
+interface ProfileChangeRequest {
+  id: string
+  user_id: string
+  message: string
+  created_at: string
 }
 
 const UserManagementPage = () => {
@@ -63,10 +71,21 @@ const UserManagementPage = () => {
   const [passwordTarget, setPasswordTarget] = useState<User | null>(null)
   const [resettingPassword, setResettingPassword] = useState(false)
   const [passwordForm, setPasswordForm] = useState<PasswordForm>({
+    currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   })
   const [passwordFormErrors, setPasswordFormErrors] = useState<Partial<PasswordForm>>({})
+
+  // Pending name/password change requests from users, shown at the top of
+  // the Edit User modal for whichever user submitted one.
+  const [pendingRequests, setPendingRequests] = useState<ProfileChangeRequest[]>([])
+
+  const pendingRequestByUserId = useMemo(() => {
+    const map = new Map<string, ProfileChangeRequest>()
+    pendingRequests.forEach(r => map.set(r.user_id, r))
+    return map
+  }, [pendingRequests])
 
   // Admin accounts always sink to the very bottom, below inactive regular
   // users too; within the regular-user group, active users come before
@@ -93,6 +112,7 @@ const UserManagementPage = () => {
       return
     }
     fetchUsers()
+    fetchPendingRequests()
   }, [currentUser])
 
   const fetchUsers = async () => {
@@ -112,6 +132,25 @@ const UserManagementPage = () => {
       console.error('Error fetching users:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPendingRequests = async () => {
+    try {
+      const data = await apiRequest('/profile-requests')
+      setPendingRequests(data.data || [])
+    } catch {
+      // Non-critical - the banner just won't show if this fails
+    }
+  }
+
+  const handleDismissRequest = async (requestId: string) => {
+    try {
+      await apiRequest(`/profile-requests/${requestId}/resolve`, { method: 'PUT' })
+      setPendingRequests(prev => prev.filter(r => r.id !== requestId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('userManagement.dismissRequestFailed'))
+      console.error('Error dismissing request:', err)
     }
   }
 
@@ -277,13 +316,21 @@ const UserManagementPage = () => {
   const handleOpenResetPassword = (user: User) => {
     setShowEditModal(false)
     setPasswordTarget(user)
-    setPasswordForm({ newPassword: '', confirmPassword: '' })
+    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
     setPasswordFormErrors({})
     setShowPasswordModal(true)
   }
 
+  // Resetting your own password (even as an admin) requires confirming the
+  // current one - only resetting someone else's account skips that.
+  const isResettingOwnPassword = passwordTarget?.id === currentUser?.id
+
   const validatePasswordForm = (): boolean => {
     const errors: Partial<PasswordForm> = {}
+
+    if (isResettingOwnPassword && !passwordForm.currentPassword.trim()) {
+      errors.currentPassword = t('userManagement.currentPasswordRequired')
+    }
 
     if (!passwordForm.newPassword.trim()) {
       errors.newPassword = t('userManagement.newPasswordRequired')
@@ -308,12 +355,15 @@ const UserManagementPage = () => {
 
       await apiRequest(`/users/${passwordTarget.id}/change-password`, {
         method: 'POST',
-        body: JSON.stringify({ newPassword: passwordForm.newPassword }),
+        body: JSON.stringify({
+          newPassword: passwordForm.newPassword,
+          ...(isResettingOwnPassword ? { currentPassword: passwordForm.currentPassword } : {}),
+        }),
       })
 
       setShowPasswordModal(false)
       setPasswordTarget(null)
-      setPasswordForm({ newPassword: '', confirmPassword: '' })
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setPasswordFormErrors({})
     } catch (err) {
       setError(err instanceof Error ? err.message : t('userManagement.resetPasswordFailed'))
@@ -354,6 +404,8 @@ const UserManagementPage = () => {
       </div>
     )
   }
+
+  const editingUserRequest = editingUser ? pendingRequestByUserId.get(editingUser.id) : undefined
 
   if (loading) {
     return (
@@ -666,6 +718,20 @@ const UserManagementPage = () => {
         size="md"
       >
         <div className="space-y-4">
+          {editingUserRequest && (
+            <Alert
+              type="info"
+              title={t('userManagement.pendingRequestTitle')}
+              message={editingUserRequest.message}
+              dismissible
+              onDismiss={() => handleDismissRequest(editingUserRequest.id)}
+            >
+              <p className="text-xs opacity-75">
+                {t('userManagement.pendingRequestSentOn', { date: formatDate(editingUserRequest.created_at) })}
+              </p>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               label={t('userManagement.firstName')}
@@ -764,8 +830,19 @@ const UserManagementPage = () => {
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t('userManagement.resetPasswordBody')}
+            {isResettingOwnPassword ? t('userManagement.resetOwnPasswordBody') : t('userManagement.resetPasswordBody')}
           </p>
+
+          {isResettingOwnPassword && (
+            <Input
+              label={t('userManagement.currentPassword')}
+              type="password"
+              value={passwordForm.currentPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+              error={passwordFormErrors.currentPassword}
+              required
+            />
+          )}
 
           <Input
             label={t('userManagement.newPassword')}

@@ -2,8 +2,6 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../context/AuthContext'
 import { ShieldCheck, User } from 'lucide-react'
 import {
-  UserCallStats,
-  AdminCallStats,
   SupplyFormQrSection,
   SupplyFormQrAdmin,
   SamplePcrSection,
@@ -39,11 +37,6 @@ const DashboardPage = () => {
           {isAdmin ? <ShieldCheck className="w-4 h-4" /> : <User className="w-4 h-4" />}
           <span className="capitalize">{t(`common.role.${user?.role}`, user?.role || '')}</span>
         </span>
-      </div>
-
-      {/* Call Stats */}
-      <div className="mb-6">
-        {isAdmin ? <AdminCallStats /> : <UserCallStats />}
       </div>
 
       {isAdmin ? <SupplyFormQrAdmin /> : <SupplyFormQrSection />}

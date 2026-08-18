@@ -192,7 +192,17 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Footer */}
           <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-3">
             {user && (
-              <div className="flex items-center gap-2.5 px-1 py-1.5">
+              <button
+                type="button"
+                onClick={() => handleItemClick('/profile')}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-1 py-1.5 rounded-md transition-colors duration-150 text-left',
+                  'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800',
+                  currentPath === '/profile'
+                    ? 'bg-primary-50 dark:bg-primary-900/40'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700',
+                )}
+              >
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-xs font-bold shrink-0">
                   {getInitials(user.name)}
                 </span>
@@ -211,7 +221,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     {t(`common.role.${user.role}`, user.role)}
                   </span>
                 </div>
-              </div>
+              </button>
             )}
             <p className="mt-2 px-1 text-xs text-gray-400 dark:text-gray-500">
               {t('login.brandAcronym')} v{__APP_VERSION__} · 2026

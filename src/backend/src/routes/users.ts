@@ -409,8 +409,10 @@ router.post('/:id/change-password', authenticateToken, logActivity('change_passw
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // If not admin, verify current password
-    if (req.user!.role !== 'admin') {
+    // Verify current password when changing your own (whether admin or not) -
+    // only an admin resetting someone else's password skips this, since they
+    // aren't expected to know it.
+    if (req.user!.id === id) {
       if (!currentPassword) {
         return res.status(400).json({ success: false, message: 'Current password required' });
       }

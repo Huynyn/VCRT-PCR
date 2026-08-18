@@ -54,8 +54,8 @@
   },
   "dashboard": {
     "welcomeBack": "Bon retour{{name}}",
-    "adminSubtitle": "Voici comment l'équipe se porte.",
-    "userSubtitle": "Votre historique d'appels et vos ressources de quart, en un seul endroit."
+    "adminSubtitle": "Ressources d'équipe et outils de quart, en un seul endroit.",
+    "userSubtitle": "Vos ressources de quart, en un seul endroit."
   },
   "samplePcr": {
     "title": "Exemple de RSP",
@@ -570,8 +570,14 @@
     "updateUser": "Mettre à jour l'utilisateur",
     "resetPasswordTitle": "Réinitialiser le mot de passe : {{username}}",
     "resetPasswordBody": "Définissez un nouveau mot de passe pour cet utilisateur. Il devra l'utiliser lors de sa prochaine connexion.",
+    "resetOwnPasswordBody": "Confirmez votre mot de passe actuel, puis définissez-en un nouveau.",
+    "currentPassword": "Mot de passe actuel",
+    "currentPasswordRequired": "Le mot de passe actuel est requis",
     "newPassword": "Nouveau mot de passe",
-    "confirmNewPassword": "Confirmer le nouveau mot de passe"
+    "confirmNewPassword": "Confirmer le nouveau mot de passe",
+    "pendingRequestTitle": "Demande de changement en attente",
+    "pendingRequestSentOn": "Envoyée le {{date}} - fermez avec le X une fois traitée, ou si vous ne souhaitez pas effectuer le changement.",
+    "dismissRequestFailed": "Échec de la fermeture de la demande"
   },
   "nameListManager": {
     "loadFailed": "Échec du chargement de la liste des {{item}}",
@@ -590,15 +596,35 @@
     "personalInfo": "Renseignements personnels",
     "firstName": "Prénom",
     "lastName": "Nom de famille",
-    "email": "Courriel",
     "username": "Nom d'utilisateur",
-    "licenseNumber": "Numéro de permis",
-    "department": "Département",
     "roleStatus": "Rôle et statut",
     "role": "Rôle",
     "status": "Statut",
     "active": "Actif",
-    "inactive": "Inactif"
+    "inactive": "Inactif",
+    "never": "Jamais",
+    "accountOverview": "Aperçu du compte",
+    "memberSince": "Membre depuis",
+    "lastLogin": "Dernière connexion",
+    "totalCalls": "Total des appels",
+    "lastCallSubmitted": "Dernier appel soumis",
+    "noneYet": "Aucun pour l'instant",
+    "adminEditHint": "Pour changer le nom, le rôle ou le statut d'un autre utilisateur, utilisez la Gestion des utilisateurs.",
+    "requestHint": "Votre nom et votre mot de passe ne peuvent pas être modifiés ici - envoyez une demande et un administrateur les mettra à jour pour vous.",
+    "requestChange": "Demander un changement",
+    "requestChangeTitle": "Demander un changement",
+    "requestChangeBody": "Choisissez ce que vous aimeriez changer. Un administrateur examinera votre demande et effectuera la mise à jour.",
+    "requestNameLabel": "Mon nom",
+    "requestPasswordLabel": "Mon mot de passe",
+    "requestSelectAtLeastOne": "Sélectionnez au moins un élément pour demander un changement",
+    "requestDetails": "Détails",
+    "requestDetailsPlaceholder": "ex. orthographe correcte, ou note pour l'administrateur (facultatif)",
+    "requestMessagePrefix": "Changement demandé : {{items}}.",
+    "requestSubmit": "Envoyer la demande",
+    "requestSuccess": "Votre demande a été envoyée à un administrateur",
+    "requestFailed": "Échec de l'envoi de la demande",
+    "requestPendingTitle": "Demande en attente",
+    "requestPendingBody": "Votre demande de changement est en attente d'examen par un administrateur (envoyée le {{date}})."
   },
   "reports": {
     "title": "Rapports RSP",
@@ -726,7 +752,9 @@
       "update_setting": "Modifier un paramètre",
       "manual_cleanup": "Nettoyage manuel",
       "cleanup_pcr_reports": "Nettoyage automatique",
-      "cleanup_activity_logs": "Nettoyer les journaux d'activité"
+      "cleanup_activity_logs": "Nettoyer les journaux d'activité",
+      "request_profile_change": "Demande de changement de profil",
+      "resolve_profile_change_request": "Résolution d'une demande de changement de profil"
     }
   },
   "errorBoundary": {
@@ -739,11 +767,14 @@
   "notificationBell": {
     "notifications": "Notifications",
     "unreadCount": "{{count}} non lues",
-    "panelTitleAdmin": "RSP en attente d'approbation",
+    "panelTitleAdmin": "RSP et demandes en attente d'examen",
     "panelTitleUser": "RSP nécessitant votre attention",
     "allCaughtUp": "Vous êtes à jour.",
     "noReportId": "Aucun numéro de RSP",
     "viewAllReports": "Voir tous les rapports",
+    "profileRequestTitle": "{{name}} a demandé un changement",
+    "profileRequest": "Demande de changement de profil",
+    "resolve": "Marquer comme traité",
     "status": {
       "draft": "Brouillon en cours",
       "changes_requested": "Changements requis",

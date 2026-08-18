@@ -54,8 +54,8 @@
   },
   "dashboard": {
     "welcomeBack": "Welcome back{{name}}",
-    "adminSubtitle": "Here's how the team is doing.",
-    "userSubtitle": "Your call history and shift resources, all in one place."
+    "adminSubtitle": "Team resources and shift tools, all in one place.",
+    "userSubtitle": "Your shift resources, all in one place."
   },
   "samplePcr": {
     "title": "Sample PCR",
@@ -570,8 +570,14 @@
     "updateUser": "Update User",
     "resetPasswordTitle": "Reset Password: {{username}}",
     "resetPasswordBody": "Set a new password for this user. They will need to use it the next time they log in.",
+    "resetOwnPasswordBody": "Confirm your current password, then set a new one.",
+    "currentPassword": "Current Password",
+    "currentPasswordRequired": "Current password is required",
     "newPassword": "New Password",
-    "confirmNewPassword": "Confirm New Password"
+    "confirmNewPassword": "Confirm New Password",
+    "pendingRequestTitle": "Pending change request",
+    "pendingRequestSentOn": "Sent {{date}} - dismiss with the X once handled, or if you don't want to make the change.",
+    "dismissRequestFailed": "Failed to dismiss request"
   },
   "nameListManager": {
     "loadFailed": "Failed to load the {{item}} list",
@@ -590,15 +596,35 @@
     "personalInfo": "Personal Information",
     "firstName": "First Name",
     "lastName": "Last Name",
-    "email": "Email",
     "username": "Username",
-    "licenseNumber": "License Number",
-    "department": "Department",
     "roleStatus": "Role & Status",
     "role": "Role",
     "status": "Status",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "never": "Never",
+    "accountOverview": "Account Overview",
+    "memberSince": "Member Since",
+    "lastLogin": "Last Login",
+    "totalCalls": "Total Calls",
+    "lastCallSubmitted": "Last Call Submitted",
+    "noneYet": "None yet",
+    "adminEditHint": "To change another user's name, role, or status, use User Management.",
+    "requestHint": "Your name and password can't be changed here - send a request and an admin will update it for you.",
+    "requestChange": "Request a Change",
+    "requestChangeTitle": "Request a Change",
+    "requestChangeBody": "Choose what you'd like changed. An admin will review your request and make the update.",
+    "requestNameLabel": "Name",
+    "requestPasswordLabel": "Password",
+    "requestSelectAtLeastOne": "Select at least one item to request a change for",
+    "requestDetails": "Details",
+    "requestDetailsPlaceholder": "e.g. correct spelling, or note for the admin (optional)",
+    "requestMessagePrefix": "Requested change: {{items}}.",
+    "requestSubmit": "Send Request",
+    "requestSuccess": "Your request has been sent to an administrator",
+    "requestFailed": "Failed to send request",
+    "requestPendingTitle": "Request pending",
+    "requestPendingBody": "Your change request is awaiting admin review (sent {{date}})."
   },
   "reports": {
     "title": "PCR Reports",
@@ -726,7 +752,9 @@
       "update_setting": "Update Setting",
       "manual_cleanup": "Manual Cleanup",
       "cleanup_pcr_reports": "Automatic Cleanup",
-      "cleanup_activity_logs": "Clean Activity Logs"
+      "cleanup_activity_logs": "Clean Activity Logs",
+      "request_profile_change": "Request Profile Change",
+      "resolve_profile_change_request": "Resolve Profile Change Request"
     }
   },
   "errorBoundary": {
@@ -739,11 +767,14 @@
   "notificationBell": {
     "notifications": "Notifications",
     "unreadCount": "{{count}} unread",
-    "panelTitleAdmin": "Reports awaiting approval",
+    "panelTitleAdmin": "Reports & requests awaiting review",
     "panelTitleUser": "Reports needing attention",
     "allCaughtUp": "You're all caught up.",
     "noReportId": "No Report ID",
     "viewAllReports": "View all reports",
+    "profileRequestTitle": "{{name}} requested a change",
+    "profileRequest": "Profile change request",
+    "resolve": "Mark handled",
     "status": {
       "draft": "Draft in progress",
       "changes_requested": "Changes requested",

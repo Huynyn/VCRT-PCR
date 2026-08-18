@@ -21,6 +21,7 @@ import logsRoutes from './routes/logs';
 import respondersRoutes from './routes/responders';
 import psmMembersRoutes from './routes/psmMembers';
 import settingsRoutes from './routes/settings';
+import profileRequestsRoutes from './routes/profileRequests';
 
 // Import database to initialize
 import { initDatabase, closeDatabase, getDatabaseHealth } from './database';
@@ -72,6 +73,7 @@ function createApp(): express.Application {
   app.use('/api/responders', respondersRoutes);
   app.use('/api/psm-members', psmMembersRoutes);
   app.use('/api/settings', settingsRoutes);
+  app.use('/api/profile-requests', profileRequestsRoutes);
 
   // Special route for submissions to match frontend expectation
   app.post('/api/submissions', (req, res, next) => {

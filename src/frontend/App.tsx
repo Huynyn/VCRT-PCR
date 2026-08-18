@@ -14,6 +14,7 @@ const PCRPage = lazy(() => import('./pages/PCRPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const ActivityLogsPage = lazy(() => import('./pages/ActivityLogsPage'))
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -153,6 +154,12 @@ const AppContent: React.FC = () => {
           <Route
             path="/admin/users"
             element={<UserManagementPage />}
+          />
+
+          {/* Profile */}
+          <Route
+            path="/profile"
+            element={<ProfilePage />}
           />
 
           {/* Default redirect */}

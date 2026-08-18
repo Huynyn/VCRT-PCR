@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bell, FileEdit, AlertTriangle, ClipboardCheck } from 'lucide-react'
+import { Bell, FileEdit, AlertTriangle, ClipboardCheck, UserCog, Check } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
 import { apiRequest } from '@/utils/api'
 import { parseServerDate, cn } from '@/utils'
@@ -12,11 +12,23 @@ interface NotificationBellProps {
 }
 
 interface PCRNotification {
+  kind: 'pcr'
   id: string
   status: string
   updated_at: string
   report_number?: string | null
 }
+
+interface ProfileRequestNotification {
+  kind: 'profileRequest'
+  id: string
+  updated_at: string
+  first_name?: string | null
+  last_name?: string | null
+  username?: string | null
+}
+
+type BellNotification = PCRNotification | ProfileRequestNotification
 
 const STATUS_ICONS: Record<string, typeof FileEdit> = {
   draft: FileEdit,
@@ -30,8 +42,9 @@ const REFRESH_INTERVAL_MS = 60 * 1000
 const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate }) => {
   const { t, i18n } = useTranslation()
   const isAdmin = user?.role === 'admin'
-  const [items, setItems] = useState<PCRNotification[]>([])
+  const [items, setItems] = useState<BellNotification[]>([])
   const [open, setOpen] = useState(false)
+  const [resolvingId, setResolvingId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -45,11 +58,33 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
         const data = await apiRequest(endpoint)
         if (cancelled) return
 
-        const reports: PCRNotification[] = data.data || []
+        const reports: PCRNotification[] = (data.data || []).map((r: any) => ({ ...r, kind: 'pcr' as const }))
         const relevant = isAdmin
           ? reports
           : reports.filter((r) => r.status === 'draft' || r.status === 'changes_requested')
-        const sorted = [...relevant].sort(
+
+        // Admins also see pending name/password change requests from users
+        // in the same list, so they don't need a separate place to check.
+        let combined: BellNotification[] = relevant
+        if (isAdmin) {
+          try {
+            const requestsData = await apiRequest('/profile-requests')
+            if (cancelled) return
+            const requests: ProfileRequestNotification[] = (requestsData.data || []).map((r: any) => ({
+              kind: 'profileRequest' as const,
+              id: r.id,
+              updated_at: r.created_at,
+              first_name: r.first_name,
+              last_name: r.last_name,
+              username: r.username,
+            }))
+            combined = [...relevant, ...requests]
+          } catch {
+            // Fall back to PCR-only notifications if this fails
+          }
+        }
+
+        const sorted = combined.sort(
           (a, b) => parseServerDate(b.updated_at).getTime() - parseServerDate(a.updated_at).getTime()
         )
 
@@ -80,9 +115,22 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
 
   if (!user) return null
 
-  const handleItemClick = () => {
+  const handleItemClick = (item: BellNotification) => {
     setOpen(false)
-    onNavigate?.('/reports')
+    onNavigate?.(item.kind === 'profileRequest' ? '/admin/users' : '/reports')
+  }
+
+  const handleResolve = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    try {
+      setResolvingId(id)
+      await apiRequest(`/profile-requests/${id}/resolve`, { method: 'PUT' })
+      setItems((prev) => prev.filter((i) => i.id !== id))
+    } catch {
+      // Non-critical - it'll just still show up next refresh
+    } finally {
+      setResolvingId(null)
+    }
   }
 
   const count = items.length
@@ -122,6 +170,51 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
           ) : (
             <ul className="divide-y divide-gray-100 dark:divide-gray-700">
               {visibleItems.map((item) => {
+                if (item.kind === 'profileRequest') {
+                  const name = [item.first_name, item.last_name].filter(Boolean).join(' ') || item.username || ''
+
+                  return (
+                    <li key={item.id}>
+                      <div
+                        className={cn(
+                          'w-full flex items-start gap-2 px-4 py-3',
+                          'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors'
+                        )}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleItemClick(item)}
+                          className="flex items-start gap-3 flex-1 min-w-0 text-left"
+                        >
+                          <UserCog className="w-4 h-4 mt-0.5 shrink-0 text-primary-600 dark:text-primary-400" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {t('notificationBell.profileRequestTitle', { name })}
+                            </span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400">
+                              {t('notificationBell.profileRequest')} · {parseServerDate(item.updated_at).toLocaleDateString(i18n.language === 'fr' ? 'fr-CA' : 'en-CA')}
+                            </span>
+                          </span>
+                        </button>
+                        <Tooltip content={t('notificationBell.resolve')}>
+                          <button
+                            type="button"
+                            onClick={(e) => handleResolve(e, item.id)}
+                            className="shrink-0 p-1 mt-0.5 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:text-primary-400 dark:hover:bg-primary-900/30"
+                            aria-label={t('notificationBell.resolve')}
+                          >
+                            {resolvingId === item.id ? (
+                              <span className="block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </li>
+                  )
+                }
+
                 const Icon = STATUS_ICONS[item.status] ?? Bell
                 const statusLabel = t(`notificationBell.status.${item.status}`, item.status)
                 const title = item.report_number || t('notificationBell.noReportId')
@@ -130,7 +223,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
                   <li key={item.id}>
                     <button
                       type="button"
-                      onClick={handleItemClick}
+                      onClick={() => handleItemClick(item)}
                       className={cn(
                         'w-full flex items-start gap-3 px-4 py-3 text-left',
                         'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors'
@@ -155,7 +248,10 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
           <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
             <button
               type="button"
-              onClick={handleItemClick}
+              onClick={() => {
+                setOpen(false)
+                onNavigate?.('/reports')
+              }}
               className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
             >
               {t('notificationBell.viewAllReports')}
