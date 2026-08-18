@@ -6,7 +6,11 @@ export class CleanupService {
 
   // Configurable retention periods
   private readonly PCR_RETENTION_DAYS = 730
+  // Admin-triggered "clean up logs" action (see /logs/cleanup, /pcr/cleanup/run)
   private readonly LOG_RETENTION_DAYS = 7
+  // Hard cap applied automatically, same as PCR reports - logs aren't deleted
+  // on their own before this regardless of admin action
+  private readonly LOG_AUTO_RETENTION_DAYS = 730
   // Completed/cancelled PCRs are only kept around for a week (after that,
   // completed ones are folded into pcr_call_archive first; cancelled ones
   // are just dropped so they never count toward stats)
@@ -51,16 +55,20 @@ export class CleanupService {
       // Delete completed/cancelled PCR reports a week after they were finalized
       const finalizedResult = this.cleanupFinalizedReports()
 
-      // Delete activity logs older than configured retention
-      const logsResult = this.cleanupActivityLogs()
+      // Activity logs are NOT deleted on the 7-day admin retention automatically -
+      // that only happens when an admin explicitly triggers it (see the
+      // /logs/cleanup and /pcr/cleanup/run endpoints). They do still get an
+      // automatic hard cap at 2 years, matching PCR report retention, so logs
+      // can't grow forever even if no admin ever runs a manual cleanup.
+      const logsAutoResult = this.cleanupOldActivityLogs()
 
-      if (pcrResult.changes > 0 || finalizedResult.changes > 0 || logsResult.changes > 0) {
+      if (pcrResult.changes > 0 || finalizedResult.changes > 0 || logsAutoResult.changes > 0) {
         console.log(`🗑️  Deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_DAYS} days`)
         console.log(`🗑️  Deleted ${finalizedResult.changes} completed/cancelled PCR report(s) older than ${this.FINALIZED_RETENTION_DAYS} days`)
-        console.log(`🗑️  Deleted ${logsResult.changes} activity log(s) older than ${this.LOG_RETENTION_DAYS} days`)
+        console.log(`🗑️  Deleted ${logsAutoResult.changes} activity log(s) older than ${this.LOG_AUTO_RETENTION_DAYS} days`)
 
         // Log the cleanup activity
-        this.logCleanupActivity(pcrResult.changes + finalizedResult.changes, logsResult.changes)
+        this.logCleanupActivity(pcrResult.changes + finalizedResult.changes, logsAutoResult.changes)
       } else {
         console.log('✅ No records to clean up')
       }
@@ -97,6 +105,14 @@ export class CleanupService {
     const deleteQuery = `
       DELETE FROM activity_logs
       WHERE datetime(created_at) < datetime('now', '-${this.LOG_RETENTION_DAYS} days')
+    `
+    return db.prepare(deleteQuery).run()
+  }
+
+  private cleanupOldActivityLogs(): { changes: number } {
+    const deleteQuery = `
+      DELETE FROM activity_logs
+      WHERE datetime(created_at) < datetime('now', '-${this.LOG_AUTO_RETENTION_DAYS} days')
     `
     return db.prepare(deleteQuery).run()
   }
@@ -146,12 +162,9 @@ export class CleanupService {
       `
       const pcrResult = db.prepare(pcrDeleteQuery).run()
 
-      // Delete activity logs older than configured retention
-      const logsDeleteQuery = `
-        DELETE FROM activity_logs
-        WHERE datetime(created_at) < datetime('now', '-${this.LOG_RETENTION_DAYS} days')
-      `
-      const logsResult = db.prepare(logsDeleteQuery).run()
+      // Activity logs are only purged here because this is an explicit,
+      // admin-triggered action - never as part of the automatic hourly job.
+      const logsResult = this.cleanupActivityLogs()
 
       if (pcrResult.changes > 0 || logsResult.changes > 0) {
         console.log(`🗑️  Manually deleted ${pcrResult.changes} PCR report(s) older than ${this.PCR_RETENTION_DAYS} days`)
