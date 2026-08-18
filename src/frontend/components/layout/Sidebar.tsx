@@ -214,7 +214,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
             <p className="mt-2 px-1 text-xs text-gray-400 dark:text-gray-500">
-              {t('login.brandAcronym')} v2.11 · 2026
+              {t('login.brandAcronym')} v{__APP_VERSION__} · 2026
             </p>
           </div>
         </div>

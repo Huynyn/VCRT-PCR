@@ -1,6 +1,6 @@
 {
   "name": "pcr-application",
-  "version": "1.0.0",
+  "version": "2.11.0",
   "description": "Local-first patient care report application for emergency response workflows",
   "main": "dist/electron/main.js",
   "scripts": {

@@ -120,6 +120,28 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
         />
 
         {data.oxygen_given === 'yes' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <RadioGroup
+              name="whoStartedTherapy"
+              label={t('pcr.oxygenProtocol.whoStartedTherapy')}
+              options={whoStartedOptions}
+              value={data.whoStartedTherapy}
+              onChange={(value) => handleFieldChange('whoStartedTherapy', value as 'Protection Services' | 'VCRT' | 'Lifeguard' | 'Sports Services' | 'Other')}
+              error={errors.whoStartedTherapy}
+            />
+
+            {data.whoStartedTherapy === 'Other' && (
+              <Input
+                label={t('pcr.oxygenProtocol.otherSpecify')}
+                value={data.whoStartedTherapyOther || ''}
+                onChange={(e) => handleFieldChange('whoStartedTherapyOther', e.target.value)}
+                placeholder={t('pcr.patientInfo.pleaseSpecify')}
+              />
+            )}
+          </div>
+        )}
+
+        {data.oxygen_given === 'yes' && (
           <FormSection title={t('pcr.oxygenProtocol.reasonForTherapy')}>
             <Input
               label={t('pcr.oxygenProtocol.reasonForO2Therapy')}
@@ -255,26 +277,6 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                 placeholder={t('pcr.oxygenProtocol.reasonForEndingTherapyPlaceholder')}
                 rows={3}
               />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <RadioGroup
-                  name="whoStartedTherapy"
-                  label={t('pcr.oxygenProtocol.whoStartedTherapy')}
-                  options={whoStartedOptions}
-                  value={data.whoStartedTherapy}
-                  onChange={(value) => handleFieldChange('whoStartedTherapy', value as 'Protection Services' | 'VCRT' | 'Lifeguard' | 'Sports Services' | 'Other')}
-                  error={errors.whoStartedTherapy}
-                />
-
-                {data.whoStartedTherapy === 'Other' && (
-                  <Input
-                    label={t('pcr.oxygenProtocol.otherSpecify')}
-                    value={data.whoStartedTherapyOther || ''}
-                    onChange={(e) => handleFieldChange('whoStartedTherapyOther', e.target.value)}
-                    placeholder={t('pcr.patientInfo.pleaseSpecify')}
-                  />
-                )}
-              </div>
             </div>
           </FormSection>
         </>
