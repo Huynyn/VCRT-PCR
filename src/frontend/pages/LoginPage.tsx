@@ -107,7 +107,7 @@ const LoginPage: React.FC = () => {
         </Tooltip>
       </div>
 
-      <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 items-center">
+      <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 lg:gap-2 lg:pl-4 items-center">
         {/* Left side - Branding and features */}
         <div className="hidden lg:grid grid-cols-[200px,1fr] gap-6 items-center">
           {/* Logo column (far left) */}
