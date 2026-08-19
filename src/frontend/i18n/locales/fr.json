@@ -130,7 +130,7 @@
   },
   "login": {
     "brandAcronym": "RSP",
-    "tagline": "Système de documentation complet conçu pour l'équipe bénévole d'intervention en cas de crise (ÉBIC) de l'Université d'Ottawa.",
+    "tagline": "Système de documentation complet conçu pour l'équipe bénévole d'intervention de crise (ÉBIC) de l'Université d'Ottawa.",
     "username": "Nom d'utilisateur",
     "usernamePlaceholder": "Entrez votre nom d'utilisateur",
     "password": "Mot de passe",
