@@ -88,7 +88,9 @@
   }
 
   .btn-primary {
-    @apply btn bg-primary-500 text-white hover:bg-primary-700 focus:ring-primary-500;
+    /* dark:bg-primary-600 matches the injury diagram's front/back toggle
+       buttons, which use the same primary-600 in both themes. */
+    @apply btn bg-primary-500 text-white hover:bg-primary-700 focus:ring-primary-500 dark:bg-primary-600 dark:hover:bg-primary-700;
   }
 
   .btn-secondary {
@@ -349,6 +351,23 @@
   }
   .dark .leaflet-control-attribution a {
     @apply text-primary-400;
+  }
+
+  /* CARTO/OSM's tile terms require this attribution to stay present and
+     reachable, but it doesn't need to sit fully visible over the map at
+     all times - fade it out until the corner is hovered/focused, same
+     pattern several map products use for a less obtrusive default.
+     (These two class names are Leaflet's own, never written literally as a
+     React className in this codebase, so Tailwind's content scanner would
+     otherwise never see them and would purge this rule entirely - see the
+     matching comment in CampusMapSection.tsx that keeps it safelisted.) */
+  .leaflet-container .leaflet-control-attribution {
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+  .leaflet-container .leaflet-control-attribution:hover,
+  .leaflet-container .leaflet-control-attribution:focus-within {
+    opacity: 1;
   }
 }
 

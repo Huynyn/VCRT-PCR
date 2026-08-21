@@ -14,7 +14,9 @@ interface TitleBadgeProps {
 const TitleBadge: React.FC<TitleBadgeProps> = ({ icon, children, className }) => (
   <span
     className={cn(
-      'inline-flex items-center gap-2.5 max-w-full min-w-0 rounded-full bg-primary-600 dark:bg-primary-500 text-white pl-4 pr-6 py-3',
+      // Same primary-600 in both themes - matches the injury diagram's
+      // front/back toggle buttons, which don't lighten for dark mode either.
+      'inline-flex items-center gap-2.5 max-w-full min-w-0 rounded-full bg-primary-600 text-white pl-4 pr-6 py-3',
       className,
     )}
   >

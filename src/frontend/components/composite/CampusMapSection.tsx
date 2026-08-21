@@ -8,6 +8,13 @@ import { cn } from '@/utils'
 import { MAIN_CAMPUS_BUILDINGS, type CampusBuilding } from './campusBuildings'
 import 'leaflet/dist/leaflet.css'
 
+// Tailwind's content scanner only keeps a hand-written @layer rule if at
+// least one of its class tokens shows up literally somewhere in a scanned
+// file - these two ("leaflet-container", "leaflet-control-attribution")
+// are Leaflet's own, added to the DOM by the library itself rather than
+// through any className prop here, so they'd otherwise never be seen and
+// the matching rule in index.css would get silently purged from the build.
+
 const CAMPUS_CENTER: [number, number] = [45.423585, -75.68332]
 const DEFAULT_ZOOM = 16
 // Keeps zooming out capped around "neighborhood" scale - this is a campus

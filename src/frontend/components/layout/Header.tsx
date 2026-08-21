@@ -2,7 +2,6 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { LogOut, Moon, Sun, Menu } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
-import { cn } from '@/utils'
 import NotificationBell from './NotificationBell'
 import LanguageToggle from './LanguageToggle'
 
@@ -39,11 +38,12 @@ const Header: React.FC<HeaderProps> = ({
         {/* Left side */}
         <div className="flex items-center space-x-4">
           {/* Hamburger + logo + brand - fixed to the sidebar's pinned-open
-              width (w-72, minus this header's own px-4 left padding) once
-              the sidebar is open, so the title pill right after it lines up
-              with the sidebar's right edge instead of trailing wherever
-              this content's natural width happens to end. */}
-          <div className={cn('flex items-center gap-4 shrink-0', sidebarOpen && 'lg:w-[256px]')}>
+              width (w-72, minus this header's own px-4 left padding)
+              regardless of whether the sidebar is actually open, so the
+              title pill right after it always lines up with the sidebar's
+              open-state right edge instead of trailing wherever this
+              content's natural width happens to end when collapsed. */}
+          <div className="flex items-center gap-4 shrink-0 lg:w-[256px]">
             <Tooltip content={sidebarOpen ? t('header.collapseSidebar') : t('header.expandSidebar')}>
               <Button
                 variant="icon"

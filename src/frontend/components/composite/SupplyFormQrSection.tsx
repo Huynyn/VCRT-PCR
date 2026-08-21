@@ -31,36 +31,37 @@ const SupplyFormQrSection: React.FC = () => {
   }, [url])
 
   return (
-    <div className="mb-6">
-      <div className="card">
-        <div className="card-header-flush">
-          {/* Same target width as the 3 middle dashboard tiles' pills - see
-              the matching comment in CampusMapSection. */}
-          <TitleBadge icon={<ClipboardList className="w-5 h-5" />} className="w-full md:w-[calc((100%+1rem)/3-3rem)]">
-            {t('supplyForm.title')}
-          </TitleBadge>
-        </div>
-        <div className="card-body">
-          {loading ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
-          ) : !url ? (
-            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-              <ClipboardList className="w-5 h-5 shrink-0" />
-              <p>{t('supplyForm.notSetUp')}</p>
+    <div className="card h-full min-w-0 flex flex-col">
+      <div className="card-header-flush">
+        {/* Same target width as the 3 middle dashboard tiles' pills (see the
+            matching comment in CampusMapSection), reworked for this card's
+            own container being one of 2 equal columns (gap-4) rather than
+            3 - solves for that same final pill width relative to this
+            pill's own (also px-6) container. */}
+        <TitleBadge icon={<ClipboardList className="w-5 h-5" />} className="w-full md:w-[calc((2*100%-4rem)/3)]">
+          {t('supplyForm.title')}
+        </TitleBadge>
+      </div>
+      <div className="card-body flex-1">
+        {loading ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
+        ) : !url ? (
+          <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+            <ClipboardList className="w-5 h-5 shrink-0" />
+            <p>{t('supplyForm.notSetUp')}</p>
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="flex-1 text-base text-gray-700 dark:text-gray-300">
+              <p>{t('supplyForm.instructions')}</p>
             </div>
-          ) : (
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="flex-1 text-base text-gray-700 dark:text-gray-300">
-                <p>{t('supplyForm.instructions')}</p>
-              </div>
-              <div className="shrink-0 p-3 bg-white rounded-lg border border-gray-200 dark:border-gray-600">
-                {qrDataUrl && (
-                  <img src={qrDataUrl} alt={t('supplyForm.qrAlt')} width={160} height={160} />
-                )}
-              </div>
+            <div className="shrink-0 p-3 bg-white rounded-lg border border-gray-200 dark:border-gray-600">
+              {qrDataUrl && (
+                <img src={qrDataUrl} alt={t('supplyForm.qrAlt')} width={160} height={160} />
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )

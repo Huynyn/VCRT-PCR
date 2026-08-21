@@ -13,6 +13,7 @@ const ALLOWED_KEYS = new Set([
   'sample_pcr_text',
   'debrief_questions',
   'medical_glossary',
+  'common_medications',
 ]);
 
 const MAX_TEXT_LENGTH = 20000;
@@ -38,7 +39,7 @@ function validateValue(key: string, value: unknown): string | null {
     }
   }
 
-  if (key === 'debrief_questions' || key === 'medical_glossary') {
+  if (key === 'debrief_questions' || key === 'medical_glossary' || key === 'common_medications') {
     try {
       const parsed = JSON.parse(value);
       if (!Array.isArray(parsed)) throw new Error('not an array');

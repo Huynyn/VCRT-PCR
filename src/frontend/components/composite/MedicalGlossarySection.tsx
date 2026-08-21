@@ -196,10 +196,10 @@ const MedicalGlossarySection: React.FC = () => {
   }
 
   const addDraftItem = () => {
-    // Prepend rather than append: the list box has a fixed max height, and an
-    // existing list can already be long enough (60+ terms by default) that a
-    // row added at the end would land below the visible scroll area, making
-    // the click look like it did nothing.
+    // Prepend rather than append: the list can already be long enough
+    // (60+ terms by default) that a row added at the end would land below
+    // the modal's visible scroll area, making the click look like it did
+    // nothing.
     setDraft(prev => [{ acronym: '', meaning: '', category: 'General' }, ...prev])
   }
 
@@ -347,7 +347,7 @@ const MedicalGlossarySection: React.FC = () => {
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           )}
 
-          <div className="max-h-96 overflow-y-auto space-y-3 pr-1">
+          <div className="space-y-3">
             {draft.map((item, i) => (
               <div key={i} className="flex items-start gap-2">
                 <div className="w-32">

@@ -57,52 +57,53 @@ const SupplyFormQrAdmin: React.FC = () => {
   }
 
   return (
-    <div className="mb-6">
-      <div className="card">
-        <div className="card-header-flush">
-          {/* Same target width as the 3 middle dashboard tiles' pills - see
-              the matching comment in CampusMapSection. */}
-          <TitleBadge icon={<QrCode className="w-5 h-5" />} className="w-full md:w-[calc((100%+1rem)/3-3rem)]">
-            {t('supplyForm.adminTitle')}
-          </TitleBadge>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {t('supplyForm.adminSubtitle')}
-          </p>
-        </div>
-        <div className="card-body">
-          {loading ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
-          ) : (
-            <div className="flex flex-col sm:flex-row items-start gap-6">
-              <div className="flex-1 w-full space-y-3">
-                {error && (
-                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                )}
-                <Input
-                  label={t('supplyForm.urlLabel')}
-                  value={inputValue}
-                  onChange={e => setInputValue(e.target.value)}
-                  placeholder="https://forms.office.com/..."
-                />
-                <Button
-                  variant="outline"
-                  onClick={handleSave}
-                  loading={saving}
-                  disabled={saving}
-                  leftIcon={<Save className="w-4 h-4" />}
-                >
-                  {saved ? t('supplyForm.saved') : saving ? t('common.saving') : t('common.save')}
-                </Button>
-              </div>
-
-              {qrDataUrl && (
-                <div className="shrink-0 p-3 bg-white rounded-lg border border-gray-200 dark:border-gray-600">
-                  <img src={qrDataUrl} alt={t('supplyForm.qrPreviewAlt')} width={160} height={160} />
-                </div>
+    <div className="card h-full min-w-0 flex flex-col">
+      <div className="card-header-flush">
+        {/* Same target width as the 3 middle dashboard tiles' pills (see the
+            matching comment in CampusMapSection), reworked for this card's
+            own container being one of 2 equal columns (gap-4) rather than
+            3 - solves for that same final pill width relative to this
+            pill's own (also px-6) container. */}
+        <TitleBadge icon={<QrCode className="w-5 h-5" />} className="w-full md:w-[calc((2*100%-4rem)/3)]">
+          {t('supplyForm.adminTitle')}
+        </TitleBadge>
+      </div>
+      <div className="card-body flex-1">
+        {loading ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-start gap-6">
+            <div className="flex-1 w-full space-y-3">
+              {error && (
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
               )}
+              <p className="text-base text-gray-700 dark:text-gray-300">
+                {t('supplyForm.adminSubtitle')}
+              </p>
+              <Input
+                label={t('supplyForm.urlLabel')}
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                placeholder="https://forms.office.com/..."
+              />
+              <Button
+                variant="outline"
+                onClick={handleSave}
+                loading={saving}
+                disabled={saving}
+                leftIcon={<Save className="w-4 h-4" />}
+              >
+                {saved ? t('supplyForm.saved') : saving ? t('common.saving') : t('common.save')}
+              </Button>
             </div>
-          )}
-        </div>
+
+            {qrDataUrl && (
+              <div className="shrink-0 p-3 bg-white rounded-lg border border-gray-200 dark:border-gray-600">
+                <img src={qrDataUrl} alt={t('supplyForm.qrPreviewAlt')} width={160} height={160} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

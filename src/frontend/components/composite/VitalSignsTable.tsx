@@ -1,9 +1,34 @@
-import React, { useState, useCallback } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2, Clock } from 'lucide-react'
-import { Button, Tooltip } from '@/components/ui'
+import { Plus, Trash2, Clock, ChevronDown } from 'lucide-react'
+import { Tooltip } from '@/components/ui'
 import { cn } from '@/utils'
 import type { VitalSign } from '@/types'
+
+interface VitalSignPart {
+  key: string
+  label: string
+  placeholder?: string
+  /** Fixed choices shown as a dropdown instead of free text. */
+  options?: string[]
+}
+
+interface VitalSignGroup {
+  key: string
+  label: string
+  placeholder?: string
+  /** Small description shown above a single (non-`parts`) field, e.g. LOC's
+   * "AOx(1-3) or GCS 3-15" format note - distinct from `placeholder`, which
+   * stays a concrete example value inside the box. */
+  fieldLabel?: string
+  /** Sub-fields (e.g. rate/rhythm/quality for HR), stacked vertically inside
+   * this group's cell. Each keystroke recomposes `partSeparator`-joined into
+   * the flat `data[set][key]` string that PDF export etc. still read as one
+   * value. */
+  parts?: VitalSignPart[]
+  partSeparator?: string
+}
 
 interface VitalSignsTableProps {
   data: VitalSign[] | any[]
@@ -11,213 +36,431 @@ interface VitalSignsTableProps {
   maxRows?: number
   title?: string
   className?: string
-  columns?: Array<{ key: string; label: string; width: string; hint?: string }>
 }
+
+const FIELD_BASE_CLASS =
+  'w-full min-w-0 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 text-xs px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500'
+
+// Smaller than the shared Input component (which is sized for full-width
+// form fields) - this table packs many labeled boxes into a narrow column
+// per set, so every field here trades the standard form sizing for a
+// denser one. When `options` is given, this is a "select or type" combobox
+// (same idea as the app's SearchableSelect, at this table's compact scale):
+// typing always saves as free text, and the dropdown just offers common
+// values to pick from instead of typing them out - not a hard-restricted
+// list.
+const CompactField: React.FC<{
+  label?: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  ariaLabel?: string
+  leftIcon?: React.ReactNode
+  rightIcon?: React.ReactNode
+  options?: string[]
+}> = ({ label, value, onChange, placeholder, ariaLabel, leftIcon, rightIcon, options }) => {
+  const [open, setOpen] = useState(false)
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
+  const containerRef = useRef<HTMLDivElement>(null)
+  const fieldRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // The dropdown is portaled to <body> (see below) so it can float over the
+  // table's own scroll container instead of getting cut off at its edge -
+  // that means its position has to be computed from the field's actual
+  // screen position rather than relying on CSS `absolute` inside the table.
+  const positionMenu = useCallback(() => {
+    const el = fieldRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    setMenuStyle({ position: 'fixed', top: rect.bottom + 2, left: rect.left, width: rect.width })
+  }, [])
+
+  useEffect(() => {
+    if (!options || !open) return
+    positionMenu()
+    const handleReposition = () => positionMenu()
+    // capture: true so this also fires for scrolling inside the table's own
+    // horizontal-scroll wrapper, not just the page itself.
+    window.addEventListener('scroll', handleReposition, true)
+    window.addEventListener('resize', handleReposition)
+    return () => {
+      window.removeEventListener('scroll', handleReposition, true)
+      window.removeEventListener('resize', handleReposition)
+    }
+  }, [options, open, positionMenu])
+
+  useEffect(() => {
+    if (!options) return
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (containerRef.current?.contains(target)) return
+      if (menuRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [options])
+
+  const filteredOptions = options
+    ? options.filter(opt => opt.toLowerCase().includes(value.trim().toLowerCase()))
+    : []
+
+  return (
+    <div ref={containerRef}>
+      {label && (
+        <label className="block text-[9px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5 truncate">
+          {label}
+        </label>
+      )}
+      <div ref={fieldRef} className="relative">
+        {leftIcon && (
+          <div className="absolute inset-y-0 left-0 pl-1.5 flex items-center pointer-events-none text-gray-400">
+            {leftIcon}
+          </div>
+        )}
+        <input
+          type="text"
+          value={value}
+          onChange={e => {
+            onChange(e.target.value)
+            if (options) setOpen(true)
+          }}
+          onFocus={() => options && setOpen(true)}
+          onKeyDown={e => {
+            if (options && (e.key === 'Escape' || e.key === 'Enter')) {
+              e.preventDefault()
+              setOpen(false)
+            }
+          }}
+          placeholder={placeholder}
+          aria-label={ariaLabel || label}
+          autoComplete="off"
+          className={cn(FIELD_BASE_CLASS, leftIcon && 'pl-5', (rightIcon || options) && 'pr-5')}
+        />
+        {options && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setOpen(o => !o)}
+            className="absolute inset-y-0 right-0 pr-1.5 flex items-center text-gray-400"
+          >
+            <ChevronDown className="w-3 h-3" />
+          </button>
+        )}
+        {rightIcon && !options && (
+          <div className="absolute inset-y-0 right-0 pr-1.5 flex items-center text-gray-400 text-xs">
+            {rightIcon}
+          </div>
+        )}
+      </div>
+
+      {options && open && filteredOptions.length > 0 && createPortal(
+        <div
+          ref={menuRef}
+          style={menuStyle}
+          className="z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg max-h-32 overflow-y-auto"
+        >
+          {filteredOptions.map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => {
+                onChange(opt)
+                setOpen(false)
+              }}
+              className={cn(
+                'block w-full text-left px-2 py-1 text-xs hover:bg-primary-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100',
+                value === opt && 'bg-primary-50 dark:bg-gray-700 font-medium',
+              )}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </div>
+  )
+}
+
+const RHYTHM_OPTIONS = ['Regular', 'Irregular']
+const PULSE_QUALITY_OPTIONS = ['Strong', 'Weak', 'Bounding', 'Thready']
+const RESP_QUALITY_OPTIONS = ['Unlaboured', 'Laboured', 'Shallow', 'Deep']
+const SKIN_COLOR_OPTIONS = ['Pink', 'Pale', 'Flushed', 'Cyanotic', 'Jaundiced', 'Mottled']
+const SKIN_WARMTH_OPTIONS = ['Warm', 'Hot', 'Cool', 'Cold']
+const SKIN_MOISTURE_OPTIONS = ['Dry', 'Moist', 'Diaphoretic']
+const PUPIL_REACTIVITY_OPTIONS = ['PERRLA', 'Sluggish', 'Fixed', 'Unequal', 'Dilated', 'Constricted']
+
+// Flowsheet-style layout: vitals go down as rows, each recorded set of
+// vitals is its own column - so a maximum of 6 columns still fits legibly
+// without the table getting too cramped or needing to scroll far.
+const MAX_SETS = 6
 
 const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
   data,
   onChange,
-  maxRows = 8,
+  maxRows = MAX_SETS,
   title = '',
   className,
-  columns: customColumns,
 }) => {
   const { t } = useTranslation()
-  const [editingCell, setEditingCell] = useState<{ row: number; field: string } | null>(null)
+  const maxSets = Math.min(maxRows, MAX_SETS)
 
-  const handleCellChange = useCallback((rowIndex: number, field: string, value: string) => {
+  const updateSet = useCallback((setIndex: number, updater: (set: any) => any) => {
     const newData = [...data]
-    if (!newData[rowIndex]) {
-      newData[rowIndex] = {}
-    }
-    newData[rowIndex] = { ...newData[rowIndex], [field]: value }
+    newData[setIndex] = updater({ ...(newData[setIndex] || {}) })
     onChange(newData)
   }, [data, onChange])
 
-  const handleCellClick = useCallback((rowIndex: number, field: string) => {
-    setEditingCell({ row: rowIndex, field })
-  }, [])
+  const handleFieldChange = useCallback((setIndex: number, key: string, value: string) => {
+    updateSet(setIndex, set => ({ ...set, [key]: value }))
+  }, [updateSet])
 
-  const handleCellBlur = useCallback(() => {
-    setEditingCell(null)
-  }, [])
+  const handlePartChange = useCallback((setIndex: number, group: VitalSignGroup, partKey: string, value: string) => {
+    updateSet(setIndex, set => {
+      const partsField = `${group.key}Parts`
+      const parts = { ...(set[partsField] || {}), [partKey]: value }
+      const composed = (group.parts || [])
+        .map(p => (parts[p.key] || '').trim())
+        .filter(Boolean)
+        .join(group.partSeparator ?? ', ')
+      return { ...set, [partsField]: parts, [group.key]: composed }
+    })
+  }, [updateSet])
 
-  const addRow = useCallback(() => {
-    if (data.length < maxRows) {
+  const addSet = useCallback(() => {
+    if (data.length < maxSets) {
       onChange([...data, {}])
     }
-  }, [data, onChange, maxRows])
+  }, [data, onChange, maxSets])
 
-  const removeRow = useCallback((index: number) => {
+  const removeSet = useCallback((index: number) => {
     const newData = data.filter((_, i) => i !== index)
-    // Ensure we always have at least 1 row (even if empty)
+    // Ensure we always have at least 1 set (even if empty)
     onChange(newData.length > 0 ? newData : [{}])
   }, [data, onChange])
 
-  const defaultColumns = [
-    { key: 'time', label: t('pcr.vitalSignsTable.time'), width: 'w-32', hint: t('pcr.vitalSignsTable.timeHint') },
-    { key: 'pulse', label: 'HR', width: 'w-32', hint: t('pcr.vitalSignsTable.rateRhythmQualityHint') },
-    { key: 'resp', label: 'RR', width: 'w-32', hint: t('pcr.vitalSignsTable.rateRhythmQualityHint') },
-    { key: 'spo2', label: 'SpO2', width: 'w-32', hint: t('pcr.vitalSignsTable.spo2Hint') },
-    { key: 'bp', label: 'B/P', width: 'w-28', hint: t('pcr.vitalSignsTable.bpHint') },
-    { key: 'loc', label: 'LOC, GCS', width: 'w-32', hint: t('pcr.vitalSignsTable.locHint') },
-    { key: 'skin', label: t('pcr.vitalSignsTable.skin'), width: 'w-32', hint: t('pcr.vitalSignsTable.skinHint') },
-    { key: 'pupils', label: t('pcr.vitalSignsTable.pupils'), width: 'w-28', hint: t('pcr.vitalSignsTable.pupilsHint') },
+  const selectPlaceholder = t('pcr.vitalSignsTable.selectPlaceholder')
+
+  // Rate/rhythm/quality for HR and RR share a shape but not their options -
+  // pulse quality (strong/weak/bounding/thready) and breathing quality
+  // (laboured/shallow/deep) describe different things.
+  const pulseParts: VitalSignPart[] = [
+    { key: 'rate', label: t('pcr.vitalSignsTable.partRate'), placeholder: 'e.g. 82' },
+    { key: 'rhythm', label: t('pcr.vitalSignsTable.partRhythm'), placeholder: selectPlaceholder, options: RHYTHM_OPTIONS },
+    { key: 'quality', label: t('pcr.vitalSignsTable.partQuality'), placeholder: selectPlaceholder, options: PULSE_QUALITY_OPTIONS },
+  ]
+  const respParts: VitalSignPart[] = [
+    { key: 'rate', label: t('pcr.vitalSignsTable.partRate'), placeholder: 'e.g. 16' },
+    { key: 'rhythm', label: t('pcr.vitalSignsTable.partRhythm'), placeholder: selectPlaceholder, options: RHYTHM_OPTIONS },
+    { key: 'quality', label: t('pcr.vitalSignsTable.partQuality'), placeholder: selectPlaceholder, options: RESP_QUALITY_OPTIONS },
   ]
 
-  const columns = customColumns || defaultColumns
+  const groups: VitalSignGroup[] = [
+    { key: 'pulse', label: 'HR', parts: pulseParts, partSeparator: ', ' },
+    { key: 'resp', label: 'RR', parts: respParts, partSeparator: ', ' },
+    { key: 'spo2', label: 'SpO2', placeholder: t('pcr.vitalSignsTable.spo2Hint') },
+    {
+      key: 'bp',
+      label: 'B/P',
+      parts: [
+        { key: 'sys', label: t('pcr.vitalSignsTable.partSys'), placeholder: 'e.g. 120' },
+        { key: 'dia', label: t('pcr.vitalSignsTable.partDia'), placeholder: 'e.g. 80 or P' },
+      ],
+      partSeparator: '/',
+    },
+    {
+      key: 'loc',
+      label: 'LOC / GCS',
+      fieldLabel: t('pcr.vitalSignsTable.locHint'),
+      placeholder: t('pcr.vitalSignsTable.locPlaceholder'),
+    },
+    {
+      key: 'skin',
+      label: t('pcr.vitalSignsTable.skin'),
+      parts: [
+        { key: 'tempC', label: t('pcr.vitalSignsTable.partTempC'), placeholder: 'e.g. 37' },
+        { key: 'color', label: t('pcr.vitalSignsTable.partColor'), placeholder: selectPlaceholder, options: SKIN_COLOR_OPTIONS },
+        { key: 'warmth', label: t('pcr.vitalSignsTable.partWarmth'), placeholder: selectPlaceholder, options: SKIN_WARMTH_OPTIONS },
+        { key: 'moisture', label: t('pcr.vitalSignsTable.partMoisture'), placeholder: selectPlaceholder, options: SKIN_MOISTURE_OPTIONS },
+      ],
+      partSeparator: ', ',
+    },
+    {
+      key: 'pupils',
+      label: t('pcr.vitalSignsTable.pupils'),
+      parts: [
+        { key: 'reactivity', label: t('pcr.vitalSignsTable.partReactivity'), placeholder: selectPlaceholder, options: PUPIL_REACTIVITY_OPTIONS },
+        { key: 'sizeMm', label: t('pcr.vitalSignsTable.partSizeMm'), placeholder: 'e.g. 3' },
+      ],
+      partSeparator: ', ',
+    },
+  ]
 
-  // Textareas don't grow with their content on their own - resize on mount
-  // (when a cell becomes editable) and on every keystroke.
-  const autoGrow = (el: HTMLTextAreaElement | null) => {
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }
-
-  const renderCell = (rowIndex: number, column: typeof columns[0]) => {
-    const value = data[rowIndex]?.[column.key] || ''
-    const isEditing = editingCell?.row === rowIndex && editingCell?.field === column.key
-
-    if (isEditing) {
+  const renderCell = (setIndex: number, group: VitalSignGroup) => {
+    if (!group.parts) {
       return (
-        <textarea
-          ref={autoGrow}
-          rows={1}
-          value={value}
-          onChange={(e) => {
-            handleCellChange(rowIndex, column.key, e.target.value)
-            autoGrow(e.target)
-          }}
-          onBlur={handleCellBlur}
-          onKeyDown={(e) => {
-            // Enter saves (matches the "Press Enter to save" hint below);
-            // Shift+Enter still allows a deliberate line break.
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              handleCellBlur()
-            }
-          }}
-          className="block w-full min-h-9 border-0 px-2.5 py-2 bg-primary-50 dark:bg-primary-900/20
-                    text-gray-900 dark:text-gray-100 text-sm resize-none overflow-hidden
-                    focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
-          autoFocus
+        <CompactField
+          label={group.fieldLabel}
+          value={data[setIndex]?.[group.key] || ''}
+          onChange={v => handleFieldChange(setIndex, group.key, v)}
+          placeholder={group.placeholder}
+          rightIcon={group.key === 'spo2' ? '%' : undefined}
+          ariaLabel={group.label}
         />
       )
     }
 
+    // Subsections stack vertically inside the group's own cell, rather than
+    // side by side, so each column stays narrow enough for up to 5 to fit.
     return (
-      <div
-        onClick={() => handleCellClick(rowIndex, column.key)}
-        className="w-full min-h-9 px-2.5 py-2 cursor-text hover:bg-primary-50/60 dark:hover:bg-gray-700/60 flex items-start text-sm text-gray-900 dark:text-gray-100 transition-colors"
-      >
-        {column.key === 'time' && value && (
-          <div className="flex items-start gap-1.5">
-            <Clock className="w-3 h-3 text-gray-400 shrink-0 mt-0.5" />
-            <span className="tabular-nums whitespace-pre-wrap break-words">{value}</span>
-          </div>
-        )}
-        {column.key !== 'time' && value && (
-          <span className="whitespace-pre-wrap break-words">{value}</span>
-        )}
-        {!value && <span className="text-gray-400 dark:text-gray-500 italic">{t('pcr.vitalSignsTable.clickToEdit')}</span>}
+      <div className="space-y-1">
+        {group.parts.map(part => (
+          <CompactField
+            key={part.key}
+            label={part.label}
+            value={data[setIndex]?.[`${group.key}Parts`]?.[part.key] || ''}
+            onChange={v => handlePartChange(setIndex, group, part.key, v)}
+            placeholder={part.placeholder}
+            options={part.options}
+          />
+        ))}
       </div>
     )
   }
 
+  const setCount = Math.max(data.length, 1)
+  // Only reserve one extra column for the "add" affordance, not all the way
+  // out to maxSets - a fixed per-column width (not 1fr) keeps every column
+  // the same size regardless of count, so the table only grows wide enough
+  // to actually need horizontal scrolling once there are enough real sets,
+  // instead of always reserving (and scrolling for) unused columns.
+  const visibleSlots = setCount < maxSets ? setCount + 1 : setCount
+
   return (
     <div className={cn('space-y-3', className)}>
       {title && (
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+        <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">
           {title}
         </h3>
       )}
 
-      <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 rounded-lg">
-        {/* No min-w-full: with table-fixed, an ancestor forcing the table
-            wider than the sum of its column widths would make browsers
-            redistribute the extra space across every column - including
-            ones whose content only shows up conditionally (the trash-icon
-            column below), which is exactly what made columns "narrow" once
-            a second row appeared. Letting the table be exactly as wide as
-            its columns keeps every column's width constant regardless of
-            row count; overflow-x-auto above still handles narrow screens. */}
-        <table className="table-fixed border-collapse">
-          <thead>
-            <tr className="bg-gray-50 dark:bg-gray-800">
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={cn(
-                    'text-center align-top font-semibold text-sm uppercase tracking-wide text-gray-600 dark:text-gray-300 px-3 py-2.5 border-b border-l border-gray-200 dark:border-gray-700 first:border-l-0',
-                    column.width,
-                  )}
+      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div
+          className="grid min-w-max"
+          style={{ gridTemplateColumns: `minmax(72px, 96px) repeat(${visibleSlots}, 132px)` }}
+        >
+          {/* Corner cell above the row-label column */}
+          <div className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-900/40 border-b border-r border-gray-200 dark:border-gray-700" />
+
+          {Array.from({ length: visibleSlots }).map((_, setIndex) => {
+            const isFilled = setIndex < setCount
+
+            if (!isFilled) {
+              // This is always the single next slot to fill (visibleSlots
+              // never reserves more than one unfilled column beyond setCount).
+              return (
+                <div
+                  key={setIndex}
+                  className="border-b border-l border-r border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/20"
                 >
-                  {column.label}
-                  {column.hint && (
-                    <div className="mt-0.5 text-[10px] font-normal normal-case tracking-normal text-gray-400 dark:text-gray-500">
-                      {column.hint}
-                    </div>
-                  )}
-                </th>
-              ))}
-              <th className="w-9 border-b border-l border-gray-200 dark:border-gray-700" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-            {Array.from({ length: Math.max(data.length, 1) }).map((_, rowIndex) => (
-              <tr
-                key={rowIndex}
-                className="bg-white dark:bg-gray-800 even:bg-gray-50/60 dark:even:bg-gray-800/60"
+                  <button
+                    type="button"
+                    onClick={addSet}
+                    aria-label={t('pcr.vitalSignsTable.addRow')}
+                    className="flex items-center justify-center gap-1 w-full h-full py-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50/60 dark:hover:text-primary-400 dark:hover:bg-primary-900/20 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )
+            }
+
+            return (
+              <div
+                key={setIndex}
+                className="flex items-center justify-between gap-1 px-2 py-1.5 bg-gray-50 dark:bg-gray-900/40 border-b border-l border-gray-200 dark:border-gray-700"
               >
-                {columns.map((column) => (
-                  <td key={column.key} className="p-0 border-l border-gray-100 dark:border-gray-700 first:border-l-0">
-                    {renderCell(rowIndex, column)}
-                  </td>
-                ))}
-                <td className="p-0 text-center align-top border-l border-gray-100 dark:border-gray-700">
-                  {/* Always rendered (just hidden below the minimum of 1 row)
-                      so this column's width is never dependent on whether
-                      any row happens to show the button. */}
-                  <Tooltip content={t('pcr.vitalSignsTable.removeRow', { index: rowIndex + 1 })}>
+                {/* Fixed width + centered so the digit itself (1 vs 2, etc.)
+                    never changes how much space it takes up, keeping the
+                    gap to the time box beside it visually consistent. */}
+                <span className="shrink-0 w-4 text-center text-primary-700 dark:text-primary-300 text-sm font-bold tabular-nums">
+                  {setIndex + 1}
+                </span>
+
+                {/* Time + remove grouped and pushed to the right edge, with
+                    a small gap between them so the time box never crowds
+                    the trash icon. */}
+                <div className="flex items-center gap-1 ml-auto">
+                  <div className="w-[72px]">
+                    <CompactField
+                      leftIcon={<Clock className="w-3 h-3" />}
+                      value={data[setIndex]?.time || ''}
+                      onChange={v => handleFieldChange(setIndex, 'time', v)}
+                      placeholder={t('pcr.vitalSignsTable.timeHint')}
+                      ariaLabel={t('pcr.vitalSignsTable.time')}
+                    />
+                  </div>
+
+                  {/* Always rendered (just hidden below the minimum of 1
+                      set) so this control's presence doesn't shift the
+                      header's layout depending on whether any set happens
+                      to show it. */}
+                  <Tooltip content={t('pcr.vitalSignsTable.removeRow', { index: setIndex + 1 })}>
                     <button
                       type="button"
-                      onClick={() => removeRow(rowIndex)}
-                      aria-label={t('pcr.vitalSignsTable.removeRow', { index: rowIndex + 1 })}
+                      onClick={() => removeSet(setIndex)}
+                      aria-label={t('pcr.vitalSignsTable.removeRow', { index: setIndex + 1 })}
                       tabIndex={data.length > 1 ? 0 : -1}
                       className={cn(
-                        'flex items-center justify-center h-9 w-9 rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:text-gray-500 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-burgundy-500 transition-colors',
+                        'flex items-center justify-center h-6 w-6 shrink-0 rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:text-gray-500 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-burgundy-500 transition-colors',
                         data.length <= 1 && 'invisible',
                       )}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   </Tooltip>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            )
+          })}
+
+          {groups.map((group, groupIndex) => (
+            <React.Fragment key={group.key}>
+              <div
+                className={cn(
+                  'sticky left-0 z-10 flex items-center justify-center text-center px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700',
+                  groupIndex % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/60 dark:bg-gray-900/20',
+                  groupIndex < groups.length - 1 && 'border-b',
+                )}
+              >
+                {group.label}
+              </div>
+
+              {Array.from({ length: visibleSlots }).map((_, setIndex) => (
+                <div
+                  key={setIndex}
+                  className={cn(
+                    'px-2 py-1.5 border-l border-gray-200 dark:border-gray-700',
+                    groupIndex % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/60 dark:bg-gray-900/20',
+                    groupIndex < groups.length - 1 && 'border-b',
+                    // Matches the "+" add-column header's own right border.
+                    setIndex >= setCount && 'border-r',
+                  )}
+                >
+                  {setIndex < setCount && renderCell(setIndex, group)}
+                </div>
+              ))}
+            </React.Fragment>
+          ))}
+        </div>
       </div>
 
-      {data.length < maxRows && (
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addRow}
-            leftIcon={<Plus className="w-4 h-4" />}
-          >
-            {t('pcr.vitalSignsTable.addRow')}
-          </Button>
-        </div>
-      )}
-
-      <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
+      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
         <p>{t('pcr.vitalSignsTable.help24h')}</p>
         <p>{t('pcr.vitalSignsTable.helpDnoUto')}</p>
-        <p>{t('pcr.vitalSignsTable.helpClickEdit')}</p>
+        <p>{t('pcr.vitalSignsTable.helpUnusual')}</p>
       </div>
     </div>
   )

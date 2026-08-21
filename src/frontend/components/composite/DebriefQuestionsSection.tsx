@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Edit, HelpCircle, Plus, Trash2 } from 'lucide-react'
+import { Edit, HelpCircle, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
 import { Modal, Button, TitleBadge } from '@/components/ui'
@@ -46,7 +46,6 @@ const DebriefQuestionsSection: React.FC = () => {
 
   const [questions, setQuestions] = useState<DebriefQuestionItem[]>(DEFAULT_DEBRIEF_QUESTIONS)
   const [loading, setLoading] = useState(true)
-  const [expanded, setExpanded] = useState(false)
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [draft, setDraft] = useState<DebriefQuestionItem[]>([])
@@ -86,10 +85,9 @@ const DebriefQuestionsSection: React.FC = () => {
   }
 
   const addDraftItem = () => {
-    // Prepend rather than append: the list box has a fixed max height, and an
-    // existing list can already be long enough that a row added at the end
-    // would land below the visible scroll area, making the click look like
-    // it did nothing.
+    // Prepend rather than append: an existing list can already be long
+    // enough that a row added at the end would land below the modal's
+    // visible scroll area, making the click look like it did nothing.
     setDraft(prev => [{ question: '', category: 'General' }, ...prev])
   }
 
@@ -121,40 +119,33 @@ const DebriefQuestionsSection: React.FC = () => {
   return (
     <>
       <div className="card h-full min-w-0 flex flex-col">
-        <div className="flex-1 min-w-0 flex flex-col items-start gap-3 px-6 pt-4 pb-6">
-          <TitleBadge icon={<HelpCircle className="w-5 h-5" />} className="w-full">{t('debrief.title')}</TitleBadge>
-          <p className="text-sm text-gray-500 dark:text-gray-400 leading-snug">{t('debrief.description')}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          aria-label={t('common.expand')}
-          className="flex items-center justify-center py-3 border-t border-gray-200 dark:border-gray-700 text-gray-400 hover:text-primary-600 hover:bg-gray-50 dark:text-gray-500 dark:hover:text-primary-400 dark:hover:bg-gray-700/50 transition-colors rounded-b-lg"
-        >
-          <ChevronDown className="w-5 h-5" />
-        </button>
-      </div>
-
-      <Modal isOpen={expanded} onClose={() => setExpanded(false)} title={t('debrief.title')} size="lg">
-        <div className="space-y-4">
-          {isAdmin && (
-            <div className="flex justify-end">
+        <div className="card-header-flush">
+          <div className="flex items-center justify-between gap-3">
+            {/* Same target width as the 3 middle dashboard tiles' pills (see
+                the matching comment in CampusMapSection), reworked for this
+                card's own container being one of 2 equal columns (gap-4)
+                rather than 3 - solves for that same final pill width
+                relative to this pill's own (also px-6) container. */}
+            <TitleBadge icon={<HelpCircle className="w-5 h-5" />} className="w-full md:w-[calc((2*100%-4rem)/3)]">{t('debrief.title')}</TitleBadge>
+            {isAdmin && (
               <button
                 type="button"
                 onClick={openEdit}
-                className="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300 inline-flex items-center gap-1"
+                className="text-xs px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 dark:text-gray-300 inline-flex items-center gap-1 shrink-0"
               >
                 <Edit className="w-3 h-3" />
                 {t('common.edit')}
               </button>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
 
+        <div className="card-body flex-1">
           {loading ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
           ) : (
             <div
-              className="flex flex-col gap-3"
+              className="flex flex-col gap-3 max-h-60 overflow-y-auto pr-1"
               role="listbox"
               aria-label={t('debrief.ariaLabel')}
             >
@@ -171,7 +162,7 @@ const DebriefQuestionsSection: React.FC = () => {
             </div>
           )}
         </div>
-      </Modal>
+      </div>
 
       <Modal
         isOpen={showEditModal}
@@ -184,7 +175,7 @@ const DebriefQuestionsSection: React.FC = () => {
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           )}
 
-          <div className="max-h-96 overflow-y-auto space-y-3 pr-1">
+          <div className="space-y-3">
             {draft.map((item, i) => (
               <div key={i} className="flex items-start gap-2">
                 <div className="flex-1">

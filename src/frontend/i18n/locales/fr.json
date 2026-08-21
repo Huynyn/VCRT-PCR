@@ -98,7 +98,7 @@
   "supplyForm": {
     "title": "Déclarer les fournitures",
     "notSetUp": "Un administrateur n'a pas encore configuré le lien du formulaire d'utilisation des fournitures.",
-    "instructions": "Scannez ce code QR avec votre téléphone pour ouvrir le formulaire Microsoft et déclarer toute fourniture médicale utilisée dans les sacs pendant un appel. Assurez-vous de le faire même si aucune fourniture n'a été utilisée, afin que nous puissions suivre l'utilisation et garantir un stock suffisant.",
+    "instructions": "Scannez ce code QR avec votre téléphone pour ouvrir le formulaire Microsoft et déclarer toute fourniture médicale utilisée dans les sacs pendant un appel. Assurez-vous de le faire même si aucune fourniture n'a été utilisée, afin que nous puissions suivre l'utilisation.",
     "qrAlt": "Code QR du formulaire d'utilisation des fournitures",
     "adminTitle": "Code QR du formulaire",
     "adminSubtitle": "Configurez le lien du formulaire Microsoft utilisé par les répondants pour déclarer les fournitures utilisées dans les sacs",
@@ -132,6 +132,22 @@
     "addAtLeastOne": "Ajoutez au moins un terme",
     "saveFailed": "Échec de l'enregistrement"
   },
+  "medications": {
+    "title": "Médicaments courants",
+    "description": "Référence consultable des médicaments courants, doses et indications.",
+    "searchPlaceholder": "Rechercher un médicament...",
+    "noResults": "Aucun médicament trouvé pour ce filtre.",
+    "doseLabel": "Dose habituelle",
+    "editTitle": "Modifier les médicaments courants",
+    "genericNamePlaceholder": "Nom générique",
+    "brandNamePlaceholder": "Nom de marque",
+    "categoryPlaceholder": "Classe",
+    "indicationsPlaceholder": "Indications principales",
+    "dosePlaceholder": "Dose habituelle",
+    "addMedication": "Ajouter un médicament",
+    "addAtLeastOne": "Ajoutez au moins un médicament",
+    "saveFailed": "Échec de l'enregistrement"
+  },
   "campusMap": {
     "title": "Carte du campus principal",
     "openOfficial": "Ouvrir la carte officielle",
@@ -139,7 +155,7 @@
     "resultsCount_one": "{{count}} bâtiment trouvé",
     "resultsCount_other": "{{count}} bâtiments trouvés",
     "noResults": "Aucun bâtiment ne correspond à votre recherche.",
-    "approximateNote": "Les contours des bâtiments proviennent d'OpenStreetMap; les bâtiments sans contour sont indiqués par un point approximatif. Consultez la carte officielle pour les adresses exactes et les numéros de bâtiment."
+    "approximateNote": "Les contours des bâtiments proviennent d'OpenStreetMap. Consultez la carte officielle pour les adresses exactes et les numéros de bâtiment."
   },
   "login": {
     "brandAcronym": "RSP",
@@ -343,20 +359,28 @@
     "vitalSignsTable": {
       "time": "Heure",
       "timeHint": "HH:MM",
-      "rateRhythmQualityHint": "fréquence, rythme, qualité",
       "spo2Hint": "0-100",
-      "bpHint": "SYS/DIA ou SYS/PALP",
       "locHint": "AOx(1-3) ou GCS 3-15",
+      "locPlaceholder": "ex. GCS 15",
       "skin": "Peau",
-      "skinHint": "XX°C, couleur, temp., humidité",
       "pupils": "Pupilles",
-      "pupilsHint": "PERRLA?, N mm",
-      "clickToEdit": "Modifiez",
-      "removeRow": "Retirer la ligne {{index}}",
-      "addRow": "Ajouter une ligne",
+      "removeRow": "Retirer le relevé {{index}}",
+      "addRow": "Ajouter un relevé",
+      "selectPlaceholder": "Sélectionner...",
+      "partRate": "Fréquence",
+      "partRhythm": "Rythme",
+      "partQuality": "Qualité",
+      "partSys": "SYS",
+      "partDia": "DIA",
+      "partTempC": "Temp. (°C)",
+      "partColor": "Couleur",
+      "partWarmth": "Chaleur",
+      "partMoisture": "Humidité",
+      "partReactivity": "Réactivité",
+      "partSizeMm": "Taille (mm)",
       "help24h": "Utilisez le format 24 heures pour les heures (ex. 14:30 pour 14h30).",
       "helpDnoUto": "Si la valeur n'a pas été obtenue, inscrivez N.O. ou I.O. selon le cas et expliquez dans les commentaires.",
-      "helpClickEdit": "Cliquez sur une cellule pour la modifier. Appuyez sur Entrée pour enregistrer."
+      "helpUnusual": "Si un signe vital est inhabituel, mentionnez-le spécifiquement et expliquez dans les commentaires."
     },
     "oxygenProtocol": {
       "title": "Protocole d'oxygène",

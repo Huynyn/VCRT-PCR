@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, Edit, FileText } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -22,6 +22,16 @@ const SamplePcrSection: React.FC = () => {
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const draftTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  // Grows the textarea to fit its content instead of scrolling internally -
+  // otherwise a long draft gets its own inner scrollbar on top of the
+  // Modal's own outer scroll, which is a confusing double-scroll UI.
+  const autoGrowDraftTextarea = (el: HTMLTextAreaElement | null) => {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
 
   useEffect(() => {
     apiRequest('/settings/sample_pcr_text')
@@ -49,6 +59,14 @@ const SamplePcrSection: React.FC = () => {
     setError('')
     setShowEditModal(true)
   }
+
+  useEffect(() => {
+    if (!showEditModal) return
+    // The textarea only mounts once the Modal opens, so its scrollHeight
+    // isn't measurable until the next frame.
+    const id = requestAnimationFrame(() => autoGrowDraftTextarea(draftTextareaRef.current))
+    return () => cancelAnimationFrame(id)
+  }, [showEditModal])
 
   const handleSave = async () => {
     try {
@@ -125,7 +143,16 @@ const SamplePcrSection: React.FC = () => {
           {error && (
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           )}
-          <Textarea value={draft} onChange={e => setDraft(e.target.value)} rows={14} />
+          <Textarea
+            ref={draftTextareaRef}
+            value={draft}
+            onChange={e => {
+              setDraft(e.target.value)
+              autoGrowDraftTextarea(e.target)
+            }}
+            rows={14}
+            resize="none"
+          />
           <div className="flex justify-end space-x-3 pt-4 border-t">
             <Button variant="secondary" onClick={() => setShowEditModal(false)} disabled={saving}>
               {t('common.cancel')}

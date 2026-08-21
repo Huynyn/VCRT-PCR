@@ -98,7 +98,7 @@
   "supplyForm": {
     "title": "Report Supplies Used",
     "notSetUp": "An admin hasn't set up the supply-usage form link yet.",
-    "instructions": "Scan this QR code with your phone to open the Microsoft Form and report any medical supplies used from the bags during a call. Make sure to do that even if no supplies were used, so we can track usage and ensure we have enough supplies.",
+    "instructions": "Scan this QR code with your phone to open the Microsoft Form and report any medical supplies used from the bags during a call. Make sure to do that even if no supplies were used, so we can track usage.",
     "qrAlt": "QR code for supply usage form",
     "adminTitle": "Supply Usage Form QR Code",
     "adminSubtitle": "Set the Microsoft Form link responders use to report supplies used from the bags",
@@ -132,6 +132,22 @@
     "addAtLeastOne": "Add at least one term",
     "saveFailed": "Failed to save"
   },
+  "medications": {
+    "title": "Common Medications",
+    "description": "Searchable reference of common medications, doses, and indications.",
+    "searchPlaceholder": "Search medication...",
+    "noResults": "No medications found for this filter.",
+    "doseLabel": "Usual dose",
+    "editTitle": "Edit Common Medications",
+    "genericNamePlaceholder": "Generic name",
+    "brandNamePlaceholder": "Brand name",
+    "categoryPlaceholder": "Class",
+    "indicationsPlaceholder": "Main indications",
+    "dosePlaceholder": "Usual dose",
+    "addMedication": "Add Medication",
+    "addAtLeastOne": "Add at least one medication",
+    "saveFailed": "Failed to save"
+  },
   "campusMap": {
     "title": "Main Campus Map",
     "openOfficial": "Open official map",
@@ -139,7 +155,7 @@
     "resultsCount_one": "{{count}} building found",
     "resultsCount_other": "{{count}} buildings found",
     "noResults": "No buildings match your search.",
-    "approximateNote": "Building outlines are from OpenStreetMap; buildings without an outline are shown at an approximate point. See the official map for exact addresses and building numbers."
+    "approximateNote": "Building outlines are from OpenStreetMap. See the official map for exact addresses and building numbers."
   },
   "login": {
     "brandAcronym": "PCR",
@@ -343,20 +359,28 @@
     "vitalSignsTable": {
       "time": "Time",
       "timeHint": "HH:MM",
-      "rateRhythmQualityHint": "rate, rhythm, quality",
       "spo2Hint": "0-100",
-      "bpHint": "SYS/DIA or SYS/PALP",
       "locHint": "AOx(1-3) or GCS 3-15",
+      "locPlaceholder": "e.g. GCS 15",
       "skin": "Skin",
-      "skinHint": "XX°C, color, temp, moisture",
       "pupils": "Pupils",
-      "pupilsHint": "PERRLA?, N mm",
-      "clickToEdit": "Click to edit",
-      "removeRow": "Remove row {{index}}",
-      "addRow": "Add Row",
+      "removeRow": "Remove set {{index}}",
+      "addRow": "Add Set",
+      "selectPlaceholder": "Select...",
+      "partRate": "Rate",
+      "partRhythm": "Rhythm",
+      "partQuality": "Quality",
+      "partSys": "SYS",
+      "partDia": "DIA",
+      "partTempC": "Temp (°C)",
+      "partColor": "Color",
+      "partWarmth": "Warmth",
+      "partMoisture": "Moisture",
+      "partReactivity": "Reactivity",
+      "partSizeMm": "Size (mm)",
       "help24h": "Use 24-hour format for time entries (e.g., 14:30 for 2:30 PM).",
       "helpDnoUto": "If value was not obtained, enter DNO or UTO based on case and explain in comments.",
-      "helpClickEdit": "Click on any cell to edit. Press Enter to save changes."
+      "helpUnusual": "If a vital sign is unusual, mention it specifically and explain in the comments."
     },
     "oxygenProtocol": {
       "title": "Oxygen Protocol",

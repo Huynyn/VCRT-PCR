@@ -849,21 +849,33 @@ const PCRPage: React.FC = () => {
       vitalSigns: [
         {
           time: '19:47',
-          pulse: '82, regular, strong',
-          resp: '16, regular, unlaboured',
+          pulse: '82, Regular, Strong',
+          pulseParts: { rate: '82', rhythm: 'Regular', quality: 'Strong' },
+          resp: '16, Regular, Unlaboured',
+          respParts: { rate: '16', rhythm: 'Regular', quality: 'Unlaboured' },
           spo2: '98',
           bp: '118/76',
+          bpParts: { sys: '118', dia: '76' },
           loc: 'A&O x4',
-          skin: 'Warm, dry, normal colour',
+          skin: 'Pink, Warm, Dry',
+          skinParts: { color: 'Pink', warmth: 'Warm', moisture: 'Dry' },
+          pupils: 'PERRLA, 3',
+          pupilsParts: { reactivity: 'PERRLA', sizeMm: '3' },
         },
         {
           time: '19:52',
-          pulse: '78, regular, strong',
-          resp: '16, regular, unlaboured',
+          pulse: '78, Regular, Strong',
+          pulseParts: { rate: '78', rhythm: 'Regular', quality: 'Strong' },
+          resp: '16, Regular, Unlaboured',
+          respParts: { rate: '16', rhythm: 'Regular', quality: 'Unlaboured' },
           spo2: '98',
           bp: '116/74',
+          bpParts: { sys: '116', dia: '74' },
           loc: 'A&O x4',
-          skin: 'Warm, dry, normal colour',
+          skin: 'Pink, Warm, Dry',
+          skinParts: { color: 'Pink', warmth: 'Warm', moisture: 'Dry' },
+          pupils: 'PERRLA, 3',
+          pupilsParts: { reactivity: 'PERRLA', sizeMm: '3' },
         },
       ],
 
@@ -1097,7 +1109,10 @@ const PCRPage: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-8" noValidate>
         {isLoadingDraft && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          // z-[1200] matches the shared Modal component - above the
+          // Sidebar's own z-[1100], so the sidebar sits behind (and dims
+          // under) this overlay's backdrop instead of showing through it.
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1200]">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

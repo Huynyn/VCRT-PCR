@@ -7,6 +7,7 @@ import {
   SamplePcrSection,
   DebriefQuestionsSection,
   MedicalGlossarySection,
+  CommonMedicationsSection,
   CampusMapSection,
 } from '../components/composite'
 
@@ -40,12 +41,10 @@ const DashboardPage = () => {
         </span>
       </div>
 
-      {isAdmin ? <SupplyFormQrAdmin /> : <SupplyFormQrSection />}
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <SamplePcrSection />
         <MedicalGlossarySection />
-        <DebriefQuestionsSection />
+        <CommonMedicationsSection />
       </div>
 
       {i18n.language === 'fr' && (
@@ -55,6 +54,11 @@ const DashboardPage = () => {
       )}
 
       <CampusMapSection />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <DebriefQuestionsSection />
+        {isAdmin ? <SupplyFormQrAdmin /> : <SupplyFormQrSection />}
+      </div>
     </div>
   )
 }

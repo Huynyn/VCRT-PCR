@@ -674,7 +674,10 @@ export class PDFService {
     const result = cachedResult ?? (await this.generatePDFReport(data, options))
 
     const modal = document.createElement('div')
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+    // z-[1200] matches the shared Modal component - above the Sidebar's own
+    // z-[1100], so the sidebar sits behind (and dims under) this popup's
+    // backdrop instead of showing through it.
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1200]'
     modal.innerHTML = `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 h-[90vh] flex flex-col">
         <div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
@@ -754,7 +757,10 @@ export class PDFService {
     }
 
     const modal = document.createElement('div')
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+    // z-[1200] matches the shared Modal component - above the Sidebar's own
+    // z-[1100], so the sidebar sits behind (and dims under) this popup's
+    // backdrop instead of showing through it.
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1200]'
     modal.innerHTML = `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
