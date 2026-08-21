@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronUp, Edit, HelpCircle, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Edit, HelpCircle, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
-import { Modal, Button } from '@/components/ui'
+import { Modal, Button, TitleBadge } from '@/components/ui'
 import { Input, Select } from '@/components/forms'
 
 type DebriefCategory = 'General' | 'Clinical Performance' | 'Teamwork' | 'Wellbeing' | 'Safety' | 'Documentation'
@@ -39,16 +39,14 @@ const CATEGORY_OPTIONS: DebriefCategory[] = [
   'Documentation',
 ]
 
-const VISIBLE_QUESTIONS = 3
-
 const DebriefQuestionsSection: React.FC = () => {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
   const [questions, setQuestions] = useState<DebriefQuestionItem[]>(DEFAULT_DEBRIEF_QUESTIONS)
   const [loading, setLoading] = useState(true)
-  const [startIndex, setStartIndex] = useState(0)
+  const [expanded, setExpanded] = useState(false)
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [draft, setDraft] = useState<DebriefQuestionItem[]>([])
@@ -72,27 +70,6 @@ const DebriefQuestionsSection: React.FC = () => {
       })
       .finally(() => setLoading(false))
   }, [])
-
-  useEffect(() => {
-    setStartIndex(0)
-  }, [questions])
-
-  const maxStartIndex = Math.max(0, Math.ceil(questions.length / VISIBLE_QUESTIONS) - 1) * VISIBLE_QUESTIONS
-  const canScrollUp = startIndex > 0
-  const canScrollDown = startIndex < maxStartIndex
-
-  const scrollUp = () => setStartIndex(i => Math.max(0, i - VISIBLE_QUESTIONS))
-  const scrollDown = () => setStartIndex(i => Math.min(maxStartIndex, i + VISIBLE_QUESTIONS))
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      scrollUp()
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      scrollDown()
-    }
-  }
 
   const openEdit = () => {
     setDraft(questions.map(q => ({ ...q })))
@@ -142,19 +119,26 @@ const DebriefQuestionsSection: React.FC = () => {
   }
 
   return (
-    <div className="mb-6">
-      <div className="card">
-        <div className="card-header">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="icon-chip icon-chip-primary w-9 h-9">
-                <HelpCircle className="w-4 h-4" />
-              </span>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {t('debrief.title')}
-              </h3>
-            </div>
-            {isAdmin && (
+    <>
+      <div className="card h-full min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col items-start gap-3 px-6 pt-4 pb-6">
+          <TitleBadge icon={<HelpCircle className="w-5 h-5" />}>{t('debrief.title')}</TitleBadge>
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-snug">{t('debrief.description')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          aria-label={t('common.expand')}
+          className="flex items-center justify-center py-3 border-t border-gray-200 dark:border-gray-700 text-gray-400 hover:text-primary-600 hover:bg-gray-50 dark:text-gray-500 dark:hover:text-primary-400 dark:hover:bg-gray-700/50 transition-colors rounded-b-lg"
+        >
+          <ChevronDown className="w-5 h-5" />
+        </button>
+      </div>
+
+      <Modal isOpen={expanded} onClose={() => setExpanded(false)} title={t('debrief.title')} size="lg">
+        <div className="space-y-4">
+          {isAdmin && (
+            <div className="flex justify-end">
               <button
                 type="button"
                 onClick={openEdit}
@@ -163,67 +147,31 @@ const DebriefQuestionsSection: React.FC = () => {
                 <Edit className="w-3 h-3" />
                 {t('common.edit')}
               </button>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
 
-        <div className="card-body">
           {loading ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
           ) : (
             <div
-              className="flex items-stretch gap-2 outline-none"
-              tabIndex={0}
-              onKeyDown={handleKeyDown}
+              className="flex flex-col gap-3"
               role="listbox"
               aria-label={t('debrief.ariaLabel')}
             >
-              <div className="flex flex-col gap-3 flex-1 min-w-0">
-                {questions.slice(startIndex, startIndex + VISIBLE_QUESTIONS).map((item, i) => (
-                  <div
-                    key={startIndex + i}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
-                  >
-                    <p className="text-base text-gray-900 dark:text-gray-100">
-                      {item.question}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-col items-center justify-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={scrollUp}
-                  disabled={!canScrollUp}
-                  aria-label={t('debrief.showPrevious')}
-                  className="p-1.5 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+              {questions.map((item, i) => (
+                <div
+                  key={i}
+                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
                 >
-                  <ChevronUp className="w-5 h-5" />
-                </button>
-                <span className="text-xs text-gray-400 dark:text-gray-500 select-none">
-                  {Math.min(startIndex + VISIBLE_QUESTIONS, questions.length)}/{questions.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={scrollDown}
-                  disabled={!canScrollDown}
-                  aria-label={t('debrief.showNext')}
-                  className="p-1.5 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-700 dark:text-primary-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronDown className="w-5 h-5" />
-                </button>
-              </div>
+                  <p className="text-base text-gray-900 dark:text-gray-100">
+                    {item.question}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
-
-          {i18n.language === 'fr' && (
-            <p className="mt-4 text-xs italic text-gray-400 dark:text-gray-500">
-              {t('common.contentNotTranslatedNote')}
-            </p>
-          )}
         </div>
-      </div>
+      </Modal>
 
       <Modal
         isOpen={showEditModal}
@@ -279,7 +227,7 @@ const DebriefQuestionsSection: React.FC = () => {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   )
 }
 

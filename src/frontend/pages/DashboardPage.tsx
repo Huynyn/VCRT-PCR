@@ -7,6 +7,7 @@ import {
   SamplePcrSection,
   DebriefQuestionsSection,
   MedicalGlossarySection,
+  CampusMapSection,
 } from '../components/composite'
 
 const DashboardPage = () => {
@@ -41,11 +42,19 @@ const DashboardPage = () => {
 
       {isAdmin ? <SupplyFormQrAdmin /> : <SupplyFormQrSection />}
 
-      <SamplePcrSection />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SamplePcrSection />
+        <MedicalGlossarySection />
+        <DebriefQuestionsSection />
+      </div>
 
-      <MedicalGlossarySection />
+      {i18n.language === 'fr' && (
+        <p className="mt-3 text-xs italic text-gray-400 dark:text-gray-500 text-center">
+          {t('common.contentNotTranslatedNote')}
+        </p>
+      )}
 
-      <DebriefQuestionsSection />
+      <CampusMapSection />
     </div>
   )
 }

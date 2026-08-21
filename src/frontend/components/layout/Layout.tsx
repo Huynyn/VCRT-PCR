@@ -43,6 +43,9 @@ const Layout: React.FC<LayoutProps> = ({
   onToggleTheme,
 }) => {
   const { t } = useTranslation()
+  // Same flag drives two different things depending on breakpoint: below lg
+  // it's the off-canvas drawer's open/closed state, at lg+ it's the sidebar's
+  // pinned-open state (see the comment on `pinned` in Sidebar.tsx).
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const toggleSidebar = () => {
@@ -55,28 +58,30 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar */}
-        <Sidebar
-          isOpen={sidebarOpen}
-          currentPath={currentPath}
-          onNavigate={onNavigate}
-          onClose={closeSidebar}
+      <div className="flex flex-col h-screen overflow-hidden">
+        {/* Header - a full-width top bar (hamburger + logo + brand never
+            collapse) sitting above the sidebar rail rather than beside it,
+            so those stay put regardless of the rail's collapsed/expanded/
+            pinned state below. */}
+        <Header
           user={user}
+          pageTitle={pageTitleFor(currentPath, t)}
+          onLogout={onLogout}
+          onNavigate={onNavigate}
+          onToggleTheme={onToggleTheme}
+          onToggleSidebar={toggleSidebar}
+          darkMode={darkMode}
+          sidebarOpen={sidebarOpen}
         />
 
-        {/* Main content area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header */}
-          <Header
-            user={user}
-            pageTitle={pageTitleFor(currentPath, t)}
-            onLogout={onLogout}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <Sidebar
+            isOpen={sidebarOpen}
+            currentPath={currentPath}
             onNavigate={onNavigate}
-            onToggleTheme={onToggleTheme}
-            onToggleSidebar={toggleSidebar}
-            darkMode={darkMode}
-            sidebarOpen={sidebarOpen}
+            onClose={closeSidebar}
+            user={user}
           />
 
           {/* Main content */}

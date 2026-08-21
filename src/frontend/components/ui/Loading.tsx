@@ -37,7 +37,10 @@ const Loading: React.FC<LoadingProps> = ({
 
   if (overlay) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      // z-[1200] - above the Sidebar's own z-[1100] (see Sidebar.tsx), so
+      // the dimming backdrop covers the sidebar too instead of leaving it
+      // showing through undimmed while the rest of the page is covered.
+      <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black bg-opacity-50">
         <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-xl">
           {content}
         </div>

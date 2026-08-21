@@ -133,7 +133,7 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
         </h3>
       )}
 
-      <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 rounded-xl">
+      <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 rounded-lg">
         {/* No min-w-full: with table-fixed, an ancestor forcing the table
             wider than the sum of its column widths would make browsers
             redistribute the extra space across every column - including

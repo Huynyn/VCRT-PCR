@@ -16,6 +16,7 @@
     "edit": "Modifier",
     "delete": "Supprimer",
     "back": "Retour",
+    "expand": "Développer",
     "loading": "Chargement...",
     "copy": "Copier",
     "copied": "Copié",
@@ -59,6 +60,7 @@
   },
   "samplePcr": {
     "title": "Exemple de RSP",
+    "description": "Un modèle prêt à utiliser pour rédiger un rapport de soins complet.",
     "editTitle": "Modifier l'exemple de RSP",
     "saveFailed": "Échec de l'enregistrement"
   },
@@ -108,6 +110,7 @@
   },
   "debrief": {
     "title": "Questions de bilan",
+    "description": "Des questions standards pour guider le bilan d'équipe après un appel.",
     "ariaLabel": "Questions de bilan",
     "showPrevious": "Afficher la question précédente",
     "showNext": "Afficher la question suivante",
@@ -119,6 +122,7 @@
   },
   "glossary": {
     "title": "Glossaire médical",
+    "description": "Acronymes et termes médicaux courants utilisés dans les rapports de soins.",
     "searchPlaceholder": "Rechercher un terme...",
     "noResults": "Aucun acronyme trouvé pour ce filtre.",
     "editTitle": "Modifier le glossaire médical",
@@ -127,6 +131,15 @@
     "addTerm": "Ajouter un terme",
     "addAtLeastOne": "Ajoutez au moins un terme",
     "saveFailed": "Échec de l'enregistrement"
+  },
+  "campusMap": {
+    "title": "Carte du campus principal",
+    "openOfficial": "Ouvrir la carte officielle",
+    "searchPlaceholder": "Rechercher un code, un nom ou une adresse...",
+    "resultsCount_one": "{{count}} bâtiment trouvé",
+    "resultsCount_other": "{{count}} bâtiments trouvés",
+    "noResults": "Aucun bâtiment ne correspond à votre recherche.",
+    "approximateNote": "Les contours des bâtiments proviennent d'OpenStreetMap; les bâtiments sans contour sont indiqués par un point approximatif. Consultez la carte officielle pour les adresses exactes et les numéros de bâtiment."
   },
   "login": {
     "brandAcronym": "RSP",
@@ -151,7 +164,9 @@
     "switchToEnglish": "Passer à l'anglais",
     "switchToFrench": "Passer au français",
     "notifications": "Notifications",
-    "logout": "Déconnexion"
+    "logout": "Déconnexion",
+    "collapseSidebar": "Réduire le menu",
+    "expandSidebar": "Développer le menu"
   },
   "pcr": {
     "searchOrType": "Rechercher ou saisir...",
@@ -189,7 +204,7 @@
       "callNumber": "Numéro d'appel",
       "callNumberPlaceholder": "N° d'appel",
       "location": "Lieu",
-      "locationPlaceholder": "Lieu de l'incident",
+      "locationPlaceholder": "Utiliser le code, si possible",
       "supervisor": "Superviseur",
       "supervisorPlaceholder": "Sélectionner ou saisir soi-même...",
       "useMyName": "Utiliser mon nom",

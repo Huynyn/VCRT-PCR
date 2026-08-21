@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { CalendarDays } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
+import { TitleBadge } from '@/components/ui'
 import CallCalendar from './CallCalendar'
 import RollingBarChart, { BarDatum } from './RollingBarChart'
 
@@ -122,13 +123,8 @@ const UserCallStats: React.FC = () => {
 
   return (
     <div className="card">
-      <div className="card-header">
-        <div className="flex items-center gap-3">
-          <span className="icon-chip icon-chip-primary w-9 h-9">
-            <CalendarDays className="w-4 h-4" />
-          </span>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{t('callStats.title')}</h3>
-        </div>
+      <div className="card-header-flush">
+        <TitleBadge icon={<CalendarDays className="w-5 h-5" />}>{t('callStats.title')}</TitleBadge>
       </div>
       <div className="card-body">
         {loading ? (

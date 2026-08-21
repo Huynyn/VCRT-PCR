@@ -10,6 +10,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { apiRequest } from '@/utils/api'
+import { TitleBadge } from '@/components/ui'
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'semesterly'
 
@@ -256,16 +257,11 @@ const AdminCallStats: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="card">
-        <div className="card-header">
+        <div className="card-header-flush">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="icon-chip icon-chip-primary w-9 h-9">
-                <Activity className="w-4 h-4" />
-              </span>
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{t('callDigest.title')}</h3>
-                <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{range.label}</p>
-              </div>
+            <div>
+              <TitleBadge icon={<Activity className="w-5 h-5" />}>{t('callDigest.title')}</TitleBadge>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{range.label}</p>
             </div>
             <div className="inline-flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden self-start">
               {PERIOD_OPTIONS.map((opt, i) => (

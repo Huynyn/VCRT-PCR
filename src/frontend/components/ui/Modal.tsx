@@ -46,7 +46,11 @@ const Modal: React.FC<ModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    // z-[1200] - above the Sidebar's own z-[1100] and any embedded Leaflet
+    // map's panes/controls (which top out at z-index 1000, see
+    // CampusMapSection), so the modal and its backdrop consistently render
+    // on top of both instead of being cut by them.
+    <div className="fixed inset-0 z-[1200] flex items-center justify-center">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
@@ -57,7 +61,7 @@ const Modal: React.FC<ModalProps> = ({
       {/* Modal */}
       <div
         className={cn(
-          'relative w-full bg-white rounded-xl shadow-xl dark:bg-gray-800',
+          'relative w-full bg-white rounded-lg shadow-xl dark:bg-gray-800',
           'animate-slide-up',
           sizeClasses[size]
         )}

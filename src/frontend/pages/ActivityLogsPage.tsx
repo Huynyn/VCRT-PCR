@@ -349,9 +349,7 @@ const ActivityLogsPage = () => {
       </div>
 
       {/* Activity Logs Table */}
-      <div className="card">
-        <div className="card-body">
-          {logs.length === 0 ? (
+      {logs.length === 0 ? (
             <div className="text-center py-8">
               <Activity className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{t('activityLogs.noLogsFound')}</h3>
@@ -364,7 +362,7 @@ const ActivityLogsPage = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-xl">
+              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
                 <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
@@ -417,7 +415,7 @@ const ActivityLogsPage = () => {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 mt-4">
+                <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 mt-4">
                   <p className="text-sm text-gray-700 dark:text-gray-300">
                     {t('activityLogs.page')} <span className="font-medium">{filters.page}</span> {t('activityLogs.of')}{' '}
                     <span className="font-medium">{totalPages}</span>
@@ -446,8 +444,6 @@ const ActivityLogsPage = () => {
               )}
             </>
           )}
-        </div>
-      </div>
 
       <Modal
         isOpen={showCleanModal}

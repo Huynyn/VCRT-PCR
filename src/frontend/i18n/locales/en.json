@@ -16,6 +16,7 @@
     "edit": "Edit",
     "delete": "Delete",
     "back": "Back",
+    "expand": "Expand",
     "loading": "Loading...",
     "copy": "Copy",
     "copied": "Copied",
@@ -59,6 +60,7 @@
   },
   "samplePcr": {
     "title": "Sample PCR",
+    "description": "A ready-to-use template for writing a full patient care report.",
     "editTitle": "Edit Sample PCR",
     "saveFailed": "Failed to save"
   },
@@ -108,6 +110,7 @@
   },
   "debrief": {
     "title": "Debrief Questions",
+    "description": "Standard questions to guide a post-call team debrief.",
     "ariaLabel": "Debrief questions",
     "showPrevious": "Show previous question",
     "showNext": "Show next question",
@@ -119,6 +122,7 @@
   },
   "glossary": {
     "title": "Medical Glossary Terms",
+    "description": "Common medical acronyms and terms used in patient care reports.",
     "searchPlaceholder": "Search term...",
     "noResults": "No acronyms found for this filter.",
     "editTitle": "Edit Medical Glossary Terms",
@@ -127,6 +131,15 @@
     "addTerm": "Add Term",
     "addAtLeastOne": "Add at least one term",
     "saveFailed": "Failed to save"
+  },
+  "campusMap": {
+    "title": "Main Campus Map",
+    "openOfficial": "Open official map",
+    "searchPlaceholder": "Search code, name, or address...",
+    "resultsCount_one": "{{count}} building found",
+    "resultsCount_other": "{{count}} buildings found",
+    "noResults": "No buildings match your search.",
+    "approximateNote": "Building outlines are from OpenStreetMap; buildings without an outline are shown at an approximate point. See the official map for exact addresses and building numbers."
   },
   "login": {
     "brandAcronym": "PCR",
@@ -151,7 +164,9 @@
     "switchToEnglish": "Switch to English",
     "switchToFrench": "Switch to French",
     "notifications": "Notifications",
-    "logout": "Logout"
+    "logout": "Logout",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar"
   },
   "pcr": {
     "searchOrType": "Search or type...",
@@ -189,7 +204,7 @@
       "callNumber": "Call Number",
       "callNumberPlaceholder": "Call #",
       "location": "Location",
-      "locationPlaceholder": "Incident location",
+      "locationPlaceholder": "Use 3-letter code, if possible",
       "supervisor": "Supervisor",
       "supervisorPlaceholder": "Select self or type...",
       "useMyName": "Use my name",

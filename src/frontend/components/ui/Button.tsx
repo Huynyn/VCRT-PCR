@@ -15,19 +15,23 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   type = 'button',
   ...props
 }, ref) => {
-  const baseClasses = 'btn'
   const variantClasses = {
     primary: 'btn-primary',
     secondary: 'btn-secondary',
     danger: 'btn-danger',
     outline: 'btn-outline',
     ghost: 'btn-ghost',
+    icon: 'btn-icon-ghost',
   }
   const sizeClasses = {
     sm: 'btn-sm',
     md: 'btn-md',
     lg: 'btn-lg',
   }
+  // btn-icon-ghost is a standalone class (fixed size, own padding/rounding),
+  // so it shouldn't be layered under the base .btn/size classes like the
+  // other variants are.
+  const baseClasses = variant === 'icon' ? '' : 'btn'
 
   return (
     <button
@@ -36,7 +40,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
       className={cn(
         baseClasses,
         variantClasses[variant],
-        sizeClasses[size],
+        variant !== 'icon' && sizeClasses[size],
         className
       )}
       disabled={disabled || loading}

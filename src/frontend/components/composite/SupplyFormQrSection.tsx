@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import QRCode from 'qrcode'
 import { ClipboardList } from 'lucide-react'
 import { apiRequest } from '@/utils/api'
+import { TitleBadge } from '@/components/ui'
 
 const SupplyFormQrSection: React.FC = () => {
   const { t } = useTranslation()
@@ -32,15 +33,8 @@ const SupplyFormQrSection: React.FC = () => {
   return (
     <div className="mb-6">
       <div className="card">
-        <div className="card-header">
-          <div className="flex items-center gap-3">
-            <span className="icon-chip icon-chip-primary w-9 h-9">
-              <ClipboardList className="w-4 h-4" />
-            </span>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-              {t('supplyForm.title')}
-            </h3>
-          </div>
+        <div className="card-header-flush">
+          <TitleBadge icon={<ClipboardList className="w-5 h-5" />}>{t('supplyForm.title')}</TitleBadge>
         </div>
         <div className="card-body">
           {loading ? (
@@ -55,7 +49,7 @@ const SupplyFormQrSection: React.FC = () => {
               <div className="flex-1 text-base text-gray-700 dark:text-gray-300">
                 <p>{t('supplyForm.instructions')}</p>
               </div>
-              <div className="shrink-0 p-3 bg-white rounded-xl border border-gray-200 dark:border-gray-600">
+              <div className="shrink-0 p-3 bg-white rounded-lg border border-gray-200 dark:border-gray-600">
                 {qrDataUrl && (
                   <img src={qrDataUrl} alt={t('supplyForm.qrAlt')} width={160} height={160} />
                 )}

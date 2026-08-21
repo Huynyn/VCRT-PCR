@@ -114,17 +114,6 @@ const Tooltip: React.FC<TooltipProps> = ({
       role="tooltip"
     >
       {content}
-      <div
-        className={cn(
-          'absolute w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45',
-          {
-            'bottom-[-4px] left-1/2 transform -translate-x-1/2': position === 'top',
-            'top-[-4px] left-1/2 transform -translate-x-1/2': position === 'bottom',
-            'right-[-4px] top-1/2 transform -translate-y-1/2': position === 'left',
-            'left-[-4px] top-1/2 transform -translate-y-1/2': position === 'right',
-          }
-        )}
-      />
     </div>
   )
 

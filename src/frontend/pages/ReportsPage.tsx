@@ -120,7 +120,7 @@ const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions }) => {
         aria-label={t('reports.actions')}
         aria-haspopup="true"
         aria-expanded={open}
-        className="flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 p-2 transition-colors"
+        className="btn-icon-ghost"
       >
         <MoreVertical className="w-4 h-4" />
       </button>
@@ -581,9 +581,7 @@ const ReportsPage = () => {
 
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}
 
-      <div className="card">
-        <div className="card-body">
-          {reports.length === 0 ? (
+      {reports.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-gray-500 dark:text-gray-400">
                 <svg
@@ -611,7 +609,7 @@ const ReportsPage = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-xl">
+              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
               <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
@@ -691,8 +689,6 @@ const ReportsPage = () => {
             </div>
             </>
           )}
-        </div>
-      </div>
 
       {/* Admin: Request Changes modal (also used to update existing comments) */}
       <Modal

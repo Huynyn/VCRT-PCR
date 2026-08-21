@@ -17,10 +17,9 @@ const LanguageToggle: React.FC = () => {
     <Tooltip content={isFrench ? t('header.switchToEnglish') : t('header.switchToFrench')}>
       <Button
         type="button"
-        variant="ghost"
-        size="sm"
+        variant="icon"
         onClick={toggleLanguage}
-        className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 text-xs font-semibold"
+        className="hover:text-primary-600 dark:hover:text-primary-400 text-xs font-semibold"
         aria-label={isFrench ? t('header.switchToEnglish') : t('header.switchToFrench')}
       >
         {isFrench ? 'EN' : 'FR'}

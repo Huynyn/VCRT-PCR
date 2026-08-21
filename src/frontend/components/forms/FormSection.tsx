@@ -23,34 +23,27 @@ const FormSection: React.FC<FormSectionProps> = ({
   return (
     <div className="mb-8">
       <div
-        className={cn(
-          'border-b border-gray-200 pb-4 mb-6 dark:border-gray-700',
-          isCollapsible && 'cursor-pointer select-none'
-        )}
+        className={cn('mb-6', isCollapsible && 'cursor-pointer select-none')}
         onClick={toggleOpen}
       >
         <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2.5">
-              {number !== undefined && (
-                <span className="flex items-center justify-center min-w-[1.75rem] h-7 px-1.5 rounded-lg bg-primary-50 text-primary-700 text-sm font-semibold dark:bg-primary-900/40 dark:text-primary-300">
+          <div className="flex items-center gap-2.5">
+            {number !== undefined ? (
+              <span className="inline-flex items-center gap-3 max-w-full min-w-0 rounded-full bg-primary-600 dark:bg-primary-500 text-white pl-2 pr-5 py-2.5">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20 text-sm font-bold shrink-0">
                   {number}
                 </span>
-              )}
-              <h2 className={cn(
-                'text-xl font-semibold text-gray-900 dark:text-gray-100',
-                required && 'after:content-["*"] after:text-emergency-500 after:ml-1'
-              )}>
+                <span className="text-base font-semibold truncate min-w-0">
+                  {title}
+                </span>
+              </span>
+            ) : (
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 {title}
               </h2>
-            </div>
-            {subtitle && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {subtitle}
-              </p>
             )}
           </div>
-          
+
           {isCollapsible && (
             <button
               type="button"
@@ -66,8 +59,19 @@ const FormSection: React.FC<FormSectionProps> = ({
             </button>
           )}
         </div>
+
+        {/* Divider comes right after the title now, with the description
+            below it instead of above - swapped from the original order per
+            request. */}
+        <div className="border-t border-gray-200 dark:border-gray-700 mt-3 pt-3">
+          {subtitle && (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
-      
+
       {isOpen && (
         <div
           id={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}

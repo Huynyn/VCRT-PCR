@@ -4,6 +4,7 @@ import { Bell, FileEdit, AlertTriangle, ClipboardCheck, UserCog, Check } from 'l
 import { Button, Tooltip } from '@/components/ui'
 import { apiRequest } from '@/utils/api'
 import { parseServerDate, cn } from '@/utils'
+import { navIconProps } from './navIcon'
 
 interface NotificationBellProps {
   /** Only `role` is used, to decide which notifications apply. */
@@ -142,13 +143,12 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ user, onNavigate })
     <div className="relative" ref={containerRef}>
       <Tooltip content={t('notificationBell.notifications')}>
         <Button
-          variant="ghost"
-          size="sm"
+          variant="icon"
           onClick={() => setOpen((v) => !v)}
-          className="relative text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+          className="relative hover:text-primary-600 dark:hover:text-primary-400"
           aria-label={`${t('notificationBell.notifications')}${count > 0 ? ` (${t('notificationBell.unreadCount', { count })})` : ''}`}
         >
-          <Bell className="w-4 h-4" />
+          <Bell className="w-4 h-4" {...navIconProps(open)} />
           {count > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-burgundy-600 text-white text-[10px] font-semibold leading-none">
               {badgeText}

@@ -84,7 +84,7 @@
 @layer components {
   /* Button variants */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
@@ -115,6 +115,25 @@
 
   .btn-ghost {
     @apply btn border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 focus:ring-gray-500 dark:border-gray-600 dark:bg-gray-700/60 dark:text-gray-300 dark:hover:bg-gray-700;
+  }
+
+  /* Icon-only "invisible until hovered" button used in the header/top bar
+     (theme toggle, notifications, language, logout) - no fill or border at
+     rest, a circular outline appears on hover so the click target stays
+     obvious without cluttering the bar. Fixed square size keeps the ring a
+     true circle regardless of the icon/text inside. */
+  .btn-icon-ghost {
+    @apply inline-flex items-center justify-center h-9 w-9 rounded-full border border-transparent text-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-200;
+  }
+
+  /* Buttons inside a modal/popup (Discard, Cancel, Request Changes, etc.)
+     deliberately break from the pill shape used everywhere else in the app -
+     a squared-off, low-radius button reads as a deliberate, weighty
+     confirmation rather than a soft in-page action. The [role="dialog"]
+     selector matches the shared Modal component, so this applies wherever
+     it's used without needing per-page overrides. */
+  [role='dialog'] .btn {
+    @apply rounded-md;
   }
 
   /* Form inputs */
@@ -156,13 +175,23 @@
     @apply text-sm text-gray-500 mt-1;
   }
 
-  /* Card components */
+  /* Card components - flat, bordered containers (GitHub/Meta style) rather
+     than soft floating panels: a plain 1px border carries the shape, no
+     ambient shadow, and a tighter radius so sections read as structured
+     content rather than rounded "bubbles". */
   .card {
-    @apply bg-white rounded-xl shadow-card border border-gray-200 dark:bg-gray-800 dark:border-gray-700;
+    @apply bg-white rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700;
   }
 
   .card-header {
     @apply px-6 py-4 border-b border-gray-200 dark:border-gray-700;
+  }
+
+  /* Same padding as .card-header but no divider - used where the header's
+     title is already set off visually (see TitleBadge) so a line beneath it
+     would be redundant. */
+  .card-header-flush {
+    @apply px-6 py-4;
   }
 
   .card-body {
@@ -170,7 +199,7 @@
   }
 
   .card-footer {
-    @apply px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl dark:border-gray-700 dark:bg-gray-900;
+    @apply px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg dark:border-gray-700 dark:bg-gray-900;
   }
 
   /* Small icon badge used in card headers and stat tiles (see DashboardPage
@@ -263,6 +292,47 @@
 
   .responsive-table td {
     @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+  }
+
+  /* Campus map building code labels (CampusMapSection) - overrides Leaflet's
+     default div-icon box (a white square with a border) with a transparent
+     container, and styles the code pill itself. Centered on its lat/lng
+     point via the transform, since each label's width varies with its code
+     ("38" vs "538/540") so a fixed iconAnchor can't center it. */
+  .campus-building-icon {
+    background: transparent;
+    border: none;
+  }
+
+  .campus-building-icon__label {
+    @apply inline-block whitespace-nowrap bg-primary-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white shadow;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Code label centered on a building outline (a non-interactive Marker at
+     the polygon's centroid, see CampusMapSection) - plain text, no halo/
+     outline and no pill/box, since the outline itself already sets the
+     building apart from the map. */
+  .campus-building-code-label {
+    @apply inline-block whitespace-nowrap text-gray-900 text-[11px] font-bold;
+    transform: translate(-50%, -50%);
+  }
+  .dark .campus-building-code-label {
+    @apply text-white;
+  }
+
+  /* Full building name shown on hover (BuildingOutline in CampusMapSection) -
+     a solid black box in light mode, flipped to a white box in dark mode
+     (matching the app's `.dark` class convention), replacing Leaflet's own
+     default white tooltip styling. */
+  .leaflet-tooltip.campus-hover-name-tooltip {
+    @apply bg-gray-900 text-white text-xs font-medium px-2 py-1 border-none rounded shadow-lg;
+  }
+  .dark .leaflet-tooltip.campus-hover-name-tooltip {
+    @apply bg-white text-gray-900;
+  }
+  .leaflet-tooltip.campus-hover-name-tooltip::before {
+    display: none;
   }
 }
 

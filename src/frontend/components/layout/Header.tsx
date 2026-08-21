@@ -34,29 +34,46 @@ const Header: React.FC<HeaderProps> = ({
   const { t } = useTranslation()
 
   return (
-    <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4">
+    <header className="h-16 shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4">
       <div className="h-full flex items-center justify-between">
         {/* Left side */}
         <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggleSidebar}
-            className="lg:hidden"
-            aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
+          {/* Hamburger + logo + brand - fixed to the sidebar's pinned-open
+              width (w-72, minus this header's own px-4 left padding) once
+              the sidebar is open, so the title pill right after it lines up
+              with the sidebar's right edge instead of trailing wherever
+              this content's natural width happens to end. */}
+          <div className={cn('flex items-center gap-4 shrink-0', sidebarOpen && 'lg:w-[256px]')}>
+            <Tooltip content={sidebarOpen ? t('header.collapseSidebar') : t('header.expandSidebar')}>
+              <Button
+                variant="icon"
+                onClick={onToggleSidebar}
+                className="hover:text-primary-600 dark:hover:text-primary-400"
+                aria-label={sidebarOpen ? t('header.collapseSidebar') : t('header.expandSidebar')}
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+            </Tooltip>
 
-          <img
-            src="./images/vcrt_logo.png"
-            alt="PCR logo"
-            className="h-8 w-auto object-contain rounded-md lg:hidden"
-          />
+            <img
+              src="./images/vcrt_logo.png"
+              alt={t('common.logoAlt')}
+              className="h-8 w-auto object-contain rounded-md shrink-0"
+            />
 
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {pageTitle || t('header.patientCareReport')}
-          </h1>
+            <span className="text-sm font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap shrink-0">
+              VCRT <span className="font-medium">|</span> ÉBIC
+            </span>
+          </div>
+
+          {/* Fixed width so the pill doesn't grow/shrink as the page title
+              changes between routes - wide enough for the longest title in
+              either language ("Rapport de soins préhospitaliers"). */}
+          <div className="w-80 h-10 shrink-0 flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 px-4">
+            <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
+              {pageTitle || t('header.patientCareReport')}
+            </h1>
+          </div>
         </div>
 
         {/* Right side */}
@@ -66,10 +83,9 @@ const Header: React.FC<HeaderProps> = ({
           {/* Theme toggle */}
           <Tooltip content={darkMode ? t('header.switchToLight') : t('header.switchToDark')}>
             <Button
-              variant="ghost"
-              size="sm"
+              variant="icon"
               onClick={onToggleTheme}
-              className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+              className="hover:text-primary-600 dark:hover:text-primary-400"
               aria-label={darkMode ? t('header.switchToLight') : t('header.switchToDark')}
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -85,10 +101,9 @@ const Header: React.FC<HeaderProps> = ({
               <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
               <Tooltip content={t('header.logout')}>
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  variant="icon"
                   onClick={onLogout}
-                  className="text-gray-500 hover:text-burgundy-600 dark:text-gray-400 dark:hover:text-burgundy-400"
+                  className="hover:text-burgundy-600 dark:hover:text-burgundy-400"
                   aria-label={t('header.logout')}
                 >
                   <LogOut className="w-4 h-4" />

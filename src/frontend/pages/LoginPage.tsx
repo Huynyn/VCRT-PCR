@@ -96,10 +96,9 @@ const LoginPage: React.FC = () => {
         <Tooltip content={darkMode ? t('header.switchToLight') : t('header.switchToDark')}>
           <Button
             type="button"
-            variant="ghost"
-            size="sm"
+            variant="icon"
             onClick={toggleTheme}
-            className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+            className="hover:text-primary-600 dark:hover:text-primary-400"
             aria-label={darkMode ? t('header.switchToLight') : t('header.switchToDark')}
           >
             {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

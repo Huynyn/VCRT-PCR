@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useNotification } from '@/context'
 import { apiRequest } from '@/utils/api'
 import { parseServerDate } from '@/utils'
-import { Button, Modal, Alert } from '@/components/ui'
+import { Button, Modal, Alert, TitleBadge } from '@/components/ui'
 import { Checkbox, Textarea } from '@/components/forms'
 import { AdminCallStats, UserCallStats } from '@/components/composite'
 
@@ -125,11 +125,8 @@ const ProfilePage = () => {
         {/* Personal Information */}
         <div className="lg:col-span-2">
           <div className="card h-full">
-            <div className="card-header flex items-center gap-3">
-              <span className="icon-chip icon-chip-primary w-9 h-9">
-                <UserIcon className="w-4 h-4" />
-              </span>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{t('profile.personalInfo')}</h3>
+            <div className="card-header-flush">
+              <TitleBadge icon={<UserIcon className="w-5 h-5" />}>{t('profile.personalInfo')}</TitleBadge>
             </div>
             <div className="card-body">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -174,11 +171,8 @@ const ProfilePage = () => {
         {/* Account Overview */}
         <div className="space-y-6">
           <div className="card">
-            <div className="card-header flex items-center gap-3">
-              <span className="icon-chip icon-chip-primary w-9 h-9">
-                <Contact className="w-4 h-4" />
-              </span>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{t('profile.accountOverview')}</h3>
+            <div className="card-header-flush">
+              <TitleBadge icon={<Contact className="w-5 h-5" />}>{t('profile.accountOverview')}</TitleBadge>
             </div>
             <div className="card-body space-y-3">
               <div className="flex items-center justify-between text-sm">
