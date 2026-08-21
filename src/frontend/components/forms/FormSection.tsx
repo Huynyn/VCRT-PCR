@@ -29,7 +29,11 @@ const FormSection: React.FC<FormSectionProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             {number !== undefined ? (
-              <span className="inline-flex items-center gap-3 max-w-full min-w-0 rounded-full bg-primary-600 dark:bg-primary-500 text-white pl-2 pr-5 py-2.5">
+              // Fixed width so the pill doesn't grow/shrink between sections
+              // as the title changes - wide enough for the longest section
+              // title in either language ("Antécédents médicaux du
+              // patient").
+              <span className="inline-flex items-center gap-3 w-96 max-w-full min-w-0 rounded-full bg-primary-600 dark:bg-primary-500 text-white pl-2 pr-5 py-2.5">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20 text-sm font-bold shrink-0">
                   {number}
                 </span>

@@ -1,4 +1,5 @@
 import React from 'react'
+import { AlertTriangle } from 'lucide-react'
 import i18n from '@/i18n'
 
 interface ErrorBoundaryProps {
@@ -34,7 +35,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       return (
         <div className="min-h-64 flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center border border-red-200">
-            <div className="text-red-500 text-4xl mb-4">⚠️</div>
+            <AlertTriangle className="w-9 h-9 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">{i18n.t('errorBoundary.title')}</h3>
             <p className="text-gray-600 mb-4 text-sm">
               {i18n.t('errorBoundary.body')}

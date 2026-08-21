@@ -96,11 +96,11 @@
     "hasCalls": "a des appel(s)"
   },
   "supplyForm": {
-    "title": "Déclarer les fournitures utilisées",
+    "title": "Déclarer les fournitures",
     "notSetUp": "Un administrateur n'a pas encore configuré le lien du formulaire d'utilisation des fournitures.",
     "instructions": "Scannez ce code QR avec votre téléphone pour ouvrir le formulaire Microsoft et déclarer toute fourniture médicale utilisée dans les sacs pendant un appel. Assurez-vous de le faire même si aucune fourniture n'a été utilisée, afin que nous puissions suivre l'utilisation et garantir un stock suffisant.",
     "qrAlt": "Code QR du formulaire d'utilisation des fournitures",
-    "adminTitle": "Code QR du formulaire d'utilisation des fournitures",
+    "adminTitle": "Code QR du formulaire",
     "adminSubtitle": "Configurez le lien du formulaire Microsoft utilisé par les répondants pour déclarer les fournitures utilisées dans les sacs",
     "urlLabel": "URL du formulaire Microsoft",
     "saved": "Enregistré!",

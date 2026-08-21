@@ -334,6 +334,22 @@
   .leaflet-tooltip.campus-hover-name-tooltip::before {
     display: none;
   }
+
+  /* CARTO's dark basemap on its own renders quite dark/low-contrast against
+     the building outline fills - brighten it a bit so buildings stay easy
+     to pick out instead of blending into the tiles. */
+  .campus-map-dark .leaflet-tile-pane {
+    filter: brightness(1.35) contrast(0.92);
+  }
+
+  /* Leaflet's attribution control defaults to a light box regardless of the
+     app's theme - follow `.dark` like every other map element. */
+  .dark .leaflet-control-attribution {
+    @apply bg-gray-800/80 text-gray-300;
+  }
+  .dark .leaflet-control-attribution a {
+    @apply text-primary-400;
+  }
 }
 
 /* Utility classes */

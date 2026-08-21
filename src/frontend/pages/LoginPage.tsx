@@ -89,7 +89,7 @@ const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-primary-50 via-white to-burgundy-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4 overflow-hidden">
+    <div className="relative min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 overflow-hidden">
       {/* Language + theme toggle */}
       <div className="absolute top-4 right-4 flex items-center gap-3">
         <LanguageToggle />
@@ -114,19 +114,19 @@ const LoginPage: React.FC = () => {
             <img
               src="./images/vcrt_logo.png"
               alt={t('header.patientCareReport')}
-              className="h-48 xl:h-56 w-auto object-contain drop-shadow-sm"
+              className="h-48 xl:h-56 w-auto object-contain"
             />
           </div>
 
           {/* Text column (aligned with the logo) */}
           <div className="flex flex-col justify-center space-y-2">
-            <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight">
+            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
               {t('login.brandAcronym')}
             </h1>
-            <p className="text-2xl lg:text-3xl font-semibold text-gray-800 dark:text-gray-200">
+            <p className="text-lg lg:text-xl font-medium text-gray-700 dark:text-gray-300">
               {t('header.patientCareReport')}
             </p>
-            <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
               {t('login.tagline')}
             </p>
           </div>
@@ -138,7 +138,6 @@ const LoginPage: React.FC = () => {
             className={cn('overflow-hidden', shake && 'animate-shake motion-reduce:animate-none')}
             onAnimationEnd={() => setShake(false)}
           >
-            <div className="h-1 bg-gradient-to-r from-primary-700 to-burgundy-700" />
             <Card.Body>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {lockoutMessage ? (

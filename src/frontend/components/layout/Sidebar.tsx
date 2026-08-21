@@ -192,7 +192,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         className={cn(
           'group fixed left-0 top-16 bottom-0 z-[1100] w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',
-          pinned ? 'lg:static lg:w-72' : cn(RAIL_WIDTH, 'lg:hover:w-72 lg:hover:shadow-2xl'),
+          pinned ? 'lg:static lg:w-72' : cn(RAIL_WIDTH, 'lg:hover:w-72 lg:hover:shadow-lg'),
         )}
       >
         <div className="flex flex-col h-full overflow-hidden">

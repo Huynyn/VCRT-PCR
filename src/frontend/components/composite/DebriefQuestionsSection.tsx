@@ -122,7 +122,7 @@ const DebriefQuestionsSection: React.FC = () => {
     <>
       <div className="card h-full min-w-0 flex flex-col">
         <div className="flex-1 min-w-0 flex flex-col items-start gap-3 px-6 pt-4 pb-6">
-          <TitleBadge icon={<HelpCircle className="w-5 h-5" />}>{t('debrief.title')}</TitleBadge>
+          <TitleBadge icon={<HelpCircle className="w-5 h-5" />} className="w-full">{t('debrief.title')}</TitleBadge>
           <p className="text-sm text-gray-500 dark:text-gray-400 leading-snug">{t('debrief.description')}</p>
         </div>
         <button
@@ -221,7 +221,7 @@ const DebriefQuestionsSection: React.FC = () => {
             <Button variant="secondary" onClick={() => setShowEditModal(false)} disabled={saving}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleSave} loading={saving} disabled={saving}>
+            <Button variant="outline" onClick={handleSave} loading={saving} disabled={saving}>
               {saving ? t('common.saving') : t('common.save')}
             </Button>
           </div>

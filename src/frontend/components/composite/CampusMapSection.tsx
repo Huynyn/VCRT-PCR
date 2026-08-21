@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Polygon, Popup, Tooltip, useMap, useMa
 import L from 'leaflet'
 import { MapPin, ExternalLink, Search, X } from 'lucide-react'
 import { TitleBadge } from '@/components/ui'
+import { cn } from '@/utils'
 import { MAIN_CAMPUS_BUILDINGS, type CampusBuilding } from './campusBuildings'
 import 'leaflet/dist/leaflet.css'
 
@@ -294,7 +295,14 @@ const CampusMapSection: React.FC = () => {
     <div className="card mt-4">
       <div className="card-header-flush">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <TitleBadge icon={<MapPin className="w-5 h-5" />}>{t('campusMap.title')}</TitleBadge>
+          {/* Same width as one of the pills in the 3 middle dashboard tiles
+              above: those sit inside a px-6 tile that's itself 1 of 3 equal
+              grid columns (gap-4 apart) spanning this section's own
+              container width, so this solves for that same final pill
+              width relative to this pill's own (also px-6) container. */}
+          <TitleBadge icon={<MapPin className="w-5 h-5" />} className="w-full md:w-[calc((100%+1rem)/3-3rem)]">
+            {t('campusMap.title')}
+          </TitleBadge>
 
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -338,7 +346,12 @@ const CampusMapSection: React.FC = () => {
           </p>
         )}
 
-        <div className="h-[32rem] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+        <div
+          className={cn(
+            'h-[32rem] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700',
+            isDark && 'campus-map-dark',
+          )}
+        >
           <MapContainer
             center={CAMPUS_CENTER}
             zoom={DEFAULT_ZOOM}

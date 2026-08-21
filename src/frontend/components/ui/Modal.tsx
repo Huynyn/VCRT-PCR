@@ -61,7 +61,7 @@ const Modal: React.FC<ModalProps> = ({
       {/* Modal */}
       <div
         className={cn(
-          'relative w-full bg-white rounded-lg shadow-xl dark:bg-gray-800',
+          'relative w-full bg-white rounded-lg border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700',
           'animate-slide-up',
           sizeClasses[size]
         )}

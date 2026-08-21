@@ -34,7 +34,11 @@ const SupplyFormQrSection: React.FC = () => {
     <div className="mb-6">
       <div className="card">
         <div className="card-header-flush">
-          <TitleBadge icon={<ClipboardList className="w-5 h-5" />}>{t('supplyForm.title')}</TitleBadge>
+          {/* Same target width as the 3 middle dashboard tiles' pills - see
+              the matching comment in CampusMapSection. */}
+          <TitleBadge icon={<ClipboardList className="w-5 h-5" />} className="w-full md:w-[calc((100%+1rem)/3-3rem)]">
+            {t('supplyForm.title')}
+          </TitleBadge>
         </div>
         <div className="card-body">
           {loading ? (

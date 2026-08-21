@@ -197,7 +197,7 @@ const NameListManager: React.FC<NameListManagerProps> = ({
             <Button variant="secondary" onClick={() => setShowModal(false)} disabled={saving}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleSave} loading={saving} disabled={saving}>
+            <Button variant="outline" onClick={handleSave} loading={saving} disabled={saving}>
               {t('common.save')}
             </Button>
           </div>

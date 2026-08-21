@@ -60,7 +60,11 @@ const SupplyFormQrAdmin: React.FC = () => {
     <div className="mb-6">
       <div className="card">
         <div className="card-header-flush">
-          <TitleBadge icon={<QrCode className="w-5 h-5" />}>{t('supplyForm.adminTitle')}</TitleBadge>
+          {/* Same target width as the 3 middle dashboard tiles' pills - see
+              the matching comment in CampusMapSection. */}
+          <TitleBadge icon={<QrCode className="w-5 h-5" />} className="w-full md:w-[calc((100%+1rem)/3-3rem)]">
+            {t('supplyForm.adminTitle')}
+          </TitleBadge>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             {t('supplyForm.adminSubtitle')}
           </p>
@@ -81,6 +85,7 @@ const SupplyFormQrAdmin: React.FC = () => {
                   placeholder="https://forms.office.com/..."
                 />
                 <Button
+                  variant="outline"
                   onClick={handleSave}
                   loading={saving}
                   disabled={saving}
