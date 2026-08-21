@@ -135,7 +135,7 @@
   "campusMap": {
     "title": "Carte du campus principal",
     "openOfficial": "Ouvrir la carte officielle",
-    "searchPlaceholder": "Rechercher un code, un nom ou une adresse...",
+    "searchPlaceholder": "Rechercher un code, nom ou adresse...",
     "resultsCount_one": "{{count}} bâtiment trouvé",
     "resultsCount_other": "{{count}} bâtiments trouvés",
     "noResults": "Aucun bâtiment ne correspond à votre recherche.",
