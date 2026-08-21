@@ -260,7 +260,16 @@ const BuildingOutline: React.FC<{
       ))}
       {showLabel && (
         <Marker
-          position={polygonCentroid(building.polygons[0])}
+          // The code label sits on whichever ring is physically biggest,
+          // not always ring 0 (the primary/named match) - a merged-in
+          // extension occasionally turns out larger than the building's
+          // own matched footprint (e.g. NCL), and the label should read
+          // as anchored to the building's dominant visible shape.
+          position={polygonCentroid(
+            building.polygons.reduce((biggest, ring) =>
+              polygonAreaM2(ring) > polygonAreaM2(biggest) ? ring : biggest,
+            ),
+          )}
           icon={codeTextIcon(building.code)}
           interactive={false}
         />
