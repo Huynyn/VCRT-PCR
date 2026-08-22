@@ -150,57 +150,55 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
               error={errors.reasonForO2Therapy}
               placeholder={t('pcr.oxygenProtocol.reasonForO2TherapyPlaceholder')}
             />
+
+            <Card>
+              <Card.Body>
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-500 dark:text-gray-500">
+                    {t('pcr.oxygenProtocol.therapyDetails')}
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <TimePicker
+                      label={t('pcr.oxygenProtocol.timeTherapyStarted')}
+                      value={data.timeTherapyStarted || ''}
+                      onChange={(e) => handleFieldChange('timeTherapyStarted', e.target.value)}
+                      error={errors.timeTherapyStarted}
+                      required
+                    />
+
+                    <TimePicker
+                      label={t('pcr.oxygenProtocol.timeTherapyEnded')}
+                      value={data.timeTherapyEnded || ''}
+                      onChange={(e) => handleFieldChange('timeTherapyEnded', e.target.value)}
+                      error={errors.timeTherapyEnded}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label={t('pcr.oxygenProtocol.initialFlowRate')}
+                      type="text"
+                      inputMode="decimal"
+                      value={data.flowRate || ''}
+                      onChange={(e) => handleFieldChange('flowRate', e.target.value)}
+                      error={errors.flowRate}
+                      placeholder={t('pcr.oxygenProtocol.enterValue')}
+                    />
+
+                    <RadioGroup
+                      name="deliveryDevice"
+                      label={t('pcr.oxygenProtocol.deliveryDevice')}
+                      options={deliveryDeviceOptions}
+                      value={data.deliveryDevice}
+                      onChange={(value) => handleFieldChange('deliveryDevice', value as 'NC' | 'NRB' | 'BVM')}
+                      error={errors.deliveryDevice}
+                    />
+                  </div>
+                </div>
+              </Card.Body>
+            </Card>
           </FormSection>
-        )}
-
-        {data.oxygen_given === 'yes' && (
-          <Card>
-            <Card.Body>
-              <div className="space-y-4">
-                <h4 className="font-medium text-gray-500 dark:text-gray-500">
-                  {t('pcr.oxygenProtocol.therapyDetails')}
-                </h4>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <TimePicker
-                    label={t('pcr.oxygenProtocol.timeTherapyStarted')}
-                    value={data.timeTherapyStarted || ''}
-                    onChange={(e) => handleFieldChange('timeTherapyStarted', e.target.value)}
-                    error={errors.timeTherapyStarted}
-                    required
-                  />
-
-                  <TimePicker
-                    label={t('pcr.oxygenProtocol.timeTherapyEnded')}
-                    value={data.timeTherapyEnded || ''}
-                    onChange={(e) => handleFieldChange('timeTherapyEnded', e.target.value)}
-                    error={errors.timeTherapyEnded}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label={t('pcr.oxygenProtocol.initialFlowRate')}
-                    type="text"
-                    inputMode="decimal"
-                    value={data.flowRate || ''}
-                    onChange={(e) => handleFieldChange('flowRate', e.target.value)}
-                    error={errors.flowRate}
-                    placeholder={t('pcr.oxygenProtocol.enterValue')}
-                  />
-
-                  <RadioGroup
-                    name="deliveryDevice"
-                    label={t('pcr.oxygenProtocol.deliveryDevice')}
-                    options={deliveryDeviceOptions}
-                    value={data.deliveryDevice}
-                    onChange={(value) => handleFieldChange('deliveryDevice', value as 'NC' | 'NRB' | 'BVM')}
-                    error={errors.deliveryDevice}
-                  />
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
         )}
       </FormSection>
 

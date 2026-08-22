@@ -867,8 +867,8 @@ const PCRPage: React.FC = () => {
           bp: '118/76',
           bpParts: { sys: '118', dia: '76' },
           loc: 'A&O x4',
-          skin: 'Pink, Warm, Dry',
-          skinParts: { color: 'Pink', warmth: 'Warm', moisture: 'Dry' },
+          skin: 'Normal, Warm, Dry',
+          skinParts: { color: 'Normal', warmth: 'Warm', moisture: 'Dry' },
           pupils: 'PERRLA, 3',
           pupilsParts: { reactivity: 'PERRLA', sizeMm: '3' },
         },
@@ -882,8 +882,8 @@ const PCRPage: React.FC = () => {
           bp: '116/74',
           bpParts: { sys: '116', dia: '74' },
           loc: 'A&O x4',
-          skin: 'Pink, Warm, Dry',
-          skinParts: { color: 'Pink', warmth: 'Warm', moisture: 'Dry' },
+          skin: 'Normal, Warm, Dry',
+          skinParts: { color: 'Normal', warmth: 'Warm', moisture: 'Dry' },
           pupils: 'PERRLA, 3',
           pupilsParts: { reactivity: 'PERRLA', sizeMm: '3' },
         },
@@ -1785,15 +1785,14 @@ const PCRPage: React.FC = () => {
                         {t('pcr.opqrst.entryTitle', { index: index + 1 })}
                       </h4>
                     </div>
-                    <Button
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
                       onClick={() => removeOpqrstEntry(entry.id)}
-                      className="text-emergency-500 hover:text-emergency-600"
+                      aria-label={t('pcr.opqrst.remove', { index: index + 1 })}
+                      className="p-1 rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-burgundy-500 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </Button>
+                    </button>
                   </div>
                 </Card.Header>
                 <Card.Body>

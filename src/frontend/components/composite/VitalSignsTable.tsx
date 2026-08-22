@@ -180,7 +180,7 @@ const CompactField: React.FC<{
 const RHYTHM_OPTIONS = ['Regular', 'Irregular']
 const PULSE_QUALITY_OPTIONS = ['Strong', 'Weak', 'Bounding', 'Thready']
 const RESP_QUALITY_OPTIONS = ['Unlaboured', 'Laboured', 'Shallow', 'Deep']
-const SKIN_COLOR_OPTIONS = ['Pink', 'Pale', 'Flushed', 'Cyanotic', 'Jaundiced', 'Mottled']
+const SKIN_COLOR_OPTIONS = ['Normal', 'Pale', 'Flushed', 'Cyanotic', 'Jaundiced', 'Mottled']
 const SKIN_WARMTH_OPTIONS = ['Warm', 'Hot', 'Cool', 'Cold']
 const SKIN_MOISTURE_OPTIONS = ['Dry', 'Moist', 'Diaphoretic']
 const PUPIL_REACTIVITY_OPTIONS = ['PERRLA', 'Sluggish', 'Fixed', 'Unequal', 'Dilated', 'Constricted']

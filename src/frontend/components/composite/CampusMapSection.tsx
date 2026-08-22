@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapContainer, TileLayer, Marker, Polygon, Popup, Tooltip, useMap, useMapEvent } from 'react-leaflet'
 import L from 'leaflet'
 import { MapPin, ExternalLink, Search, X } from 'lucide-react'
 import { TitleBadge } from '@/components/ui'
 import { cn } from '@/utils'
-import { MAIN_CAMPUS_BUILDINGS, type CampusBuilding } from './campusBuildings'
+import { MAIN_CAMPUS_BUILDINGS, LEES_CAMPUS_BUILDINGS, type CampusBuilding } from './campusBuildings'
 import 'leaflet/dist/leaflet.css'
 
 // Tailwind's content scanner only keeps a hand-written @layer rule if at
@@ -15,19 +15,41 @@ import 'leaflet/dist/leaflet.css'
 // through any className prop here, so they'd otherwise never be seen and
 // the matching rule in index.css would get silently purged from the build.
 
+const ALL_BUILDINGS: CampusBuilding[] = [...MAIN_CAMPUS_BUILDINGS, ...LEES_CAMPUS_BUILDINGS]
+
 const CAMPUS_CENTER: [number, number] = [45.423585, -75.68332]
 const DEFAULT_ZOOM = 16
+// Covers every Main + Lees building (see campusBoundsPoints in
+// campusBuildings.ts data) with a hair of margin - the map's very first
+// render fits this instead of opening on CAMPUS_CENTER/DEFAULT_ZOOM, so both
+// campuses are visible together on load rather than just Main Campus.
+const BOTH_CAMPUS_BOUNDS: L.LatLngBoundsExpression = [
+  [45.4152, -75.6903],
+  [45.4306, -75.6644],
+]
+// The "Main Campus" / "Lees Campus" jump buttons fly to these fixed
+// center+zoom pairs rather than fitBounds-ing the campus's full building
+// extent - fitBounds picks whatever zoom makes the widest/tallest building
+// span fit the container's aspect ratio, which for a wide card and a
+// north-south-heavy building spread meant the computed view could need more
+// room than MAX_BOUNDS allowed on one side, clipping that side once
+// maxBoundsViscosity snapped it back in. A fixed, hand-picked view has no
+// such surprise. Main Campus zooms in one step further than the default
+// opening view for a closer look at the building cluster.
+const MAIN_CAMPUS_ZOOM = 17
+const LEES_CAMPUS_CENTER: [number, number] = [45.41605, -75.66757]
+const LEES_CAMPUS_ZOOM = 17
 // Keeps zooming out capped around "neighborhood" scale - this is a campus
 // quick-reference, not a general-purpose map, so there's no reason to let
 // users scroll out to city/country level.
 const MIN_ZOOM = 15
-// Keeps panning within Main Campus plus a small margin, for the same reason -
-// this isn't a general-purpose map, so there's no reason to let it wander
-// off into the rest of Ottawa. maxBoundsViscosity=1 makes the edge fully
-// solid (no rubber-banding past it).
+// Keeps panning within Main Campus + Lees Campus plus a comfortable margin -
+// this isn't a general-purpose map, so there's no reason to let a drag
+// wander off into the rest of Ottawa. maxBoundsViscosity=1 makes the edge
+// fully solid (no rubber-banding past it).
 const MAX_BOUNDS: L.LatLngBoundsExpression = [
-  [45.414, -75.694],
-  [45.432, -75.674],
+  [45.408, -75.698],
+  [45.433, -75.656],
 ]
 
 // Code-label visibility by zoom, to avoid overcrowding when zoomed out:
@@ -50,7 +72,7 @@ const LIGHT_TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{
 const DARK_TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 // Kept short (initials rather than the full copyright names) while still
 // linking both - CARTO's and OSM's tile terms require attribution to stay
-// visible, so this trims the text without dropping it.
+// visible.
 const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 
@@ -191,8 +213,17 @@ const ZoomTracker: React.FC<{ onZoomChange: (zoom: number) => void }> = ({ onZoo
 // inside <MapContainer> and reads it via useMap().
 const SearchFlyTo: React.FC<{ query: string; results: CampusBuilding[] }> = ({ query, results }) => {
   const map = useMap()
+  // The map already opens fit to both campuses (see BOTH_CAMPUS_BOUNDS) -
+  // without this, this effect's own initial run (query is '' before anyone
+  // has typed anything) would immediately fly it back to just Main Campus.
+  // Only an actual clear-after-searching should reset the view.
+  const isFirstRun = useRef(true)
 
   useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false
+      return
+    }
     if (!query) {
       map.flyTo(CAMPUS_CENTER, DEFAULT_ZOOM, { duration: 0.5 })
       return
@@ -291,11 +322,12 @@ const CampusMapSection: React.FC = () => {
   const [search, setSearch] = useState('')
   const [hoveredCode, setHoveredCode] = useState<string | null>(null)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+  const mapRef = useRef<L.Map | null>(null)
 
   const query = search.trim().toLowerCase()
   const results = useMemo(() => {
-    if (!query) return MAIN_CAMPUS_BUILDINGS
-    return MAIN_CAMPUS_BUILDINGS.filter(
+    if (!query) return ALL_BUILDINGS
+    return ALL_BUILDINGS.filter(
       b =>
         b.code.toLowerCase().includes(query) ||
         b.name.toLowerCase().includes(query) ||
@@ -306,6 +338,10 @@ const CampusMapSection: React.FC = () => {
   // (see SearchFlyTo) and its label/address should stay visible regardless
   // of the zoom-based crowding rules.
   const selectedCode = results.length === 1 ? results[0].code : null
+
+  const flyToCampus = (center: [number, number], targetZoom: number) => {
+    mapRef.current?.flyTo(center, targetZoom, { duration: 0.6 })
+  }
 
   return (
     <div className="card mt-4">
@@ -364,17 +400,49 @@ const CampusMapSection: React.FC = () => {
 
         <div
           className={cn(
-            'h-[32rem] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700',
+            'relative h-[32rem] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700',
             isDark && 'campus-map-dark',
           )}
         >
+          {/* Floating on top of the map itself (top-right, clear of Leaflet's
+              own zoom control at top-left) rather than in the card header -
+              these jump straight to a view of the map underneath them, so
+              they read as map controls, not page chrome. */}
+          <div className="absolute top-3 right-3 z-[1000] flex gap-2">
+            <button
+              type="button"
+              onClick={() => flyToCampus(CAMPUS_CENTER, MAIN_CAMPUS_ZOOM)}
+              className="px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-medium shadow-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-400"
+            >
+              {t('campusMap.mainCampus')}
+            </button>
+            <button
+              type="button"
+              onClick={() => flyToCampus(LEES_CAMPUS_CENTER, LEES_CAMPUS_ZOOM)}
+              className="px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-medium shadow-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-400"
+            >
+              {t('campusMap.leesCampus')}
+            </button>
+          </div>
+
           <MapContainer
-            center={CAMPUS_CENTER}
-            zoom={DEFAULT_ZOOM}
+            ref={mapRef}
+            // react-leaflet only honours one of these on mount: bounds is
+            // ignored entirely if center+zoom are also passed. Using bounds
+            // (fit both campuses) here means the "reset to Main Campus"
+            // center/zoom pair below only ever gets used later, via
+            // SearchFlyTo's map.flyTo call, not for the initial view.
+            bounds={BOTH_CAMPUS_BOUNDS}
+            boundsOptions={{ padding: [40, 40] }}
             minZoom={MIN_ZOOM}
             maxBounds={MAX_BOUNDS}
             maxBoundsViscosity={1.0}
             scrollWheelZoom={false}
+            // Canvas instead of SVG for the building outlines - well over a
+            // hundred polygons (Main + Lees) as individual SVG elements with
+            // their own hover/tooltip listeners was the main source of the
+            // map feeling sluggish while panning/zooming.
+            preferCanvas
             className="h-full w-full"
           >
             <TileLayer attribution={TILE_ATTRIBUTION} url={isDark ? DARK_TILE_URL : LIGHT_TILE_URL} />

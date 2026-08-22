@@ -234,6 +234,7 @@ function createWindow(): void {
   mainWindow.once('ready-to-show', () => {
     log('Window ready to show');
     closeSplashWindow();
+    mainWindow?.maximize();
     mainWindow?.show();
   });
 

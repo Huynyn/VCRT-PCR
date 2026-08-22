@@ -151,7 +151,9 @@
     "saveFailed": "Échec de l'enregistrement"
   },
   "campusMap": {
-    "title": "Carte du campus principal",
+    "title": "Carte du campus",
+    "mainCampus": "Campus principal",
+    "leesCampus": "Campus Lees",
     "openOfficial": "Ouvrir la carte officielle",
     "searchPlaceholder": "Rechercher un code, nom ou adresse...",
     "resultsCount_one": "{{count}} bâtiment trouvé",
@@ -354,6 +356,7 @@
       "sectionsAdded_other": "{{count}} sections ajoutées.",
       "add": "Ajouter OPQRST",
       "entryTitle": "OPQRST n° {{index}}",
+      "remove": "Supprimer OPQRST n° {{index}}",
       "area": "Zone / Emplacement",
       "areaPlaceholder": "ex. Genou gauche, Thorax, Bas du dos",
       "onset": "Apparition",
@@ -422,7 +425,7 @@
       "initialSpo2Acceptable": "SpO₂ initiale acceptable?",
       "therapyDecision": "Décision d'oxygénothérapie",
       "oxygenGiven": "Oxygénothérapie administrée?",
-      "reasonForTherapy": "Raison de l'oxygénothérapie",
+      "reasonForTherapy": "Début de l'oxygénothérapie",
       "reasonForO2Therapy": "Raison de l'oxygénothérapie",
       "reasonForO2TherapyPlaceholder": "ex., hypoxémie, choc, anaphylaxie, noyade, ventilation pendant la RCR...",
       "therapyDetails": "Détails du traitement",

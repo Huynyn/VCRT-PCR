@@ -349,6 +349,25 @@
     filter: brightness(1.35) contrast(0.92);
   }
 
+  /* Leaflet ships its own fix for Chromium's tile hairline-gap bug
+     (mix-blend-mode on .leaflet-tile in leaflet.css, see
+     https://bugs.chromium.org/p/chromium/issues/detail?id=600120), but it's
+     not fully covering it in this app's Electron/Chromium build - seams are
+     still visible between tiles in both light and dark mode, at any zoom,
+     anywhere on the map (not just at the edge of the loaded tile area,
+     which would instead mean a genuinely missing tile). Padding each tile by
+     exactly 1px (calc(), not a percentage - a percentage scales to a
+     non-integer size like 257.28px on a 256px tile, which forces the browser
+     to resample/blur the image and was worse than the seam it tried to
+     hide). Leaflet positions each tile by its top-left corner, so the extra
+     pixel bleeds rightward/downward - covering the gap on that tile's right
+     and bottom edges, which is where a seam would otherwise show against
+     its neighbour. */
+  .leaflet-tile {
+    width: calc(100% + 1px) !important;
+    height: calc(100% + 1px) !important;
+  }
+
   /* Leaflet's attribution control defaults to a light box regardless of the
      app's theme - follow `.dark` like every other map element. */
   .dark .leaflet-control-attribution {
@@ -356,6 +375,18 @@
   }
   .dark .leaflet-control-attribution a {
     @apply text-primary-400;
+  }
+
+  /* Leaflet's zoom control (+/- buttons) defaults to a white box with black
+     text regardless of theme - follow `.dark` like every other map element. */
+  .dark .leaflet-control-zoom a {
+    @apply bg-gray-800 text-gray-200 border-gray-600;
+  }
+  .dark .leaflet-control-zoom a:hover {
+    @apply bg-gray-700 text-white;
+  }
+  .dark .leaflet-control-zoom-in {
+    @apply border-b-gray-600;
   }
 
   /* CARTO/OSM's tile terms require this attribution to stay present and

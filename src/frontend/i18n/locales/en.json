@@ -151,7 +151,9 @@
     "saveFailed": "Failed to save"
   },
   "campusMap": {
-    "title": "Main Campus Map",
+    "title": "Campus Map",
+    "mainCampus": "Main Campus",
+    "leesCampus": "Lees Campus",
     "openOfficial": "Open official map",
     "searchPlaceholder": "Search code, name, or address...",
     "resultsCount_one": "{{count}} building found",
@@ -201,7 +203,7 @@
       { "q": "How do I handle a name or password change request?", "a": "You'll see it flagged in the notification bell and in User Management as a \"Pending change request\". Open that user's Edit screen to make the update, then dismiss the request." },
       { "q": "Where can I see what actions users have taken?", "a": "Activity Logs in the sidebar shows a filterable audit trail of logins, PCR edits, and other actions - including edits made through someone's Temporary Login. Logs older than 1 week can be deleted using the Clear button." },
       { "q": "How do I modify the content shown on the Dashboard?", "a": "Most Dashboard sections - Sample PCR, Medical Glossary, Common Medications, Debrief Questions, and the Supply Form QR link - have an Edit icon visible only to admins. Use it to update what everyone sees there." },
-      { "q": "How do I manage the Responder and Primary PSM dropdown lists?", "a": "In User Management, the Responders and Primary PSM sections let you add, rename, or remove the names available in those PCR dropdowns." }
+      { "q": "How do I manage the Responder and Primary PSM dropdown lists?", "a": "In User Management, the Responders and Primary PSM sections let you add, rename, or remove the names available in those PCR dro
     ],
     "user": [
       { "q": "How do I start a new PCR?", "a": "Click \"New PCR\" in the sidebar. Fill in the sections as you go; the draft is saved automatically after the first save. Check your notifications for incomplete drafts or requested changes." },
@@ -354,6 +356,7 @@
       "sectionsAdded_other": "{{count}} sections added.",
       "add": "Add OPQRST",
       "entryTitle": "OPQRST #{{index}}",
+      "remove": "Remove OPQRST #{{index}}",
       "area": "Area / Location",
       "areaPlaceholder": "e.g. Left knee, Chest, Lower back",
       "onset": "Onset",
@@ -422,7 +425,7 @@
       "initialSpo2Acceptable": "Initial SpO₂ Acceptable?",
       "therapyDecision": "Oxygen Therapy Decision",
       "oxygenGiven": "Oxygen Therapy Given?",
-      "reasonForTherapy": "Reason for Oxygen Therapy",
+      "reasonForTherapy": "Start of O2 Therapy",
       "reasonForO2Therapy": "Reason for O2 Therapy",
       "reasonForO2TherapyPlaceholder": "e.g., hypoxaemia, shock, anaphylaxis, drowning, ventilation during CPR...",
       "therapyDetails": "Therapy Details",
