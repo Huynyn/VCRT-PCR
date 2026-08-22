@@ -375,16 +375,12 @@
       "injuryLocation": "Emplacement de la blessure",
       "marker": "Repère :",
       "size": "Taille :",
-      "markerTooltip": "OPQRST n° {{number}} - {{name}}",
-      "selectMarker": "Sélectionner le repère {{number}} ({{name}})",
+      "markerTooltip": "OPQRST n° {{number}}",
+      "selectMarker": "Sélectionner le repère {{number}}",
       "clear": "Effacer",
-      "instructions": "Sélectionnez un numéro de repère, puis cliquez sur Avant ou Arrière pour le placer. Cliquez sur un repère placé pour le retirer. (les numéros/couleurs correspondent aux sections OPQRST ci-dessus)",
+      "instructions": "Sélectionnez un numéro de repère, puis cliquez sur Avant ou Arrière pour le placer. Cliquez sur un repère placé pour le retirer. (les numéros correspondent aux sections OPQRST ci-dessus)",
       "front": "Avant",
-      "back": "Arrière",
-      "colorRed": "Rouge",
-      "colorBlue": "Bleu",
-      "colorYellow": "Jaune",
-      "colorGreen": "Vert"
+      "back": "Arrière"
     },
     "vitalSigns": {
       "title": "Signes vitaux",

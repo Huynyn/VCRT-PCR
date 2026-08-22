@@ -17,7 +17,7 @@ import { VitalSignsTable, InjuryLocationMap, OxygenProtocolForm, SearchableSelec
 import { useForm } from '../context/FormContext'
 import { useNotification } from '../context/NotificationContext'
 import { useAuth } from '../context/AuthContext'
-import { cn, getCurrentTime, formatDate, generateId, MARKER_COLORS } from '../utils'
+import { cn, getCurrentTime, formatDate, generateId } from '../utils'
 import { pdfService } from '../services/pdf.service'
 import { apiRequest } from '../utils/api'
 import { setPcrCloseHandler } from '../utils/electronCloseGuard'
@@ -1769,7 +1769,10 @@ const PCRPage: React.FC = () => {
           </div>
 
           {opqrstEntries.map((entry, index) => {
-            const color = MARKER_COLORS[index]?.hex || MARKER_COLORS[0].hex
+            // VCRT red (burgundy-600) - matches the injury diagram's markers,
+            // which are all this same color rather than one per OPQRST
+            // number now.
+            const color = '#95232a'
             return (
               <Card key={entry.id}>
                 <Card.Header>

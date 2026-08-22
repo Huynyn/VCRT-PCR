@@ -5,7 +5,6 @@ import jsPDF from 'jspdf'
 import type { PCRFormData, VitalSign } from '@/types'
 import { OxygenProtocol } from '../types'
 import { PDFDocument } from 'pdf-lib'
-import { MARKER_COLORS } from '@/utils'
 import i18n from '../i18n'
 
 interface PDFOptions {
@@ -260,12 +259,6 @@ type NewPageFn = () => number
     return y + totalBlockH + FIELD_ROW_SPACING
   }
 
-function hexToRgb(hex: string): [number, number, number] {
-  const clean = hex.replace('#', '')
-  const num = parseInt(clean, 16)
-  return [(num >> 16) & 255, (num >> 8) & 255, num & 255]
-}
-
 // Bilingual label - "English | French Quebecois". The PDF always shows both,
 // regardless of the app's current UI language. Skips the " | fr" half when
 // the two are identical (e.g. "Date" / "Date"), rather than showing a
@@ -274,22 +267,15 @@ function bl(en: string, fr: string): string {
   return en === fr ? en : `${en} | ${fr}`
 }
 
-// MARKER_COLORS (utils/index.ts) names its marker colors in English -
-// translate for the OPQRST marker label in the injury diagram.
-const MARKER_NAME_FR: Record<string, string> = {
-  Red: 'Rouge',
-  Blue: 'Bleu',
-  Yellow: 'Jaune',
-  Green: 'Vert',
-}
-function translateMarkerName(name: string): string {
-  return bl(name, MARKER_NAME_FR[name] ?? name)
-}
-
 // VCRT brand navy (#1F2A51), sampled from the VCRT/EBIC logo - same value
 // used for the navy accents on docs/PCR Sign-Off Sheet.pdf and the app's
 // tailwind `primary-800`/`navy-800` tokens.
 const VCRT_BLUE: [number, number, number] = [31, 42, 81]
+
+// VCRT burgundy (#95232a / tailwind burgundy-600) - used for the OPQRST
+// marker numbers here and on the injury diagram itself (InjuryLocationMap.tsx),
+// which are all this one color now rather than one per OPQRST number.
+const VCRT_RED: [number, number, number] = [149, 35, 42]
 
 // Same light blue-grey box fill used on docs/PCR Sign-Off Sheet.pdf.
 const VCRT_BLUE_LIGHT: [number, number, number] = [232, 232, 237]
@@ -1443,13 +1429,11 @@ private addPageWithHeader(
       }
 
       opqrstEntries.forEach((entry, index) => {
-        const marker = MARKER_COLORS[index] || MARKER_COLORS[0]
         yText = ensureSpaceFor(pdf, options, yText, 8, newPage)
 
-        const [r, g, b] = hexToRgb(marker.hex)
         pdf.setFont('helvetica', 'bold')
-        pdf.setTextColor(r, g, b)
-        pdf.text(`OPQRST #${index + 1} (${translateMarkerName(marker.name)})`, options.margins.left, yText)
+        pdf.setTextColor(...VCRT_RED)
+        pdf.text(`OPQRST #${index + 1}`, options.margins.left, yText)
         pdf.setTextColor(0, 0, 0)
         yText += 5
 

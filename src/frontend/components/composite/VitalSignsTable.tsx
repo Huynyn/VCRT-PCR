@@ -322,12 +322,11 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
   }
 
   const setCount = Math.max(data.length, 1)
-  // Only reserve one extra column for the "add" affordance, not all the way
-  // out to maxSets - a fixed per-column width (not 1fr) keeps every column
-  // the same size regardless of count, so the table only grows wide enough
-  // to actually need horizontal scrolling once there are enough real sets,
-  // instead of always reserving (and scrolling for) unused columns.
-  const visibleSlots = setCount < maxSets ? setCount + 1 : setCount
+  // Always show every column up to maxSets, not just the filled ones plus a
+  // single "add" slot - the empty columns stay visible (as plain placeholder
+  // cells) so the table's full extent is visible up front, and only the one
+  // right after the last filled set gets the "+" affordance.
+  const visibleSlots = maxSets
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -339,31 +338,39 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
 
       <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
         <div
-          className="grid min-w-max"
-          style={{ gridTemplateColumns: `minmax(72px, 96px) repeat(${visibleSlots}, 132px)` }}
+          className="grid"
+          style={{ gridTemplateColumns: `minmax(72px, 108px) repeat(${visibleSlots}, minmax(100px, 1fr))` }}
         >
           {/* Corner cell above the row-label column */}
           <div className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-900/40 border-b border-r border-gray-200 dark:border-gray-700" />
 
           {Array.from({ length: visibleSlots }).map((_, setIndex) => {
             const isFilled = setIndex < setCount
+            const isNextToFill = setIndex === setCount
 
             if (!isFilled) {
-              // This is always the single next slot to fill (visibleSlots
-              // never reserves more than one unfilled column beyond setCount).
               return (
                 <div
                   key={setIndex}
-                  className="border-b border-l border-r border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/20"
+                  className={cn(
+                    'border-b border-l border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/20',
+                    setIndex === visibleSlots - 1 && 'border-r',
+                  )}
                 >
-                  <button
-                    type="button"
-                    onClick={addSet}
-                    aria-label={t('pcr.vitalSignsTable.addRow')}
-                    className="flex items-center justify-center gap-1 w-full h-full py-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50/60 dark:hover:text-primary-400 dark:hover:bg-primary-900/20 transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
+                  {/* Only the column right after the last filled set offers
+                      "+" - the rest just sit there as plain empty columns so
+                      the table's full extent reads as one flowsheet-style
+                      box up front. */}
+                  {isNextToFill && (
+                    <button
+                      type="button"
+                      onClick={addSet}
+                      aria-label={t('pcr.vitalSignsTable.addRow')}
+                      className="flex items-center justify-center gap-1 w-full h-full py-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50/60 dark:hover:text-primary-400 dark:hover:bg-primary-900/20 transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               )
             }
@@ -425,8 +432,9 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
                     'px-2 py-1.5 border-l border-gray-200 dark:border-gray-700',
                     groupIndex % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/60 dark:bg-gray-900/20',
                     groupIndex < groups.length - 1 && 'border-b',
-                    // Matches the "+" add-column header's own right border.
-                    setIndex >= setCount && 'border-r',
+                    // Closes off the table's right edge - matches the header
+                    // row's own last-column border.
+                    setIndex === visibleSlots - 1 && 'border-r',
                   )}
                 >
                   {setIndex < setCount && renderCell(setIndex, group)}

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Trash2 } from 'lucide-react'
+import { Eraser } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
-import { cn, generateId, MARKER_COLORS } from '@/utils'
+import { cn, generateId } from '@/utils'
 import {
   BODY_VIEWBOX,
   FRONT_MUSCLE_PATHS,
@@ -42,11 +42,20 @@ type BodyView = 'front' | 'back'
 const MIN_MARKER_SIZE = 5
 const MAX_MARKER_SIZE = 17
 const DEFAULT_MARKER_SIZE = 10
+// Floor for the number's font size - independent of MIN_MARKER_SIZE, whose
+// dot can be smaller than this looks fine to render text at (11 used to be
+// the floor for both, but at the smallest dot size that meant text taller
+// than the dot itself, clipping badly - this is deliberately smaller than
+// the marker floor so the digit actually fits inside even the tiniest dot).
+const MIN_FONT_SIZE = 8
 
 const SNAPSHOT_GAP = 48
 
-const colorForNumber = (n: number): string =>
-  MARKER_COLORS.find(c => c.number === n)?.hex || MARKER_COLORS[0].hex
+// All injury markers render in this one VCRT red (matches the app's
+// burgundy-600 elsewhere) rather than a distinct color per OPQRST number -
+// the number inside each marker is what ties it back to its OPQRST section,
+// not color.
+const MARKER_COLOR = '#95232a'
 
 const parseMarkers = (value?: string): InjuryMarker[] => {
   if (!value || !value.trim()) return []
@@ -105,16 +114,15 @@ const buildSnapshot = (markers: InjuryMarker[]): string => {
     const baseX = marker.view === 'front' ? 0 : panelW + SNAPSHOT_GAP
     const x = baseX + (marker.x / 100) * panelW
     const y = (marker.y / 100) * panelH
-    const color = colorForNumber(marker.number)
 
     ctx.beginPath()
     ctx.arc(x, y, marker.size, 0, Math.PI * 2)
-    ctx.strokeStyle = color
+    ctx.strokeStyle = MARKER_COLOR
     ctx.lineWidth = 2.5
     ctx.stroke()
 
-    ctx.fillStyle = color
-    ctx.font = `bold ${Math.max(marker.size, 11)}px Arial, sans-serif`
+    ctx.fillStyle = MARKER_COLOR
+    ctx.font = `bold ${Math.max(marker.size, MIN_FONT_SIZE)}px Arial, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(String(marker.number), x, y + 1)
@@ -188,17 +196,16 @@ const BodyPanel: React.FC<BodyPanelProps> = ({
           {markers.filter(m => m.view === view).map(m => {
             const cx = (m.x / 100) * BODY_VIEWBOX.width
             const cy = (m.y / 100) * BODY_VIEWBOX.height
-            const color = colorForNumber(m.number)
             return (
               <g key={m.id} pointerEvents="none">
-                <circle cx={cx} cy={cy} r={m.size} fill="none" stroke={color} strokeWidth={2.5} />
+                <circle cx={cx} cy={cy} r={m.size} fill="none" stroke={MARKER_COLOR} strokeWidth={2.5} />
                 <text
                   x={cx}
                   y={cy}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fill={color}
-                  fontSize={Math.max(m.size, 11)}
+                  fill={MARKER_COLOR}
+                  fontSize={Math.max(m.size, MIN_FONT_SIZE)}
                   fontWeight={700}
                 >
                   {m.number}
@@ -219,13 +226,6 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
   className,
 }) => {
   const { t } = useTranslation()
-  const colorLabelKeys: Record<string, string> = {
-    Red: 'pcr.opqrst.colorRed',
-    Blue: 'pcr.opqrst.colorBlue',
-    Yellow: 'pcr.opqrst.colorYellow',
-    Green: 'pcr.opqrst.colorGreen',
-  }
-  const colorLabel = (name: string) => (colorLabelKeys[name] ? t(colorLabelKeys[name]) : name)
   const [markers, setMarkers] = useState<InjuryMarker[]>(() => parseMarkers(value))
   const [activeView, setActiveView] = useState<BodyView>('front')
   const [activeNumber, setActiveNumber] = useState(1)
@@ -241,16 +241,16 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
     setMarkers(parseMarkers(value))
   }, [value])
 
-  const availableColors = useMemo(() => {
+  const availableNumbers = useMemo(() => {
     const count = Math.max(1, Math.min(4, opqrstCount || 0))
-    return MARKER_COLORS.slice(0, count)
+    return Array.from({ length: count }, (_, i) => i + 1)
   }, [opqrstCount])
 
   useEffect(() => {
-    if (!availableColors.some(c => c.number === activeNumber)) {
-      setActiveNumber(availableColors[availableColors.length - 1].number)
+    if (!availableNumbers.includes(activeNumber)) {
+      setActiveNumber(availableNumbers[availableNumbers.length - 1])
     }
-  }, [availableColors, activeNumber])
+  }, [availableNumbers, activeNumber])
 
   // Removing an OPQRST section drops the marker numbers/colors past the new
   // count from the picker above, but any dots already drawn with one of
@@ -313,24 +313,24 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('pcr.opqrst.marker')}</span>
             <div className="flex gap-2">
-              {availableColors.map(c => (
-                <Tooltip key={c.number} content={t('pcr.opqrst.markerTooltip', { number: c.number, name: colorLabel(c.name) })}>
+              {availableNumbers.map(n => (
+                <Tooltip key={n} content={t('pcr.opqrst.markerTooltip', { number: n })}>
                   <button
                     type="button"
-                    onClick={() => setActiveNumber(c.number)}
-                    aria-label={t('pcr.opqrst.selectMarker', { number: c.number, name: colorLabel(c.name) })}
+                    onClick={() => setActiveNumber(n)}
+                    aria-label={t('pcr.opqrst.selectMarker', { number: n })}
                     className={cn(
                       'w-9 h-9 rounded-full border-2 flex items-center justify-center text-sm font-bold',
                       'bg-white dark:bg-gray-900 transition-transform',
-                      activeNumber === c.number ? 'scale-110' : 'opacity-60 hover:opacity-100 hover:scale-105'
+                      activeNumber === n ? 'scale-110' : 'opacity-60 hover:opacity-100 hover:scale-105'
                     )}
                     style={{
-                      borderColor: c.hex,
-                      color: c.hex,
-                      boxShadow: activeNumber === c.number ? `0 0 0 3px ${c.hex}33` : undefined,
+                      borderColor: MARKER_COLOR,
+                      color: MARKER_COLOR,
+                      boxShadow: activeNumber === n ? `0 0 0 3px ${MARKER_COLOR}33` : undefined,
                     }}
                   >
-                    {c.number}
+                    {n}
                   </button>
                 </Tooltip>
               ))}
@@ -355,7 +355,7 @@ const InjuryLocationMap: React.FC<InjuryLocationMapProps> = ({
           variant="outline"
           size="sm"
           onClick={handleClear}
-          leftIcon={<Trash2 className="w-4 h-4" />}
+          leftIcon={<Eraser className="w-4 h-4" />}
         >
           {t('pcr.opqrst.clear')}
         </Button>

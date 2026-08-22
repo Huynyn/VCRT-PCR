@@ -184,15 +184,6 @@ export function importFromJSON(file: File): Promise<any> {
   })
 }
 
-// Colors used to link an OPQRST assessment section (1-4) with its
-// corresponding marker on the injury location body diagram.
-export const MARKER_COLORS: Array<{ number: number; name: string; hex: string }> = [
-  { number: 1, name: 'Red', hex: '#DC2626' },
-  { number: 2, name: 'Blue', hex: '#2563EB' },
-  { number: 3, name: 'Yellow', hex: '#D97706' },
-  { number: 4, name: 'Green', hex: '#059669' },
-]
-
 export const validationRules = {
   required: (value: any) => {
     if (typeof value === 'string') return value.trim().length > 0

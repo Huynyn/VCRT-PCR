@@ -375,16 +375,12 @@
       "injuryLocation": "Injury Location",
       "marker": "Marker:",
       "size": "Size:",
-      "markerTooltip": "OPQRST #{{number}} - {{name}}",
-      "selectMarker": "Select marker {{number}} ({{name}})",
+      "markerTooltip": "OPQRST #{{number}}",
+      "selectMarker": "Select marker {{number}}",
       "clear": "Clear",
-      "instructions": "Select a marker number, then click Front or Back to place it. Click a placed marker to remove it. (matching numbers/colors link to OPQRST sections above)",
+      "instructions": "Select a marker number, then click Front or Back to place it. Click a placed marker to remove it. (matching numbers link to OPQRST sections above)",
       "front": "Front",
-      "back": "Back",
-      "colorRed": "Red",
-      "colorBlue": "Blue",
-      "colorYellow": "Yellow",
-      "colorGreen": "Green"
+      "back": "Back"
     },
     "vitalSigns": {
       "title": "Vital Signs",
