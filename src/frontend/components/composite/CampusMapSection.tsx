@@ -17,16 +17,20 @@ import 'leaflet/dist/leaflet.css'
 
 const ALL_BUILDINGS: CampusBuilding[] = [...MAIN_CAMPUS_BUILDINGS, ...LEES_CAMPUS_BUILDINGS]
 
-const CAMPUS_CENTER: [number, number] = [45.423585, -75.68332]
-const DEFAULT_ZOOM = 16
-// Covers every Main + Lees building (see campusBoundsPoints in
-// campusBuildings.ts data) with a hair of margin - the map's very first
-// render fits this instead of opening on CAMPUS_CENTER/DEFAULT_ZOOM, so both
-// campuses are visible together on load rather than just Main Campus.
-const BOTH_CAMPUS_BOUNDS: L.LatLngBoundsExpression = [
-  [45.4152, -75.6903],
-  [45.4306, -75.6644],
-]
+// Nudged south of Main Campus's own building-extent midpoint (~45.4248) so
+// the "Main Campus" jump button's view sits a bit lower/south within the
+// cluster rather than dead-centered on it.
+const MAIN_CAMPUS_CENTER: [number, number] = [45.4221, -75.68332]
+// Midpoint between Main and Lees Campus - paired with MIN_ZOOM (the map's
+// farthest zoomed-out level) as the map's home view, so both campuses are
+// visible together on load and whenever a search is cleared, rather than
+// just Main Campus. A fixed center+zoom rather than fitBounds-ing the two
+// campuses' combined extent: fitBounds' own computed zoom already floors to
+// MIN_ZOOM for any realistic window width (the two campuses' combined
+// north-south spread is the limiting dimension against this map's fixed
+// height), so pinning it directly is equivalent and more predictable than
+// relying on that calculation to land there.
+const BOTH_CAMPUS_CENTER: [number, number] = [45.4229, -75.67735]
 // The "Main Campus" / "Lees Campus" jump buttons fly to these fixed
 // center+zoom pairs rather than fitBounds-ing the campus's full building
 // extent - fitBounds picks whatever zoom makes the widest/tallest building
@@ -43,12 +47,31 @@ const LEES_CAMPUS_ZOOM = 17
 // quick-reference, not a general-purpose map, so there's no reason to let
 // users scroll out to city/country level.
 const MIN_ZOOM = 15
+const MAX_ZOOM = 18
+// The one zoom level actually cached on disk (see public/tiles and
+// scripts/download-campus-tiles.js). TileLayer's minNativeZoom/maxNativeZoom
+// (set below) makes Leaflet reuse these same tiles at every other zoom in
+// [MIN_ZOOM, MAX_ZOOM], CSS-scaling them up or down instead of fetching
+// separate tiles per level - a full pyramid across that whole range would
+// mean thousands of tiles; one level is a few hundred/low thousand. 16
+// rather than 17 (which MAIN_CAMPUS_ZOOM/LEES_CAMPUS_ZOOM actually use) so
+// the download script's BOUNDS can comfortably cover a wide/maximized
+// window's full width at MIN_ZOOM without ballooning the tile count (each
+// zoom level roughly triples the tiles needed for the same area) - a
+// tighter area at zoom 17 left the sides of a wide window blank past its
+// edge (real tiles just don't exist out there). The tradeoff is the reverse
+// of that: the deliberate close-up campus views are a mild ~2x upscale of
+// this zoom's tiles rather than pixel-native.
+const NATIVE_ZOOM = 16
 // Keeps panning within Main Campus + Lees Campus plus a comfortable margin -
 // this isn't a general-purpose map, so there's no reason to let a drag
-// wander off into the rest of Ottawa. maxBoundsViscosity=1 makes the edge
-// fully solid (no rubber-banding past it).
+// wander off into the rest of Ottawa. This only restricts how far the pan
+// CENTER can move - see scripts/download-campus-tiles.js's BOUNDS for why
+// the actual tile coverage is (and needs to be) wider than this box.
+// maxBoundsViscosity=1 makes the edge fully solid (no rubber-banding past
+// it).
 const MAX_BOUNDS: L.LatLngBoundsExpression = [
-  [45.408, -75.698],
+  [45.413, -75.698],
   [45.433, -75.656],
 ]
 
@@ -65,14 +88,19 @@ const SMALL_BUILDING_AREA_M2 = 3000
 
 const OFFICIAL_MAP_URL = 'https://www.uottawa.ca/about-us/administration-services/facilities/campus-maps'
 
-// Same free CARTO basemap the official campus map itself uses (just the dark
-// variant), so the map follows the app's theme instead of staying a plain
-// light rectangle when dark mode is on.
-const LIGHT_TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-const DARK_TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+// Bundled offline copies of the CARTO tiles below (see public/tiles), served
+// as plain static files instead of fetched from the CDN - the app needs to
+// keep working with no wifi/network at all. Only NATIVE_ZOOM is actually
+// downloaded (see scripts/download-campus-tiles.js), not a full pyramid.
+// Relative paths so they resolve correctly both under the Vite dev server
+// and from the file:// index.html Electron loads in production. No {s}
+// subdomain or {r} retina variant - those were only ever about spreading
+// load across a live CDN, which doesn't apply to local files.
+const LIGHT_TILE_URL = './tiles/light/{z}/{x}/{y}.png'
+const DARK_TILE_URL = './tiles/dark/{z}/{x}/{y}.png'
 // Kept short (initials rather than the full copyright names) while still
 // linking both - CARTO's and OSM's tile terms require attribution to stay
-// visible.
+// visible even when the tiles themselves are served from a local cache.
 const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 
@@ -213,10 +241,11 @@ const ZoomTracker: React.FC<{ onZoomChange: (zoom: number) => void }> = ({ onZoo
 // inside <MapContainer> and reads it via useMap().
 const SearchFlyTo: React.FC<{ query: string; results: CampusBuilding[] }> = ({ query, results }) => {
   const map = useMap()
-  // The map already opens fit to both campuses (see BOTH_CAMPUS_BOUNDS) -
-  // without this, this effect's own initial run (query is '' before anyone
-  // has typed anything) would immediately fly it back to just Main Campus.
-  // Only an actual clear-after-searching should reset the view.
+  // The map already opens on the both-campuses home view (see
+  // BOTH_CAMPUS_CENTER/MIN_ZOOM) - without this, this effect's own initial
+  // run (query is '' before anyone has typed anything) would immediately
+  // re-fly it to that same view, causing a pointless animation on load.
+  // Only an actual clear-after-searching should trigger the reset flyTo.
   const isFirstRun = useRef(true)
 
   useEffect(() => {
@@ -225,7 +254,7 @@ const SearchFlyTo: React.FC<{ query: string; results: CampusBuilding[] }> = ({ q
       return
     }
     if (!query) {
-      map.flyTo(CAMPUS_CENTER, DEFAULT_ZOOM, { duration: 0.5 })
+      map.flyTo(BOTH_CAMPUS_CENTER, MIN_ZOOM, { duration: 0.5 })
       return
     }
     if (results.length === 0) return
@@ -321,7 +350,7 @@ const CampusMapSection: React.FC = () => {
   const isDark = useIsDarkMode()
   const [search, setSearch] = useState('')
   const [hoveredCode, setHoveredCode] = useState<string | null>(null)
-  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+  const [zoom, setZoom] = useState(MIN_ZOOM)
   const mapRef = useRef<L.Map | null>(null)
 
   const query = search.trim().toLowerCase()
@@ -411,7 +440,14 @@ const CampusMapSection: React.FC = () => {
           <div className="absolute top-3 right-3 z-[1000] flex gap-2">
             <button
               type="button"
-              onClick={() => flyToCampus(CAMPUS_CENTER, MAIN_CAMPUS_ZOOM)}
+              onClick={() => flyToCampus(BOTH_CAMPUS_CENTER, MIN_ZOOM)}
+              className="px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-medium shadow-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-400"
+            >
+              {t('campusMap.allCampuses')}
+            </button>
+            <button
+              type="button"
+              onClick={() => flyToCampus(MAIN_CAMPUS_CENTER, MAIN_CAMPUS_ZOOM)}
               className="px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-medium shadow-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-400"
             >
               {t('campusMap.mainCampus')}
@@ -427,14 +463,10 @@ const CampusMapSection: React.FC = () => {
 
           <MapContainer
             ref={mapRef}
-            // react-leaflet only honours one of these on mount: bounds is
-            // ignored entirely if center+zoom are also passed. Using bounds
-            // (fit both campuses) here means the "reset to Main Campus"
-            // center/zoom pair below only ever gets used later, via
-            // SearchFlyTo's map.flyTo call, not for the initial view.
-            bounds={BOTH_CAMPUS_BOUNDS}
-            boundsOptions={{ padding: [40, 40] }}
+            center={BOTH_CAMPUS_CENTER}
+            zoom={MIN_ZOOM}
             minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
             maxBounds={MAX_BOUNDS}
             maxBoundsViscosity={1.0}
             scrollWheelZoom={false}
@@ -445,7 +477,15 @@ const CampusMapSection: React.FC = () => {
             preferCanvas
             className="h-full w-full"
           >
-            <TileLayer attribution={TILE_ATTRIBUTION} url={isDark ? DARK_TILE_URL : LIGHT_TILE_URL} />
+            <TileLayer
+              attribution={TILE_ATTRIBUTION}
+              url={isDark ? DARK_TILE_URL : LIGHT_TILE_URL}
+              // Only NATIVE_ZOOM's tiles exist on disk - these two make
+              // Leaflet reuse them at every other zoom in [MIN_ZOOM,
+              // MAX_ZOOM] instead of requesting tiles that don't exist.
+              minNativeZoom={NATIVE_ZOOM}
+              maxNativeZoom={NATIVE_ZOOM}
+            />
             <SearchFlyTo query={query} results={results} />
             <ZoomTracker onZoomChange={setZoom} />
             {results.map(building => {

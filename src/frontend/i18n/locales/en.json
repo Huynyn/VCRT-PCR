@@ -152,6 +152,7 @@
   },
   "campusMap": {
     "title": "Campus Map",
+    "allCampuses": "Both Campuses",
     "mainCampus": "Main Campus",
     "leesCampus": "Lees Campus",
     "openOfficial": "Open official map",

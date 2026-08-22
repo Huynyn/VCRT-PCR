@@ -152,6 +152,7 @@
   },
   "campusMap": {
     "title": "Carte du campus",
+    "allCampuses": "Tous les campus",
     "mainCampus": "Campus principal",
     "leesCampus": "Campus Lees",
     "openOfficial": "Ouvrir la carte officielle",

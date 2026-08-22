@@ -356,16 +356,25 @@
      still visible between tiles in both light and dark mode, at any zoom,
      anywhere on the map (not just at the edge of the loaded tile area,
      which would instead mean a genuinely missing tile). Padding each tile by
-     exactly 1px (calc(), not a percentage - a percentage scales to a
+     a few pixels (calc(), not a percentage - a percentage scales to a
      non-integer size like 257.28px on a 256px tile, which forces the browser
      to resample/blur the image and was worse than the seam it tried to
-     hide). Leaflet positions each tile by its top-left corner, so the extra
-     pixel bleeds rightward/downward - covering the gap on that tile's right
-     and bottom edges, which is where a seam would otherwise show against
-     its neighbour. */
+     hide) makes neighbouring tiles overlap enough to cover the gap. Leaflet
+     positions each tile by its top-left corner, so the extra pixels bleed
+     rightward/downward - covering the gap on that tile's right and bottom
+     edges, which is where a seam would otherwise show against its neighbour.
+
+     3px rather than 1px because only one zoom level is ever actually loaded
+     (see NATIVE_ZOOM/minNativeZoom in CampusMapSection.tsx) - every other
+     zoom CSS-scales those same tiles, so a fixed pixel overlap gets scaled
+     too. At MIN_ZOOM (one level below NATIVE_ZOOM, scale 0.5x) a 1px overlap
+     would shrink to 0.5px - back to the exact sub-pixel rounding this fix
+     exists to avoid. 3px stays a whole pixel or more even at that smallest
+     scale, at the cost of a slightly wider (still practically invisible)
+     bleed at zoom levels above NATIVE_ZOOM. */
   .leaflet-tile {
-    width: calc(100% + 1px) !important;
-    height: calc(100% + 1px) !important;
+    width: calc(100% + 3px) !important;
+    height: calc(100% + 3px) !important;
   }
 
   /* Leaflet's attribution control defaults to a light box regardless of the
