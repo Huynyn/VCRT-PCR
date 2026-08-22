@@ -33,17 +33,22 @@ const Header: React.FC<HeaderProps> = ({
   const { t } = useTranslation()
 
   return (
-    <header className="h-16 shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4">
+    // Same background as the sidebar (not white like the content cards) -
+    // together they read as one back panel that the main content frame
+    // floats in front of, Gmail-style. Slightly darker than the page's own
+    // gray-50 shell so the back panel reads as visually distinct from it,
+    // not just from the white front panel. See the matching comment on
+    // <main> in Layout.tsx.
+    <header className="h-16 shrink-0 bg-gray-100 dark:bg-gray-900 px-4">
       <div className="h-full flex items-center justify-between">
         {/* Left side */}
         <div className="flex items-center space-x-4">
-          {/* Hamburger + logo + brand - fixed to the sidebar's pinned-open
-              width (w-72, minus this header's own px-4 left padding)
-              regardless of whether the sidebar is actually open, so the
-              title pill right after it always lines up with the sidebar's
-              open-state right edge instead of trailing wherever this
-              content's natural width happens to end when collapsed. */}
-          <div className="flex items-center gap-4 shrink-0 lg:w-[256px]">
+          {/* Hamburger + logo + brand - same w-72 width as the sidebar's own
+              pinned-open width, regardless of whether the sidebar is
+              actually open, so this zone lines up exactly with it (and the
+              title pill right after it doesn't trail wherever this
+              content's natural width happens to end when collapsed). */}
+          <div className="flex items-center gap-4 shrink-0 lg:w-72">
             <Tooltip content={sidebarOpen ? t('header.collapseSidebar') : t('header.expandSidebar')}>
               <Button
                 variant="icon"
@@ -68,16 +73,20 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Fixed width so the pill doesn't grow/shrink as the page title
               changes between routes - wide enough for the longest title in
-              either language ("Rapport de soins préhospitaliers"). */}
-          <div className="w-80 h-10 shrink-0 flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 px-4">
+              either language ("Rapport de soins préhospitaliers"). White
+              (not gray-50) so it still stands out against the header's
+              gray-50 background - see the Gmail-style frame comment on
+              <main> in Layout.tsx. */}
+          <div className="w-80 h-10 shrink-0 flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700/50 px-4">
             <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
               {pageTitle || t('header.patientCareReport')}
             </h1>
           </div>
         </div>
 
-        {/* Right side */}
-        <div className="flex items-center gap-3">
+        {/* Right side - h-full so the logout divider's self-stretch below
+            can reach the header's full height, edge to edge. */}
+        <div className="h-full flex items-center gap-3">
           <LanguageToggle />
 
           {/* Theme toggle */}
@@ -95,10 +104,14 @@ const Header: React.FC<HeaderProps> = ({
           {/* Notifications */}
           {user && <NotificationBell user={user} onNavigate={onNavigate} />}
 
-          {/* Logout */}
+          {/* Logout - separated from the other icons by a full-height
+              divider line (like the line above the sidebar's profile
+              section), since it's a more consequential action than the
+              plain ghost icons before it. No border on the button itself -
+              the divider line alone is the separation. */}
           {user && (
             <>
-              <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
+              <div className="self-stretch w-px bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
               <Tooltip content={t('header.logout')}>
                 <Button
                   variant="icon"

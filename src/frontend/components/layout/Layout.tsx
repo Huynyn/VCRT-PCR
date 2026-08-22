@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Header from './Header'
 import Sidebar from './Sidebar'
-import { cn } from '@/utils'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -57,7 +56,11 @@ const Layout: React.FC<LayoutProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    // Matches the header/sidebar's own gray-100 (not gray-50) - main's
+    // rounded-tl-lg corner clips a small sliver of whatever's behind it
+    // down to this wrapper, so it has to match their background exactly or
+    // that curve shows an inconsistent color.
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="flex flex-col h-screen overflow-hidden">
         {/* Header - a full-width top bar (hamburger + logo + brand never
             collapse) sitting above the sidebar rail rather than beside it,
@@ -84,8 +87,14 @@ const Layout: React.FC<LayoutProps> = ({
             user={user}
           />
 
-          {/* Main content */}
-          <main className="flex-1 overflow-y-auto p-6">
+          {/* Main content - the header and sidebar share one gray "back
+              panel" background (see their own components) with no border
+              between them; this frame is the white "front panel" floating
+              on top of it, inset by the header's height and the sidebar's
+              width so that back panel's icons still show above and to the
+              left of it. A rounded top-left corner (same radius as the
+              app's cards) marks where the two frames meet, Gmail-style. */}
+          <main className="flex-1 overflow-y-auto p-6 bg-white dark:bg-gray-800 rounded-tl-lg">
             <div className="max-w-7xl mx-auto">
               {children}
             </div>

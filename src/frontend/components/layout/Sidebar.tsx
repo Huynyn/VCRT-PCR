@@ -56,7 +56,7 @@ const SidebarItemComponent: React.FC<{ item: SidebarItem; onClick: (href: string
         : 'w-10 h-10 mx-auto justify-center lg:group-hover:w-full lg:group-hover:h-auto lg:group-hover:mx-0 lg:group-hover:justify-start lg:group-hover:px-3 lg:group-hover:py-2',
       item.isActive
         ? 'bg-primary-50 text-primary-700 font-semibold dark:bg-primary-900/40 dark:text-primary-300'
-        : 'text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100',
+        : 'text-gray-600 font-medium hover:bg-gray-200 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100',
     )}
   >
     <span className="flex-shrink-0">{item.icon}</span>
@@ -190,7 +190,14 @@ const Sidebar: React.FC<SidebarProps> = ({
           cut by it. */}
       <div
         className={cn(
-          'group fixed left-0 top-16 bottom-0 z-[1100] w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out lg:translate-x-0',
+          // Same background as the header (not white like the content
+          // cards) - together they read as one back panel that the main
+          // content frame floats in front of, Gmail-style. No border - the
+          // two stay fully attached where they meet. Slightly darker than
+          // the page's own gray-50 shell so the back panel reads as
+          // visually distinct from it. See the matching comment on <main>
+          // in Layout.tsx.
+          'group fixed left-0 top-16 bottom-0 z-[1100] w-72 bg-gray-100 dark:bg-gray-900 transition-all duration-300 ease-in-out lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',
           pinned ? 'lg:static lg:w-72' : cn(RAIL_WIDTH, 'lg:hover:w-72 lg:hover:shadow-lg'),
         )}
@@ -244,7 +251,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     : 'w-10 h-10 mx-auto justify-center lg:group-hover:w-full lg:group-hover:h-auto lg:group-hover:mx-0 lg:group-hover:justify-start lg:group-hover:px-3 lg:group-hover:py-1.5',
                   currentPath === '/profile'
                     ? 'bg-primary-50 dark:bg-primary-900/40'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-700',
+                    : 'hover:bg-gray-200 dark:hover:bg-gray-700',
                 )}
               >
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-xs font-bold shrink-0">
@@ -254,16 +261,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                     {user.name}
                   </p>
-                  <span
-                    className={cn(
-                      'inline-flex text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded',
-                      isAdmin
-                        ? 'bg-burgundy-100 text-burgundy-700 dark:bg-burgundy-900/40 dark:text-burgundy-300'
-                        : 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300',
-                    )}
-                  >
-                    {t(`common.role.${user.role}`, user.role)}
-                  </span>
                 </div>
               </button>
             )}

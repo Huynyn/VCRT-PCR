@@ -8,8 +8,9 @@ import type { VitalSign } from '@/types'
 
 interface VitalSignPart {
   key: string
+  /** Shown as this field's placeholder text (there's no room for a label
+   * above each stacked sub-field, so the name doubles as the placeholder). */
   label: string
-  placeholder?: string
   /** Fixed choices shown as a dropdown instead of free text. */
   options?: string[]
 }
@@ -17,11 +18,9 @@ interface VitalSignPart {
 interface VitalSignGroup {
   key: string
   label: string
+  /** Shown as the field's placeholder text - e.g. LOC's "AOx(1-3) or GCS
+   * 3-15" format note. */
   placeholder?: string
-  /** Small description shown above a single (non-`parts`) field, e.g. LOC's
-   * "AOx(1-3) or GCS 3-15" format note - distinct from `placeholder`, which
-   * stays a concrete example value inside the box. */
-  fieldLabel?: string
   /** Sub-fields (e.g. rate/rhythm/quality for HR), stacked vertically inside
    * this group's cell. Each keystroke recomposes `partSeparator`-joined into
    * the flat `data[set][key]` string that PDF export etc. still read as one
@@ -39,7 +38,7 @@ interface VitalSignsTableProps {
 }
 
 const FIELD_BASE_CLASS =
-  'w-full min-w-0 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 text-xs px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500'
+  'w-full min-w-0 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 text-sm px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500'
 
 // Smaller than the shared Input component (which is sized for full-width
 // form fields) - this table packs many labeled boxes into a narrow column
@@ -50,7 +49,6 @@ const FIELD_BASE_CLASS =
 // values to pick from instead of typing them out - not a hard-restricted
 // list.
 const CompactField: React.FC<{
-  label?: string
   value: string
   onChange: (value: string) => void
   placeholder?: string
@@ -58,7 +56,7 @@ const CompactField: React.FC<{
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
   options?: string[]
-}> = ({ label, value, onChange, placeholder, ariaLabel, leftIcon, rightIcon, options }) => {
+}> = ({ value, onChange, placeholder, ariaLabel, leftIcon, rightIcon, options }) => {
   const [open, setOpen] = useState(false)
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
   const containerRef = useRef<HTMLDivElement>(null)
@@ -108,11 +106,6 @@ const CompactField: React.FC<{
 
   return (
     <div ref={containerRef}>
-      {label && (
-        <label className="block text-[9px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5 truncate">
-          {label}
-        </label>
-      )}
       <div ref={fieldRef} className="relative">
         {leftIcon && (
           <div className="absolute inset-y-0 left-0 pl-1.5 flex items-center pointer-events-none text-gray-400">
@@ -134,7 +127,7 @@ const CompactField: React.FC<{
             }
           }}
           placeholder={placeholder}
-          aria-label={ariaLabel || label}
+          aria-label={ariaLabel || placeholder}
           autoComplete="off"
           className={cn(FIELD_BASE_CLASS, leftIcon && 'pl-5', (rightIcon || options) && 'pr-5')}
         />
@@ -170,7 +163,7 @@ const CompactField: React.FC<{
                 setOpen(false)
               }}
               className={cn(
-                'block w-full text-left px-2 py-1 text-xs hover:bg-primary-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100',
+                'block w-full text-left px-2 py-1 text-sm hover:bg-primary-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100',
                 value === opt && 'bg-primary-50 dark:bg-gray-700 font-medium',
               )}
             >
@@ -241,20 +234,18 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
     onChange(newData.length > 0 ? newData : [{}])
   }, [data, onChange])
 
-  const selectPlaceholder = t('pcr.vitalSignsTable.selectPlaceholder')
-
   // Rate/rhythm/quality for HR and RR share a shape but not their options -
   // pulse quality (strong/weak/bounding/thready) and breathing quality
   // (laboured/shallow/deep) describe different things.
   const pulseParts: VitalSignPart[] = [
-    { key: 'rate', label: t('pcr.vitalSignsTable.partRate'), placeholder: 'e.g. 82' },
-    { key: 'rhythm', label: t('pcr.vitalSignsTable.partRhythm'), placeholder: selectPlaceholder, options: RHYTHM_OPTIONS },
-    { key: 'quality', label: t('pcr.vitalSignsTable.partQuality'), placeholder: selectPlaceholder, options: PULSE_QUALITY_OPTIONS },
+    { key: 'rate', label: t('pcr.vitalSignsTable.partRate') },
+    { key: 'rhythm', label: t('pcr.vitalSignsTable.partRhythm'), options: RHYTHM_OPTIONS },
+    { key: 'quality', label: t('pcr.vitalSignsTable.partQuality'), options: PULSE_QUALITY_OPTIONS },
   ]
   const respParts: VitalSignPart[] = [
-    { key: 'rate', label: t('pcr.vitalSignsTable.partRate'), placeholder: 'e.g. 16' },
-    { key: 'rhythm', label: t('pcr.vitalSignsTable.partRhythm'), placeholder: selectPlaceholder, options: RHYTHM_OPTIONS },
-    { key: 'quality', label: t('pcr.vitalSignsTable.partQuality'), placeholder: selectPlaceholder, options: RESP_QUALITY_OPTIONS },
+    { key: 'rate', label: t('pcr.vitalSignsTable.partRate') },
+    { key: 'rhythm', label: t('pcr.vitalSignsTable.partRhythm'), options: RHYTHM_OPTIONS },
+    { key: 'quality', label: t('pcr.vitalSignsTable.partQuality'), options: RESP_QUALITY_OPTIONS },
   ]
 
   const groups: VitalSignGroup[] = [
@@ -265,25 +256,24 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
       key: 'bp',
       label: 'B/P',
       parts: [
-        { key: 'sys', label: t('pcr.vitalSignsTable.partSys'), placeholder: 'e.g. 120' },
-        { key: 'dia', label: t('pcr.vitalSignsTable.partDia'), placeholder: 'e.g. 80 or P' },
+        { key: 'sys', label: t('pcr.vitalSignsTable.partSys') },
+        { key: 'dia', label: t('pcr.vitalSignsTable.partDia') },
       ],
       partSeparator: '/',
     },
     {
       key: 'loc',
       label: 'LOC / GCS',
-      fieldLabel: t('pcr.vitalSignsTable.locHint'),
-      placeholder: t('pcr.vitalSignsTable.locPlaceholder'),
+      placeholder: t('pcr.vitalSignsTable.locHint'),
     },
     {
       key: 'skin',
       label: t('pcr.vitalSignsTable.skin'),
       parts: [
-        { key: 'tempC', label: t('pcr.vitalSignsTable.partTempC'), placeholder: 'e.g. 37' },
-        { key: 'color', label: t('pcr.vitalSignsTable.partColor'), placeholder: selectPlaceholder, options: SKIN_COLOR_OPTIONS },
-        { key: 'warmth', label: t('pcr.vitalSignsTable.partWarmth'), placeholder: selectPlaceholder, options: SKIN_WARMTH_OPTIONS },
-        { key: 'moisture', label: t('pcr.vitalSignsTable.partMoisture'), placeholder: selectPlaceholder, options: SKIN_MOISTURE_OPTIONS },
+        { key: 'tempC', label: t('pcr.vitalSignsTable.partTempC') },
+        { key: 'color', label: t('pcr.vitalSignsTable.partColor'), options: SKIN_COLOR_OPTIONS },
+        { key: 'warmth', label: t('pcr.vitalSignsTable.partWarmth'), options: SKIN_WARMTH_OPTIONS },
+        { key: 'moisture', label: t('pcr.vitalSignsTable.partMoisture'), options: SKIN_MOISTURE_OPTIONS },
       ],
       partSeparator: ', ',
     },
@@ -291,8 +281,8 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
       key: 'pupils',
       label: t('pcr.vitalSignsTable.pupils'),
       parts: [
-        { key: 'reactivity', label: t('pcr.vitalSignsTable.partReactivity'), placeholder: selectPlaceholder, options: PUPIL_REACTIVITY_OPTIONS },
-        { key: 'sizeMm', label: t('pcr.vitalSignsTable.partSizeMm'), placeholder: 'e.g. 3' },
+        { key: 'reactivity', label: t('pcr.vitalSignsTable.partReactivity'), options: PUPIL_REACTIVITY_OPTIONS },
+        { key: 'sizeMm', label: t('pcr.vitalSignsTable.partSizeMm') },
       ],
       partSeparator: ', ',
     },
@@ -302,7 +292,6 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
     if (!group.parts) {
       return (
         <CompactField
-          label={group.fieldLabel}
           value={data[setIndex]?.[group.key] || ''}
           onChange={v => handleFieldChange(setIndex, group.key, v)}
           placeholder={group.placeholder}
@@ -313,16 +302,18 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
     }
 
     // Subsections stack vertically inside the group's own cell, rather than
-    // side by side, so each column stays narrow enough for up to 5 to fit.
+    // side by side, so each column stays narrow enough for up to 6 to fit.
+    // Each one's name is its placeholder (e.g. "Rate", "Rhythm") instead of
+    // a separate label above, since there's no room to spare for both.
     return (
       <div className="space-y-1">
         {group.parts.map(part => (
           <CompactField
             key={part.key}
-            label={part.label}
             value={data[setIndex]?.[`${group.key}Parts`]?.[part.key] || ''}
             onChange={v => handlePartChange(setIndex, group, part.key, v)}
-            placeholder={part.placeholder}
+            placeholder={part.label}
+            ariaLabel={part.label}
             options={part.options}
           />
         ))}
@@ -382,46 +373,35 @@ const VitalSignsTable: React.FC<VitalSignsTableProps> = ({
                 key={setIndex}
                 className="flex items-center justify-between gap-1 px-2 py-1.5 bg-gray-50 dark:bg-gray-900/40 border-b border-l border-gray-200 dark:border-gray-700"
               >
-                {/* Fixed width + centered so the digit itself (1 vs 2, etc.)
-                    never changes how much space it takes up, keeping the
-                    gap to the time box beside it visually consistent. */}
-                <span className="shrink-0 w-4 text-center text-primary-700 dark:text-primary-300 text-sm font-bold tabular-nums">
-                  {setIndex + 1}
-                </span>
-
-                {/* Time + remove grouped and pushed to the right edge, with
-                    a small gap between them so the time box never crowds
-                    the trash icon. */}
-                <div className="flex items-center gap-1 ml-auto">
-                  <div className="w-[72px]">
-                    <CompactField
-                      leftIcon={<Clock className="w-3 h-3" />}
-                      value={data[setIndex]?.time || ''}
-                      onChange={v => handleFieldChange(setIndex, 'time', v)}
-                      placeholder={t('pcr.vitalSignsTable.timeHint')}
-                      ariaLabel={t('pcr.vitalSignsTable.time')}
-                    />
-                  </div>
-
-                  {/* Always rendered (just hidden below the minimum of 1
-                      set) so this control's presence doesn't shift the
-                      header's layout depending on whether any set happens
-                      to show it. */}
-                  <Tooltip content={t('pcr.vitalSignsTable.removeRow', { index: setIndex + 1 })}>
-                    <button
-                      type="button"
-                      onClick={() => removeSet(setIndex)}
-                      aria-label={t('pcr.vitalSignsTable.removeRow', { index: setIndex + 1 })}
-                      tabIndex={data.length > 1 ? 0 : -1}
-                      className={cn(
-                        'flex items-center justify-center h-6 w-6 shrink-0 rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:text-gray-500 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-burgundy-500 transition-colors',
-                        data.length <= 1 && 'invisible',
-                      )}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </Tooltip>
+                {/* Anchored to the cell's left edge; the remove button below
+                    is pushed to the right edge via justify-between. */}
+                <div className="w-[88px]">
+                  <CompactField
+                    leftIcon={<Clock className="w-3 h-3" />}
+                    value={data[setIndex]?.time || ''}
+                    onChange={v => handleFieldChange(setIndex, 'time', v)}
+                    placeholder={t('pcr.vitalSignsTable.timeHint')}
+                    ariaLabel={t('pcr.vitalSignsTable.time')}
+                  />
                 </div>
+
+                {/* Always rendered (just hidden below the minimum of 1 set)
+                    so this control's presence doesn't shift the header's
+                    layout depending on whether any set happens to show it. */}
+                <Tooltip content={t('pcr.vitalSignsTable.removeRow', { index: setIndex + 1 })}>
+                  <button
+                    type="button"
+                    onClick={() => removeSet(setIndex)}
+                    aria-label={t('pcr.vitalSignsTable.removeRow', { index: setIndex + 1 })}
+                    tabIndex={data.length > 1 ? 0 : -1}
+                    className={cn(
+                      'flex items-center justify-center h-6 w-6 shrink-0 rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:text-gray-500 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-burgundy-500 transition-colors',
+                      data.length <= 1 && 'invisible',
+                    )}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </Tooltip>
               </div>
             )
           })}
