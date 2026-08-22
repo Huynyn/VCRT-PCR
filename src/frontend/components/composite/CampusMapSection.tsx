@@ -5,7 +5,7 @@ import L from 'leaflet'
 import { MapPin, ExternalLink, Search, X } from 'lucide-react'
 import { TitleBadge } from '@/components/ui'
 import { cn } from '@/utils'
-import { MAIN_CAMPUS_BUILDINGS, LEES_CAMPUS_BUILDINGS, type CampusBuilding } from './campusBuildings'
+import { MAIN_CAMPUS_BUILDINGS, LEES_CAMPUS_BUILDINGS, OUTDOOR_SPACES, type CampusBuilding } from './campusBuildings'
 import 'leaflet/dist/leaflet.css'
 
 // Tailwind's content scanner only keeps a hand-written @layer rule if at
@@ -144,6 +144,17 @@ function codeTextIcon(code: string) {
   return L.divIcon({
     className: 'campus-building-icon',
     html: `<span class="campus-building-code-label">${code}</span>`,
+    iconAnchor: [0, 0],
+  })
+}
+
+// A plain dot marker for an outdoor space - unlike buildings, these have no
+// code to show and aren't part of the search/filter results, so there's
+// nothing to label them with beyond the hover tooltip (see the Marker below).
+function outdoorSpaceIcon() {
+  return L.divIcon({
+    className: 'campus-outdoor-icon',
+    html: '<span class="campus-outdoor-icon__dot"></span>',
     iconAnchor: [0, 0],
   })
 }
@@ -291,7 +302,7 @@ const BuildingOutline: React.FC<{
   if (!building.polygons) return null
 
   const popup = (
-    <Popup>
+    <Popup closeButton={false}>
       <span className="font-semibold">{building.code}</span> — {building.name}
       <br />
       <span className="text-gray-500">{building.address}</span>
@@ -312,14 +323,16 @@ const BuildingOutline: React.FC<{
     <>
       {building.polygons.map((ring, i) => (
         <Polygon key={i} positions={ring} pathOptions={pathOptions} eventHandlers={eventHandlers}>
-          {/* Only the main chunk (ring 0) carries the name tooltip - hovering
-              any merged-in extension still highlights the whole building
-              (shared `isHovered`/eventHandlers above), but the name should
-              only ever appear pinned to the primary shape, not pop up
-              wherever a small extension happens to sit. */}
-          {(isHovered || isSelected) && i === 0 && (
+          {/* Name only appears once a building is actually selected (a
+              single search match) - not on hover. Hover still darkens the
+              fill (isHovered/eventHandlers above) as a lighter affordance
+              that the shape is interactive, but the name itself is reserved
+              for a deliberate selection, same as the outdoor-space dots'
+              click-only Popup. Only the main chunk (ring 0) carries it - a
+              merged-in extension has no name of its own to show. */}
+          {isSelected && i === 0 && (
             <Tooltip permanent direction="top" className="campus-hover-name-tooltip">
-              {isSelected ? `${building.name} — ${building.address}` : building.name}
+              {`${building.name} — ${building.address}`}
             </Tooltip>
           )}
           {popup}
@@ -502,10 +515,14 @@ const CampusMapSection: React.FC = () => {
               ) : (
                 shouldShowLabel(building, zoom, isSelected) && (
                   <Marker key={building.code} position={building.position} icon={codeIcon(building.code)}>
-                    <Tooltip permanent={isSelected} className={isSelected ? 'campus-hover-name-tooltip' : undefined}>
-                      {isSelected ? `${building.name} — ${building.address}` : building.name}
-                    </Tooltip>
-                    <Popup>
+                    {/* Name only on selection (see BuildingOutline above) - no
+                        hover tooltip here either. */}
+                    {isSelected && (
+                      <Tooltip permanent className="campus-hover-name-tooltip">
+                        {`${building.name} — ${building.address}`}
+                      </Tooltip>
+                    )}
+                    <Popup closeButton={false}>
                       <span className="font-semibold">{building.code}</span> — {building.name}
                       <br />
                       <span className="text-gray-500">{building.address}</span>
@@ -514,6 +531,27 @@ const CampusMapSection: React.FC = () => {
                 )
               )
             })}
+            {/* Held back to LABEL_ZOOM_ALL (the same zoom step where every
+                building's own code label shows) rather than always-on -
+                24+ extra dots on top of the full building set at the
+                zoomed-out home view would be too crowded to read. No
+                Tooltip (unlike the building markers above) - the name
+                should only show once a dot is actually clicked/selected,
+                via the Popup below, not on every incidental hover. */}
+            {zoom >= LABEL_ZOOM_ALL &&
+              OUTDOOR_SPACES.map(space => (
+                <Marker key={space.name} position={space.position} icon={outdoorSpaceIcon()}>
+                  <Popup closeButton={false}>
+                    {space.name}
+                    {space.description && (
+                      <>
+                        <br />
+                        <span className="text-gray-500">{space.description}</span>
+                      </>
+                    )}
+                  </Popup>
+                </Marker>
+              ))}
           </MapContainer>
         </div>
         <p className="mt-3 text-xs italic text-gray-400 dark:text-gray-500">{t('campusMap.approximateNote')}</p>

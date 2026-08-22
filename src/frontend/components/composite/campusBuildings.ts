@@ -107,11 +107,73 @@ export const MAIN_CAMPUS_BUILDINGS: CampusBuilding[] = [
 
 // Lees Campus building locations - sourced the same way as Main Campus
 // above (same official uottawa.ca campus map page and embedded dataset), for
-// the four Lees buildings this dashboard cares about: the Faculty of Health
-// Sciences building, Blocks A and E, and the Gee-Gees athletics field.
+// the three Lees buildings this dashboard cares about: the Faculty of
+// Health Sciences building and Blocks A and E. (The Gee-Gees athletics
+// field lives in OUTDOOR_SPACES below instead, alongside Matt Anthony
+// Field - both are open fields, not buildings, so they get the same red
+// dot treatment as the rest of that list.)
 export const LEES_CAMPUS_BUILDINGS: CampusBuilding[] = [
   { code: 'LEES-FHS', name: '200 Lees - Faculty of Health Sciences', address: '200 Lees Avenue', position: [45.41546007934903, -75.668515248765], polygons: [[[45.41591121220699, -75.66912607803188], [45.41548907714662, -75.66886435306871], [45.415480662462244, -75.66888832787491], [45.41538669840071, -75.66883438456172], [45.41537688125109, -75.66885236566593], [45.4152787096595, -75.66882439505918], [45.41527590475425, -75.6687944265522], [45.415218404168314, -75.66878443704965], [45.41526889249076, -75.66740388781766], [45.41551011385255, -75.66743185842437], [45.41548206490958, -75.66847476247528], [45.41578499275221, -75.6686605672199], [45.41583548056809, -75.66850872678343], [45.41608090680714, -75.66867455252357], [45.41601919973908, -75.66887634047212], [45.416037431379664, -75.66888033627265], [45.41597852913418, -75.66906014731589], [45.4159392609364, -75.66903617251025], [45.41591121220699, -75.66912607803188]]] },
   { code: 'LEES-A', name: '200 Lees - Block A', address: '200 Lees Avenue', position: [45.415902380397775, -75.66662505269056], polygons: [[[45.41614316646137, -75.66734519782256], [45.41642934876497, -75.66654992284964], [45.41565364073766, -75.66598800006102], [45.41535615764799, -75.66683289590071], [45.415469126094436, -75.66691872658919], [45.4154841885369, -75.66687447014044], [45.41595300504965, -75.66721242847632], [45.4159078180854, -75.66734989168833], [45.415941708311976, -75.66737403156947], [45.415991602219684, -75.66723321559618]]] },
   { code: 'LEES-E', name: '200 Lees - Block E', address: '200 Lees Avenue', position: [45.41636931066319, -75.66754773259169], polygons: [[[45.41642348976056, -75.66795000796697], [45.416611766820495, -75.66742295389554], [45.416479031558524, -75.66732371216199], [45.41649409373161, -75.66727811460873], [45.41635853402928, -75.6671815550842], [45.416335940713914, -75.66722447042844], [45.41628698849959, -75.66718826060674], [45.41610247592584, -75.6677233613052], [45.416295461001276, -75.66786417727849], [45.41627945738594, -75.66790709262273], [45.41638865843567, -75.66798085337064], [45.416402779245665, -75.66793659692189]]] },
-  { code: 'LEES-F', name: 'Gee-Gees Field', address: '200 Lees Avenue', position: [45.416480368597306, -75.6676002886409], polygons: [[[45.416309, -75.666141], [45.416347, -75.66443], [45.415876, -75.664435], [45.415823, -75.666141]]] },
+]
+
+// Main Campus's bookable outdoor event spaces, sourced from uottawa.ca/
+// about-us/reservations/spaces/outdoor's embedded Google My Maps (KML
+// export), plus Parking Lot K - the surface lot at 60 University Private
+// immediately beside the 90U residence (see uottawa.ca's parking map) -
+// since it's commonly referred to by that neighbouring building's code -
+// and the Gee-Gees Field / Matt Anthony Field athletics fields, the Lees
+// Terrace green space outside the Lees FHS building, the uOttawa O-Train
+// station, and Lots B/C/J/M/P/T from uOttawa's separate "Main Campus
+// Parking Map" Google My Maps (KML export) - positions for these lots are
+// each an average of that source polygon's own vertices (the KML gives a
+// lot's outline, not a single point), so they land near but not exactly
+// at any official centroid. English names only: unlike
+// MAIN_CAMPUS_BUILDINGS/LEES_CAMPUS_BUILDINGS, this dataset has no French
+// source to carry over, and the dashboard is English-only for these
+// markers by design. Rendered in VCRT red (burgundy-600) rather than the
+// buildings' navy to read as a distinct marker type - see
+// CampusMapSection.
+export interface CampusOutdoorSpace {
+  name: string
+  position: [number, number]
+  description?: string
+}
+
+export const OUTDOOR_SPACES: CampusOutdoorSpace[] = [
+  { name: 'Tabaret Lawn', position: [45.4248336, -75.6855918] },
+  { name: 'Tabaret Grand Allée', position: [45.4247256, -75.6860701] },
+  { name: 'Ottawa-Citizen Terrace', position: [45.4243366, -75.6866432] },
+  { name: 'Simard-Arts Terrace', position: [45.4235535, -75.6858493] },
+  { name: 'Perez Terrace', position: [45.4235836, -75.6849695] },
+  { name: 'Grande Allée', position: [45.4230038, -75.6845618] },
+  { name: 'Morisset Terrace', position: [45.4233203, -75.683853] },
+  { name: 'Thompson Park', position: [45.423422, -75.6831342] },
+  { name: 'UCU Outdoor Auditorium', position: [45.4226323, -75.6842084] },
+  { name: '90 University Terrace', position: [45.4225974, -75.6847381] },
+  { name: 'UCU Upper Terrace', position: [45.4228798, -75.6837182] },
+  { name: 'Jock Turcot University Centre Park', position: [45.4222228, -75.683788] },
+  { name: 'Fauteux Terrace', position: [45.4239304, -75.6826222] },
+  { name: 'Montpetit Terrace', position: [45.4223669, -75.6829099] },
+  { name: 'Lamoureux Terrace', position: [45.4218926, -75.6823226] },
+  { name: 'University Square', position: [45.4219133, -75.682867] },
+  { name: 'Learning Crossroads Terrace', position: [45.4215311, -75.6819926] },
+  { name: 'D\'Iorio Courtyard', position: [45.4208816, -75.6818317] },
+  { name: 'Husky Energy Courtyard', position: [45.4211076, -75.6811853] },
+  { name: 'Marion Square', position: [45.4207206, -75.6806184] },
+  { name: 'Colonel By Terrace', position: [45.4200692, -75.679626] },
+  { name: 'Colonel By Green Roof', position: [45.4200654, -75.6791163] },
+  { name: 'SITE Terrace', position: [45.4197254, -75.6785483] },
+  { name: '90U Parking (Lot K)', position: [45.4229, -75.6853], description: '60 University Private' },
+  { name: 'Matt Anthony Field', position: [45.42062799, -75.67687377] },
+  { name: 'Gee-Gees Field', position: [45.416085, -75.6652855] },
+  { name: 'Lees Terrace', position: [45.4150, -75.6688] },
+  { name: 'uOttawa Station (O-Train Confederation Line)', position: [45.42056, -75.68222] },
+  { name: 'Lot B', position: [45.425727, -75.686264], description: '40 Stewart' },
+  { name: 'Lot C', position: [45.425465, -75.686809], description: '30 Stewart' },
+  { name: 'Lot J', position: [45.423937, -75.681399], description: '109 Osgoode' },
+  { name: 'Lot M', position: [45.418843, -75.675573], description: '40 Mann' },
+  { name: 'Lot P', position: [45.424750, -75.683078], description: '15 Copernicus' },
+  { name: 'Lot T', position: [45.424739, -75.682122], description: '585 King Edward' },
 ]

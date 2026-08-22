@@ -342,6 +342,20 @@
     display: none;
   }
 
+  /* Outdoor space / parking dot markers (CampusMapSection) - VCRT red
+     (burgundy-600) so they read as a distinct marker type from the navy
+     building pills/labels above. Same transparent-container + centering
+     transform trick as .campus-building-icon. */
+  .campus-outdoor-icon {
+    background: transparent;
+    border: none;
+  }
+
+  .campus-outdoor-icon__dot {
+    @apply block w-2.5 h-2.5 bg-burgundy-600 rounded-full border-2 border-white shadow;
+    transform: translate(-50%, -50%);
+  }
+
   /* CARTO's dark basemap on its own renders quite dark/low-contrast against
      the building outline fills - brighten it a bit so buildings stay easy
      to pick out instead of blending into the tiles. */
