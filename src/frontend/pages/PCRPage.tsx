@@ -206,6 +206,16 @@ const PCRPage: React.FC = () => {
       const draftId = urlParams.get('draftId')
       const reportId = urlParams.get('reportId')
 
+      // Defense in depth: the Sidebar already hides "New PCR" for a
+      // temp-login delegate session (and the backend rejects the create
+      // endpoints outright - see blockTempLogin in pcr.ts), but a typed-in
+      // URL could still land here directly with neither param, i.e. "create
+      // new" rather than editing an existing draft/report.
+      if (!draftId && !reportId && currentUser?.viaTempLogin) {
+        window.location.hash = '#/dashboard'
+        return
+      }
+
       if (draftId && isAuthenticated && token) {
         setIsLoadingDraft(true)
         setCurrentDraftId(draftId)
@@ -284,7 +294,7 @@ const PCRPage: React.FC = () => {
     return () => {
       ignore = true
     }
-  }, [isAuthenticated, token, isAdmin, loadData, showNotification])
+  }, [isAuthenticated, token, isAdmin, loadData, showNotification, currentUser?.viaTempLogin])
 
   // Auto-populate Call Number for a brand-new report: 001 for the first
   // draft/submitted PCR of the call date (across all users), incrementing

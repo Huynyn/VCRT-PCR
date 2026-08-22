@@ -25,6 +25,15 @@ const ProfilePage = () => {
   const { showNotification } = useNotification()
   const isAdmin = user?.role === 'admin'
 
+  // Defense in depth: the Sidebar already renders the footer identity block
+  // as non-clickable for a temp-login delegate session (see Sidebar.tsx),
+  // but a typed-in URL could still land here directly.
+  useEffect(() => {
+    if (user?.viaTempLogin) {
+      window.location.hash = '#/dashboard'
+    }
+  }, [user?.viaTempLogin])
+
   const formatDateTime = (dateString?: string | null) =>
     dateString
       ? parseServerDate(dateString).toLocaleDateString(i18n.language === 'fr' ? 'fr-CA' : 'en-CA', {

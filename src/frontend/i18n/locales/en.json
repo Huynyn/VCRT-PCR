@@ -31,7 +31,7 @@
     "next": "Next",
     "previous": "Previous",
     "scrollHorizontally": "Scroll horizontally to view all columns",
-    "contentNotTranslatedNote": "Note: this content stays in English.",
+    "contentNotTranslatedNote": "Note: all content on this dashboard page is only available in English.",
     "logoAlt": "PCR logo",
     "role": {
       "admin": "Admin",
@@ -45,10 +45,12 @@
   },
   "nav": {
     "workflow": "Workflow",
+    "account": "Supervisor",
     "admin": "Admin",
     "dashboard": "Dashboard",
     "newPcr": "New PCR",
     "pcrReports": "PCR Reports",
+    "tempLogin": "Temporary Login",
     "activityLogs": "Activity Logs",
     "userManagement": "User Management",
     "profile": "Profile"
@@ -183,6 +185,34 @@
     "logout": "Logout",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar"
+  },
+  "help": {
+    "title": "Help & FAQ",
+    "adminHeading": "For Admins",
+    "userHeading": "For Users",
+    "feedbackHeading": "Send Feedback & Further Help",
+    "admin": [
+      { "q": "How do I create a new user account?", "a": "Go to User Management in the sidebar and click \"Create User\". Fill in their name, username, and a temporary password, then choose their role (User or Administrator)." },
+      { "q": "How do I reset a user's password?", "a": "In User Management, click Edit on their row, then \"Reset Password\" to set a new one for them." },
+      { "q": "How do I activate or deactivate a user account?", "a": "In User Management, click Edit on a user's row, then use Activate or Deactivate to control whether they can log in. At least one admin must stay active, and you can't deactivate your own account while logged in." },
+      { "q": "How do I review a submitted PCR?", "a": "Open PCR Reports and find the report with status \"Submitted\". Use Review to Approve it, or \"Request Changes\" with comments to send it back to the submitter to fix and resubmit or Edit yourself." },
+      { "q": "What happens after I approve or complete a PCR?", "a": "Once approved, the submitter can no longer edit it. After you mark it Complete (once it's been downloaded and uploaded to Microsoft Teams), it becomes view-only as a PDF and is permanently deleted after 1 week." },
+      { "q": "Can I create a new PCR as an admin?", "a": "No - only users create and submit PCRs. Admins review, approve, or edit existing ones instead, and the \"New PCR\" option doesn't appear in the admin sidebar." },
+      { "q": "How do I handle a name or password change request?", "a": "You'll see it flagged in the notification bell and in User Management as a \"Pending change request\". Open that user's Edit screen to make the update, then dismiss the request." },
+      { "q": "Where can I see what actions users have taken?", "a": "Activity Logs in the sidebar shows a filterable audit trail of logins, PCR edits, and other actions - including edits made through someone's Temporary Login. Logs older than 1 week can be deleted using the Clear button." },
+      { "q": "How do I modify the content shown on the Dashboard?", "a": "Most Dashboard sections - Sample PCR, Medical Glossary, Common Medications, Debrief Questions, and the Supply Form QR link - have an Edit icon visible only to admins. Use it to update what everyone sees there." },
+      { "q": "How do I manage the Responder and Primary PSM dropdown lists?", "a": "In User Management, the Responders and Primary PSM sections let you add, rename, or remove the names available in those PCR dropdowns." }
+    ],
+    "user": [
+      { "q": "How do I start a new PCR?", "a": "Click \"New PCR\" in the sidebar. Fill in the sections as you go; the draft is saved automatically after the first save. Check your notifications for incomplete drafts or requested changes." },
+      { "q": "I started a PCR draft I don't need anymore, what do I do?", "a": "Open PCR Reports in the sidebar, find the draft, and click Delete. Drafts can be removed at any time since they haven't been submitted yet." },
+      { "q": "What happens after I submit a PCR?", "a": "An admin reviews it. They'll either approve it, or send it back with \"Request Changes\" comments for you to fix and resubmit. Once it's approved, it disappears from your own PCR Reports list, since you can no longer edit it." },
+      { "q": "I forgot to get a signature or missed a field after submitting - can I fix it?", "a": "An admin will request for this change to be made, use \"Edit & Resubmit\" on that report to do so in \"PCR reports\" from the sidebar. If a supervisor isn't around, \"Temporary Login\" can help - see below." },
+      { "q": "What is Temporary Login?", "a": "Under Supervisor > Temporary Login in the sidebar, you can turn on a separate password. Anyone who knows it can log into your account to edit an existing PCR - useful if someone forgot to sign - but they can't create new PCRs or change this setting themselves. It's tagged for the admin so it's clear when a change was made that way." },
+      { "q": "How do I change my name or password?", "a": "Go to Profile and use \"Request a Change\" - an admin will review and update it for you." },
+      { "q": "Where can I see my total number of calls?", "a": "Go to Profile - the Account Overview card shows your Total Calls and the date of your last submitted call." },
+      { "q": "Where can I find resources to help me write a PCR?", "a": "The Dashboard has a Sample PCR template, a Medical Glossary, and a Common Medications reference you can search, plus the Debrief Questions and the Supply Form QR code for after the call." }
+    ]
   },
   "pcr": {
     "searchOrType": "Search or type...",
@@ -663,6 +693,24 @@
     "requestPendingTitle": "Request pending",
     "requestPendingBody": "Your change request is awaiting admin review (sent {{date}})."
   },
+  "tempLogin": {
+    "title": "Temporary Login",
+    "subtitle": "Let someone log into this account with a separate password, to fix up an existing PCR without you present.",
+    "accessDeniedMessage": "Not available for admin accounts.",
+    "loadFailed": "Failed to load current setting",
+    "saved": "Saved",
+    "saveFailed": "Failed to save",
+    "passwordRequired": "Set a password to turn on temporary login",
+    "enableLabel": "Allow temporary login",
+    "enableDescription": "Whoever has this password can sign in as you to fix up an existing PCR (e.g. a missing signature), but can't create a new one or change this setting.",
+    "passwordLabel": "Temporary login password",
+    "newPasswordLabel": "New temporary login password",
+    "passwordPlaceholder": "Choose a password",
+    "newPasswordPlaceholder": "Leave blank to keep the current one",
+    "passwordHelp": "Different from your own password. Share it only with who needs it.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
+  },
   "reports": {
     "title": "PCR Reports",
     "subtitleLoading": "View completed PCR submissions",
@@ -694,6 +742,7 @@
     "cancel": "Cancel",
     "complete": "Complete",
     "noneDash": "—",
+    "lastEditedViaTempLogin": "Last edit was via temporary login",
     "columnReportId": "Report ID",
     "columnCreatedBy": "Created By",
     "columnStatus": "Status",
@@ -770,7 +819,9 @@
     "loginToView": "Please log in to view activity logs",
     "actions": {
       "login": "Login",
+      "login_via_temp_login": "Login (Temp)",
       "logout": "Logout",
+      "logout_via_temp_login": "Logout (Temp)",
       "create_user": "Create User",
       "update_user": "Update User",
       "delete_user": "Delete User",
@@ -783,10 +834,12 @@
       "delete_psm_member": "Delete PSM Member",
       "create_pcr": "Create PCR",
       "update_pcr": "Update PCR",
+      "update_pcr_via_temp_login": "Update PCR (Temp)",
       "submit_pcr": "Submit PCR",
       "delete_pcr": "Delete PCR",
       "approve_pcr": "Approve PCR",
       "update_setting": "Update Setting",
+      "update_temp_login_setting": "Update Temp Login Setting",
       "manual_cleanup": "Manual Cleanup",
       "cleanup_pcr_reports": "Automatic Cleanup",
       "cleanup_activity_logs": "Clean Activity Logs",

@@ -10,6 +10,7 @@ interface LayoutProps {
     name: string
     role: string
     avatar?: string
+    viaTempLogin?: boolean
   }
   onLogout?: () => void
   onNavigate?: (href: string) => void
@@ -25,6 +26,7 @@ const PAGE_TITLE_KEYS: Array<[string, string]> = [
   ['/logs', 'nav.activityLogs'],
   ['/admin/users', 'nav.userManagement'],
   ['/profile', 'nav.profile'],
+  ['/account/temp-login', 'nav.tempLogin'],
 ]
 
 function pageTitleFor(path: string, t: (key: string) => string): string {

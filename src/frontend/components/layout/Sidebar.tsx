@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { FileText, Users, History, Settings, LayoutDashboard, Printer, Plus, Search } from 'lucide-react'
+import { FileText, Users, History, Settings, LayoutDashboard, Printer, Plus, Search, KeyRound } from 'lucide-react'
 import { cn } from '@/utils'
 import { navIconProps } from './navIcon'
 
@@ -21,6 +21,7 @@ interface SidebarProps {
   user?: {
     name: string
     role: string
+    viaTempLogin?: boolean
   }
 }
 
@@ -77,6 +78,52 @@ const SidebarItemComponent: React.FC<{ item: SidebarItem; onClick: (href: string
   </button>
 )
 
+// The sidebar footer's identity entry - normally a link into Profile, but a
+// delegate on a temporary login can't reach Profile either (same as New PCR
+// and Temporary Login itself), so this renders as a plain non-clickable
+// block for them instead, still showing who they're signed in as.
+const ProfileFooterEntry: React.FC<{
+  isViaTempLogin: boolean
+  pinned: boolean
+  isActive: boolean
+  initials: string
+  name: string
+  nameVisibility: ReturnType<typeof revealWhenExpanded>
+  onClick: () => void
+}> = ({ isViaTempLogin, pinned, isActive, initials, name, nameVisibility, onClick }) => {
+  const className = cn(
+    'flex items-center gap-2.5 rounded-full transition-all duration-150 text-left',
+    !isViaTempLogin && 'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800',
+    pinned
+      ? 'w-full px-3 py-1.5'
+      : 'w-10 h-10 mx-auto justify-center lg:group-hover:w-full lg:group-hover:h-auto lg:group-hover:mx-0 lg:group-hover:justify-start lg:group-hover:px-3 lg:group-hover:py-1.5',
+    !isViaTempLogin && (isActive ? 'bg-primary-50 dark:bg-primary-900/40' : 'hover:bg-gray-200 dark:hover:bg-gray-700'),
+  )
+
+  const content = (
+    <>
+      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-xs font-bold shrink-0">
+        {initials}
+      </span>
+      <div className={cn('min-w-0', nameVisibility)}>
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+          {name}
+        </p>
+      </div>
+    </>
+  )
+
+  if (isViaTempLogin) {
+    return <div className={className}>{content}</div>
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
+    </button>
+  )
+}
+
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return '?'
@@ -93,6 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { t } = useTranslation()
   const isAdmin = user?.role === 'admin'
+  const isViaTempLogin = !!user?.viaTempLogin
   // `isOpen` doubles as "pinned open" once we're at the lg+ breakpoint: below
   // lg it's the familiar off-canvas drawer toggle, at lg+ it switches the
   // rail between a permanently-expanded sidebar and an icon-only rail that
@@ -104,6 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isReportsActive = currentPath === '/reports'
   const isLogsActive = currentPath === '/logs'
   const isUsersActive = currentPath === '/admin/users'
+  const isTempLoginActive = currentPath === '/account/temp-login'
 
   const navigationItems: SidebarItem[] = [
     {
@@ -113,19 +162,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       href: '/dashboard',
       isActive: isDashboardActive,
     },
-    // Admins only manage/review existing PCRs - they don't submit their own,
-    // so there's no need for a "New PCR" entry point in their sidebar.
-    ...(isAdmin
-      ? []
-      : [
-          {
-            id: 'new-pcr',
-            label: t('nav.newPcr'),
-            icon: <Plus className="w-5 h-5" {...navIconProps(isNewPcrActive)} />,
-            href: '/pcr/new',
-            isActive: isNewPcrActive,
-          },
-        ]),
     {
       id: 'pcr-list',
       label: t('nav.pcrReports'),
@@ -134,6 +170,35 @@ const Sidebar: React.FC<SidebarProps> = ({
       isActive: isReportsActive,
     },
   ]
+
+  // Admins only manage/review existing PCRs - they don't submit their own,
+  // so there's no "New PCR" entry point (or this section at all) in their
+  // sidebar. A delegate signed in with someone's temporary login can fix up
+  // an existing PCR but never starts a new one (enforced server-side too -
+  // see blockTempLogin in pcr.ts), and can't manage the temp-login setting
+  // itself from inside the account it let them into.
+  const accountItems: SidebarItem[] = isAdmin
+    ? []
+    : [
+        ...(isViaTempLogin
+          ? []
+          : [
+              {
+                id: 'new-pcr',
+                label: t('nav.newPcr'),
+                icon: <Plus className="w-5 h-5" {...navIconProps(isNewPcrActive)} />,
+                href: '/pcr/new',
+                isActive: isNewPcrActive,
+              },
+              {
+                id: 'temp-login',
+                label: t('nav.tempLogin'),
+                icon: <KeyRound className="w-5 h-5" {...navIconProps(isTempLoginActive)} />,
+                href: '/account/temp-login',
+                isActive: isTempLoginActive,
+              },
+            ]),
+      ]
 
   const adminItems: SidebarItem[] = [
     {
@@ -218,6 +283,23 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <SidebarItemComponent key={item.id} item={item} onClick={handleItemClick} pinned={pinned} />
               ))}
             </div>
+            {accountItems.length > 0 && (
+              <>
+                <p
+                  className={cn(
+                    'mt-5 mb-1.5 px-3 text-[11px] font-semibold tracking-wider uppercase text-gray-400 dark:text-gray-500 whitespace-nowrap',
+                    revealWhenExpanded(pinned),
+                  )}
+                >
+                  {t('nav.account')}
+                </p>
+                <div className="space-y-0.5">
+                  {accountItems.map(item => (
+                    <SidebarItemComponent key={item.id} item={item} onClick={handleItemClick} pinned={pinned} />
+                  ))}
+                </div>
+              </>
+            )}
             {isAdmin && (
               <>
                 <p
@@ -240,29 +322,15 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Footer */}
           <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-3">
             {user && (
-              <button
-                type="button"
+              <ProfileFooterEntry
+                isViaTempLogin={isViaTempLogin}
+                pinned={pinned}
+                isActive={currentPath === '/profile'}
+                initials={getInitials(user.name)}
+                name={user.name}
+                nameVisibility={revealWhenExpanded(pinned)}
                 onClick={() => handleItemClick('/profile')}
-                className={cn(
-                  'flex items-center gap-2.5 rounded-full transition-all duration-150 text-left',
-                  'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800',
-                  pinned
-                    ? 'w-full px-3 py-1.5'
-                    : 'w-10 h-10 mx-auto justify-center lg:group-hover:w-full lg:group-hover:h-auto lg:group-hover:mx-0 lg:group-hover:justify-start lg:group-hover:px-3 lg:group-hover:py-1.5',
-                  currentPath === '/profile'
-                    ? 'bg-primary-50 dark:bg-primary-900/40'
-                    : 'hover:bg-gray-200 dark:hover:bg-gray-700',
-                )}
-              >
-                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-xs font-bold shrink-0">
-                  {getInitials(user.name)}
-                </span>
-                <div className={cn('min-w-0', revealWhenExpanded(pinned))}>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                    {user.name}
-                  </p>
-                </div>
-              </button>
+              />
             )}
             <p className={cn('mt-2 px-1 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap', revealWhenExpanded(pinned))}>
               {t('login.brandAcronym')} v{__APP_VERSION__} · 2026

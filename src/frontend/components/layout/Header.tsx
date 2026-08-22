@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LogOut, Moon, Sun, Menu } from 'lucide-react'
+import { LogOut, Moon, Sun, Menu, HelpCircle } from 'lucide-react'
 import { Button, Tooltip } from '@/components/ui'
 import NotificationBell from './NotificationBell'
 import LanguageToggle from './LanguageToggle'
+import HelpPopup from './HelpPopup'
 
 interface HeaderProps {
   user?: {
@@ -31,6 +32,7 @@ const Header: React.FC<HeaderProps> = ({
   sidebarOpen = true,
 }) => {
   const { t } = useTranslation()
+  const [helpOpen, setHelpOpen] = useState(false)
 
   return (
     // Same background as the sidebar (not white like the content cards) -
@@ -43,12 +45,17 @@ const Header: React.FC<HeaderProps> = ({
       <div className="h-full flex items-center justify-between">
         {/* Left side */}
         <div className="flex items-center space-x-4">
-          {/* Hamburger + logo + brand - same w-72 width as the sidebar's own
-              pinned-open width, regardless of whether the sidebar is
-              actually open, so this zone lines up exactly with it (and the
-              title pill right after it doesn't trail wherever this
-              content's natural width happens to end when collapsed). */}
-          <div className="flex items-center gap-4 shrink-0 lg:w-72">
+          {/* Hamburger + logo + brand - fixed to the sidebar's pinned-open
+              width (w-72 = 288px), minus this header's own left px-4 (16px)
+              and the space-x-4 gap (16px) before the title pill next to it
+              - both of those sit between the viewport edge and where this
+              zone's content starts, so they have to be subtracted for the
+              title pill's own start position to land exactly on the
+              sidebar's real right edge (288px from the viewport edge), not
+              32px short of it. Regardless of whether the sidebar is
+              actually open, so the pill doesn't trail wherever this
+              content's natural width happens to end when collapsed. */}
+          <div className="flex items-center gap-4 shrink-0 lg:w-[256px]">
             <Tooltip content={sidebarOpen ? t('header.collapseSidebar') : t('header.expandSidebar')}>
               <Button
                 variant="icon"
@@ -87,6 +94,17 @@ const Header: React.FC<HeaderProps> = ({
         {/* Right side - h-full so the logout divider's self-stretch below
             can reach the header's full height, edge to edge. */}
         <div className="h-full flex items-center gap-3">
+          <Tooltip content={t('help.title')}>
+            <Button
+              variant="icon"
+              onClick={() => setHelpOpen((v) => !v)}
+              className="hover:text-primary-600 dark:hover:text-primary-400"
+              aria-label={t('help.title')}
+            >
+              <HelpCircle className="w-4 h-4" />
+            </Button>
+          </Tooltip>
+
           <LanguageToggle />
 
           {/* Theme toggle */}
@@ -126,6 +144,8 @@ const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
+
+      <HelpPopup isOpen={helpOpen} onClose={() => setHelpOpen(false)} isAdmin={user?.role === 'admin'} />
     </header>
   )
 }

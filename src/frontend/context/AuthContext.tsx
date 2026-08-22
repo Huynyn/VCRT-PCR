@@ -197,6 +197,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isActive: userData.isActive,
         createdAt: userData.createdAt,
         lastLogin: userData.lastLogin,
+        viaTempLogin: userData.viaTempLogin,
       }
 
       // Calculate session expiry

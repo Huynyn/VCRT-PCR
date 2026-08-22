@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { Eye, Edit, Trash2, Ban, ThumbsUp, Archive, MoreVertical, ChevronRight, MessageSquare, type LucideIcon } from 'lucide-react'
-import { Loading, Alert, Modal, Button } from '@/components/ui'
+import { Eye, Edit, Trash2, Ban, ThumbsUp, Archive, MoreVertical, ChevronRight, MessageSquare, KeyRound, type LucideIcon } from 'lucide-react'
+import { Loading, Alert, Modal, Button, Tooltip } from '@/components/ui'
 import { Textarea } from '@/components/forms'
 import { pdfService } from '@/services/pdf.service'
 import { useAuth } from '@/context/AuthContext'
@@ -20,6 +20,8 @@ interface PCRReport {
   creator_first_name?: string | null
   creator_last_name?: string | null
   creator_username?: string | null
+  // SQLite gives back 0/1, not a real boolean
+  last_edited_via_temp_login?: number | boolean | null
 }
 
 interface SubAction {
@@ -120,7 +122,7 @@ const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions }) => {
         aria-label={t('reports.actions')}
         aria-haspopup="true"
         aria-expanded={open}
-        className="btn-icon-ghost"
+        className={cn('btn-icon-ghost', 'hover:text-primary-600 dark:hover:text-primary-400')}
       >
         <MoreVertical className="w-4 h-4" />
       </button>
@@ -677,7 +679,14 @@ const ReportsPage = () => {
                         {formatDate(report.created_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
-                        {formatDate(report.updated_at)}
+                        <span className="inline-flex items-center gap-1.5">
+                          {formatDate(report.updated_at)}
+                          {!!report.last_edited_via_temp_login && (
+                            <Tooltip content={t('reports.lastEditedViaTempLogin')}>
+                              <KeyRound className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400 shrink-0" />
+                            </Tooltip>
+                          )}
+                        </span>
                       </td>
                       <td className="w-0 pl-2 pr-4 py-4 whitespace-nowrap text-sm font-medium text-right">
                         <RowActionsMenu actions={getActionSlots(report)} />

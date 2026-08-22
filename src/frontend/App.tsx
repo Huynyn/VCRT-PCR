@@ -15,6 +15,7 @@ const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const ActivityLogsPage = lazy(() => import('./pages/ActivityLogsPage'))
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const TempLoginSettingsPage = lazy(() => import('./pages/TempLoginSettingsPage'))
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -106,6 +107,7 @@ const AppContent: React.FC = () => {
           ? {
               name: `${user.firstName} ${user.lastName}`,
               role: user.role,
+              viaTempLogin: user.viaTempLogin,
             }
           : undefined
       }
@@ -160,6 +162,12 @@ const AppContent: React.FC = () => {
           <Route
             path="/profile"
             element={<ProfilePage />}
+          />
+
+          {/* Temporary login (delegate access) settings */}
+          <Route
+            path="/account/temp-login"
+            element={<TempLoginSettingsPage />}
           />
 
           {/* Default redirect */}

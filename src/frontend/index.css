@@ -181,8 +181,13 @@
      than soft floating panels: a plain 1px border carries the shape, no
      ambient shadow, and a tighter radius so sections read as structured
      content rather than rounded "bubbles". */
+  /* shadow-sm - now that the main content frame itself is white (see the
+     Gmail-style frame comment on <main> in Layout.tsx), a white card with
+     just a 1px border no longer reads as a distinct box the way it did
+     against the old gray page background; the shadow restores that
+     definition without needing every card's own background to change. */
   .card {
-    @apply bg-white rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700;
+    @apply bg-white rounded-lg border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700;
   }
 
   .card-header {

@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import db from '../database';
-import { authenticateToken, AuthenticatedRequest, requireRole } from '../middleware/auth';
+import { authenticateToken, AuthenticatedRequest, requireRole, blockTempLogin } from '../middleware/auth';
 import { logActivity } from '../middleware/logger';
 import { cleanupService } from '../services/cleanup';
 
@@ -102,6 +102,7 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
         pcr_reports.created_at,
         pcr_reports.updated_at,
         pcr_reports.created_by,
+        pcr_reports.last_edited_via_temp_login,
         NULLIF(TRIM(json_extract(form_data, '$.reportNumber')), '') AS report_number,
         NULLIF(TRIM(json_extract(form_data, '$.patientName')), '') AS patient_name,
         users.first_name AS creator_first_name,
@@ -147,8 +148,10 @@ router.get('/', authenticateToken, (req: AuthenticatedRequest, res: Response) =>
   }
 });
 
-// POST /api/pcr - Create new PCR report
-router.post('/', authenticateToken, logActivity('create_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
+// POST /api/pcr - Create new PCR report. blockTempLogin: a delegate signed
+// in with a temporary login may fix up an existing report but never starts
+// a new one.
+router.post('/', authenticateToken, blockTempLogin, logActivity('create_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
     const { form_data, status = 'draft', sign_off_attachments } = req.body;
 
@@ -265,6 +268,11 @@ router.put('/:id', authenticateToken, logActivity('update_pcr', 'pcr_report'), (
     }
 
     updateFields.push('updated_at = CURRENT_TIMESTAMP');
+    // Always reflects the session that made *this* edit - a normal edit by
+    // the owner/admin after a delegate's fix clears it back to 0, same as
+    // it would flip to 1 if a delegate edits next.
+    updateFields.push('last_edited_via_temp_login = ?');
+    updateValues.push(req.user!.viaTempLogin ? 1 : 0);
     updateValues.push(id);
 
     db.prepare(`
@@ -513,8 +521,9 @@ router.delete('/:id', authenticateToken, logActivity('delete_pcr', 'pcr_report')
   }
 });
 
-// POST /api/submissions - Submit PCR (for compatibility with frontend)
-router.post('/submit', authenticateToken, logActivity('submit_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
+// POST /api/submissions - Submit PCR (for compatibility with frontend).
+// blockTempLogin: this always creates a brand-new report, same as POST /.
+router.post('/submit', authenticateToken, blockTempLogin, logActivity('submit_pcr', 'pcr_report'), (req: AuthenticatedRequest, res: Response) => {
   try {
     const { data: formData, sign_off_attachments } = req.body;
 

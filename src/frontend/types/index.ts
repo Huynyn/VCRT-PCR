@@ -159,6 +159,10 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   lastLogin?: string;
+  // True when this session was established with the account's secondary
+  // "temporary login" password (a delegate standing in for the account
+  // owner) rather than its real one - see Sidebar's Account section.
+  viaTempLogin?: boolean;
 }
 
 export interface AuthContextType {

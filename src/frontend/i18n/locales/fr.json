@@ -31,7 +31,7 @@
     "next": "Suivant",
     "previous": "Précédent",
     "scrollHorizontally": "Faites défiler horizontalement pour voir toutes les colonnes",
-    "contentNotTranslatedNote": "Remarque : ce contenu demeure seulement disponible en anglais.",
+    "contentNotTranslatedNote": "Remarque : tout le contenu de cette page de tableau de bord est disponible en anglais seulement.",
     "logoAlt": "Logo RSP",
     "role": {
       "admin": "Admin",
@@ -45,10 +45,12 @@
   },
   "nav": {
     "workflow": "Flux des tâches",
+    "account": "Superviseur",
     "admin": "Administration",
     "dashboard": "Tableau de bord",
     "newPcr": "Nouveau RSP",
     "pcrReports": "Rapports RSP",
+    "tempLogin": "Connexion temporaire",
     "activityLogs": "Journal d'activités",
     "userManagement": "Gestion des utilisateurs",
     "profile": "Profil"
@@ -183,6 +185,34 @@
     "logout": "Déconnexion",
     "collapseSidebar": "Réduire le menu",
     "expandSidebar": "Développer le menu"
+  },
+  "help": {
+    "title": "Aide et FAQ",
+    "adminHeading": "Pour les administrateurs",
+    "userHeading": "Pour les utilisateurs",
+    "feedbackHeading": "Envoyer des commentaires ou obtenir de l'aide",
+    "admin": [
+      { "q": "Comment créer un nouveau compte utilisateur?", "a": "Allez dans Gestion des utilisateurs dans le menu, puis cliquez sur \"Créer un utilisateur\". Entrez son nom, son nom d'utilisateur et un mot de passe temporaire, puis choisissez son rôle (Utilisateur ou Administrateur)." },
+      { "q": "Comment réinitialiser le mot de passe d'un utilisateur?", "a": "Dans Gestion des utilisateurs, cliquez sur Modifier pour cet utilisateur, puis sur \"Réinitialiser le mot de passe\" pour lui en définir un nouveau." },
+      { "q": "Comment activer ou désactiver un compte utilisateur?", "a": "Dans Gestion des utilisateurs, cliquez sur Modifier pour cet utilisateur, puis utilisez Activer ou Désactiver pour contrôler s'il peut se connecter. Au moins un administrateur doit rester actif, et vous ne pouvez pas désactiver votre propre compte pendant que vous êtes connecté." },
+      { "q": "Comment réviser un RSP soumis?", "a": "Ouvrez Rapports RSP et trouvez le rapport au statut \"Soumis\". Utilisez Réviser pour l'approuver, ou \"Demander des modifications\" avec des commentaires pour le renvoyer à l'auteur afin qu'il le corrige et le resoumette, ou modifiez-le vous-même." },
+      { "q": "Que se passe-t-il après avoir approuvé ou complété un RSP?", "a": "Une fois approuvé, l'auteur ne peut plus le modifier. Une fois que vous le marquez Complété (après l'avoir téléchargé et téléversé sur Microsoft Teams), il devient consultable en PDF seulement et sera supprimé de façon permanente après 1 semaine." },
+      { "q": "Puis-je créer un nouveau RSP en tant qu'administrateur?", "a": "Non - seuls les utilisateurs créent et soumettent des RSP. Les administrateurs révisent, approuvent ou modifient plutôt les RSP existants, et l'option \"Nouveau RSP\" n'apparaît pas dans le menu administrateur." },
+      { "q": "Comment traiter une demande de changement de nom ou de mot de passe?", "a": "Vous la verrez signalée dans la cloche de notifications et dans Gestion des utilisateurs comme \"Demande de changement en attente\". Ouvrez l'écran Modifier de cet utilisateur pour faire la mise à jour, puis rejetez la demande." },
+      { "q": "Où puis-je voir les actions effectuées par les utilisateurs?", "a": "Le Journal d'activité dans le menu affiche un historique filtrable des connexions, modifications de RSP et autres actions - y compris les modifications faites via une Connexion temporaire. Les entrées de plus d'une semaine peuvent être supprimées avec le bouton Nettoyer." },
+      { "q": "Comment modifier le contenu affiché sur le Tableau de bord?", "a": "La plupart des sections du Tableau de bord - RSP type, Glossaire médical, Médicaments courants, Questions de débreffage et le lien du formulaire de fournitures - ont une icône Modifier visible seulement aux administrateurs. Utilisez-la pour mettre à jour ce que tout le monde y voit." },
+      { "q": "Comment gérer les listes déroulantes Intervenants et PSM principal?", "a": "Dans Gestion des utilisateurs, les sections Intervenants et PSM principal permettent d'ajouter, renommer ou retirer les noms disponibles dans ces listes déroulantes du RSP." }
+    ],
+    "user": [
+      { "q": "Comment démarrer un nouveau RSP?", "a": "Cliquez sur \"Nouveau RSP\" dans le menu. Remplissez les sections au fur et à mesure; le brouillon est enregistré automatiquement après le premier enregistrement. Vérifiez vos notifications pour les brouillons incomplets ou les modifications demandées." },
+      { "q": "J'ai commencé un brouillon de RSP dont je n'ai plus besoin, que dois-je faire?", "a": "Ouvrez Rapports RSP dans le menu, trouvez le brouillon, puis cliquez sur Supprimer. Un brouillon peut être retiré en tout temps puisqu'il n'a pas encore été soumis." },
+      { "q": "Que se passe-t-il après avoir soumis un RSP?", "a": "Un administrateur le révise. Il l'approuvera, ou le renverra avec des commentaires \"Demander des modifications\" pour que vous le corrigiez et le resoumettiez. Une fois approuvé, il disparaît de votre propre liste Rapports RSP, puisque vous ne pouvez plus le modifier." },
+      { "q": "J'ai oublié une signature ou un champ après avoir soumis - puis-je le corriger?", "a": "Un administrateur demandera que ce changement soit fait; utilisez \"Modifier et resoumettre\" sur ce rapport pour le faire dans \"Rapports RSP\" depuis le menu. Si aucun superviseur n'est disponible, la \"Connexion temporaire\" peut aider - voir ci-dessous." },
+      { "q": "Qu'est-ce que la Connexion temporaire?", "a": "Sous Superviseur > Connexion temporaire dans le menu, vous pouvez activer un mot de passe distinct. Quiconque le connaît peut se connecter à votre compte pour modifier un RSP existant - utile si quelqu'un a oublié de signer - mais sans pouvoir créer de nouveaux RSP ni modifier ce réglage. C'est indiqué pour l'administrateur afin qu'on sache qu'une modification a été faite ainsi." },
+      { "q": "Comment changer mon nom ou mon mot de passe?", "a": "Allez dans Profil et utilisez \"Demander un changement\" - un administrateur le révisera et fera la mise à jour pour vous." },
+      { "q": "Où puis-je voir mon nombre total d'appels?", "a": "Allez dans Profil - la carte Aperçu du compte affiche votre nombre total d'appels et la date de votre dernier appel soumis." },
+      { "q": "Où puis-je trouver des ressources pour m'aider à rédiger un RSP?", "a": "Le Tableau de bord propose un modèle de RSP type, un Glossaire médical et une référence Médicaments courants que vous pouvez consulter, ainsi que les Questions de débreffage et le code QR du formulaire de fournitures pour après l'appel." }
+    ]
   },
   "pcr": {
     "searchOrType": "Rechercher ou saisir...",
@@ -663,6 +693,24 @@
     "requestPendingTitle": "Demande en attente",
     "requestPendingBody": "Votre demande de changement est en attente d'examen par un administrateur (envoyée le {{date}})."
   },
+  "tempLogin": {
+    "title": "Connexion temporaire",
+    "subtitle": "Permettez à quelqu'un de se connecter à ce compte avec un mot de passe distinct, pour corriger un RSP existant sans que vous soyez présent.",
+    "accessDeniedMessage": "Non disponible pour les comptes administrateurs.",
+    "loadFailed": "Échec du chargement du paramètre actuel",
+    "saved": "Enregistré",
+    "saveFailed": "Échec de l'enregistrement",
+    "passwordRequired": "Définissez un mot de passe pour activer la connexion temporaire",
+    "enableLabel": "Autoriser la connexion temporaire",
+    "enableDescription": "Quiconque a ce mot de passe peut se connecter en votre nom pour corriger un RSP existant (ex. une signature manquante), mais ne peut pas en créer un nouveau ni modifier ce paramètre.",
+    "passwordLabel": "Mot de passe de connexion temporaire",
+    "newPasswordLabel": "Nouveau mot de passe de connexion temporaire",
+    "passwordPlaceholder": "Choisissez un mot de passe",
+    "newPasswordPlaceholder": "Laissez vide pour conserver l'actuel",
+    "passwordHelp": "Différent de votre propre mot de passe. Partagez-le seulement avec qui en a besoin.",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe"
+  },
   "reports": {
     "title": "Rapports RSP",
     "subtitleLoading": "Consultez les soumissions RSP complétées",
@@ -694,6 +742,7 @@
     "cancel": "Annuler",
     "complete": "Compléter",
     "noneDash": "—",
+    "lastEditedViaTempLogin": "Dernière modification via une connexion temporaire",
     "columnReportId": "N° rapport",
     "columnCreatedBy": "Créé par",
     "columnStatus": "Statut",
@@ -770,7 +819,9 @@
     "loginToView": "Veuillez vous connecter pour voir les journaux d'activité",
     "actions": {
       "login": "Connexion",
+      "login_via_temp_login": "Connexion (temp.)",
       "logout": "Déconnexion",
+      "logout_via_temp_login": "Déconnexion (temp.)",
       "create_user": "Créer un utilisateur",
       "update_user": "Modifier un utilisateur",
       "delete_user": "Supprimer un utilisateur",
@@ -783,10 +834,12 @@
       "delete_psm_member": "Supprimer un membre PSM",
       "create_pcr": "Créer un RSP",
       "update_pcr": "Modifier un RSP",
+      "update_pcr_via_temp_login": "Modifier un RSP (temp.)",
       "submit_pcr": "Soumettre un RSP",
       "delete_pcr": "Supprimer un RSP",
       "approve_pcr": "Approuver un RSP",
       "update_setting": "Modifier un paramètre",
+      "update_temp_login_setting": "Modifier le paramètre de connexion temporaire",
       "manual_cleanup": "Nettoyage manuel",
       "cleanup_pcr_reports": "Nettoyage automatique",
       "cleanup_activity_logs": "Nettoyer les journaux d'activité",

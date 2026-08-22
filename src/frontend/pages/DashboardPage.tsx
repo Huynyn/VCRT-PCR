@@ -47,18 +47,18 @@ const DashboardPage = () => {
         <CommonMedicationsSection />
       </div>
 
-      {i18n.language === 'fr' && (
-        <p className="mt-3 text-xs italic text-gray-400 dark:text-gray-500 text-center">
-          {t('common.contentNotTranslatedNote')}
-        </p>
-      )}
-
       <CampusMapSection />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <DebriefQuestionsSection />
         {isAdmin ? <SupplyFormQrAdmin /> : <SupplyFormQrSection />}
       </div>
+
+      {i18n.language === 'fr' && (
+        <p className="mt-4 text-xs italic text-gray-400 dark:text-gray-500 text-left">
+          {t('common.contentNotTranslatedNote')}
+        </p>
+      )}
     </div>
   )
 }

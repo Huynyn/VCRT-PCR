@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Edit, HelpCircle, Plus, Trash2 } from 'lucide-react'
+import { Edit, MessagesSquare, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiRequest } from '@/utils/api'
 import { Modal, Button, TitleBadge } from '@/components/ui'
@@ -126,7 +126,7 @@ const DebriefQuestionsSection: React.FC = () => {
                 card's own container being one of 2 equal columns (gap-4)
                 rather than 3 - solves for that same final pill width
                 relative to this pill's own (also px-6) container. */}
-            <TitleBadge icon={<HelpCircle className="w-5 h-5" />} className="w-full md:w-[calc((2*100%-4rem)/3)]">{t('debrief.title')}</TitleBadge>
+            <TitleBadge icon={<MessagesSquare className="w-5 h-5" />} className="w-full md:w-[calc((2*100%-4rem)/3)]">{t('debrief.title')}</TitleBadge>
             {isAdmin && (
               <button
                 type="button"

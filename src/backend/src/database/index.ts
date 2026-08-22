@@ -586,6 +586,28 @@ export class DatabaseManager {
         this.database.exec('ALTER TABLE pcr_reports ADD COLUMN sign_off_attachments TEXT');
         console.log('Migration: Added sign_off_attachments column to pcr_reports');
       }
+
+      // Migration: Add temporary-login delegation columns to users - lets a
+      // 'user'-role account holder set a second password a delegate (who has
+      // no account of their own) can log in with, to fix up an existing PCR
+      // (e.g. a missing signature) without the account owner needing to be
+      // present. See routes/auth.ts.
+      if (!userColumnNames.includes('temp_login_enabled')) {
+        this.database.exec('ALTER TABLE users ADD COLUMN temp_login_enabled INTEGER DEFAULT 0');
+        console.log('Migration: Added temp_login_enabled column to users');
+      }
+      if (!userColumnNames.includes('temp_login_password_hash')) {
+        this.database.exec('ALTER TABLE users ADD COLUMN temp_login_password_hash TEXT');
+        console.log('Migration: Added temp_login_password_hash column to users');
+      }
+
+      // Migration: Track whether a PCR's most recent edit came through a
+      // temp-login delegate session rather than the account owner - shown as
+      // a badge in the admin reports view (see ReportsPage.tsx).
+      if (!currentColumnNames.includes('last_edited_via_temp_login')) {
+        this.database.exec('ALTER TABLE pcr_reports ADD COLUMN last_edited_via_temp_login INTEGER DEFAULT 0');
+        console.log('Migration: Added last_edited_via_temp_login column to pcr_reports');
+      }
     } catch (error) {
       // Rethrown (unlike the inner per-migration try/catches above, which
       // intentionally stay isolated) so a failure here fails startup loudly

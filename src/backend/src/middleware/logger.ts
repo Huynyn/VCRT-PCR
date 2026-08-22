@@ -15,6 +15,10 @@ export const logActivity = (action: string, resourceType?: string) => {
           // - req.params/req.body never carry it, so every "create" log
           // entry ended up with resource_id: null without this fallback.
           const resourceId = req.params.id || req.body?.id || extractResponseId(data) || null;
+          // Distinct action string when this was a temp-login delegate
+          // session rather than the account owner, so it's visibly separate
+          // in Activity Logs (see ActivityLogsPage.tsx).
+          const effectiveAction = req.user.viaTempLogin ? `${action}_via_temp_login` : action;
 
           db.prepare(`
             INSERT INTO activity_logs (id, user_id, action, resource_type, resource_id, details, ip_address, user_agent)
@@ -22,7 +26,7 @@ export const logActivity = (action: string, resourceType?: string) => {
           `).run(
             generateId(),
             req.user.id,
-            action,
+            effectiveAction,
             resourceType || null,
             resourceId,
             JSON.stringify({

@@ -251,14 +251,16 @@ const OxygenProtocolForm: React.FC<OxygenProtocolFormProps> = ({
                             it (rather than aligning to the row's shared
                             items-end baseline) lines it up with the input box. */}
                         <label className="form-label opacity-0 select-none" aria-hidden="true">&nbsp;</label>
-                        <button
-                          type="button"
-                          onClick={() => removeFlowRateRow(index)}
-                          aria-label={t('pcr.oxygenProtocol.removeFlowRateChange')}
-                          className="h-10 w-10 flex items-center justify-center rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:text-gray-500 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-burgundy-500 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="h-10 flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={() => removeFlowRateRow(index)}
+                            aria-label={t('pcr.oxygenProtocol.removeFlowRateChange')}
+                            className="p-1 rounded text-gray-400 hover:text-burgundy-600 hover:bg-burgundy-50 dark:hover:text-burgundy-400 dark:hover:bg-burgundy-900/20 focus:outline-none focus:ring-1 focus:ring-burgundy-500 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </Card.Body>
